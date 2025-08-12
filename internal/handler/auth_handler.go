@@ -1,12 +1,13 @@
 package handler
 
 import (
-	"heathhub/internal/service"
-	"heathhub/internal/util"
 	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
+	"heathhub/internal/service"
+	"heathhub/internal/util"
 )
 
 type AuthHandler struct {

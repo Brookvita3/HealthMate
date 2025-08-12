@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"net/http"
 
 	"heathhub/internal/model"
 	"heathhub/internal/repository"
-	"net/http"
 )
 
 type AuthService struct {

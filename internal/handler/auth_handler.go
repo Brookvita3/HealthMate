@@ -1,13 +1,11 @@
 package handler
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 
 	"heathhub/internal/service"
-	"heathhub/internal/util"
 )
 
 type AuthHandler struct {
@@ -27,21 +25,17 @@ func (h *AuthHandler) GoogleLogin(c *gin.Context) {
 		return
 	}
 
-	user, err := h.AuthService.LoginWithGoogleIDToken(req.IDToken)
+	result, err := h.AuthService.LoginWithGoogleIDToken(req.IDToken)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	log.Println("Login successful for", user.Email)
-	jwt, err := util.GenerateJWT(user.Email)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
-		return
-	}
-
 	c.JSON(http.StatusOK, gin.H{
-		"access_token": jwt,
-		"user":         user,
+		"access_token":       result.AccessToken,
+		"expires_in":         result.AccessTTL,
+		"refresh_token":      result.RefreshToken,
+		"refresh_expires_in": result.RefreshTTL,
+		"user":               result.User,
 	})
 }

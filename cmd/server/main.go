@@ -1,21 +1,19 @@
 package main
 
 import (
-	"heathhub/config"
-	"heathhub/internal/handler"
-	"heathhub/internal/repository"
-	"heathhub/internal/router"
-	"heathhub/internal/service"
 	"os"
+
+	"heathhub/app"
+	"heathhub/config"
+	"heathhub/internal/router"
 )
 
 func main() {
-	config.LoadConfig()
+	cfg := config.LoadConfig()
 
-	userRepo := repository.NewUserRepository("users.json")
-	authService := service.NewAuthService(userRepo)
-	authHandler := handler.NewAuthHandler(authService)
+	app := app.NewApp(cfg)
 
-	r := router.SetupRouter(authHandler)
+	r := router.SetupRouter(app)
+
 	r.Run(":" + os.Getenv("PORT"))
 }

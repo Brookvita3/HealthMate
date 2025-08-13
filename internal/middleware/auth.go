@@ -3,13 +3,13 @@ package middleware
 import (
 	"net/http"
 	"strings"
-	
+
 	"github.com/gin-gonic/gin"
-	
-	"heathhub/internal/util"
+
+	"heathhub/pkg/auth"
 )
 
-func AuthMiddleware() gin.HandlerFunc {
+func AuthMiddleware(tokenService *auth.TokenService) gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
@@ -26,7 +26,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		claims, err := util.ValidateJWT(parts[1])
+		claims, err := tokenService.ValidateJWT(parts[1])
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 			c.Abort()

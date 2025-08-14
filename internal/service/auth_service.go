@@ -9,6 +9,8 @@ import (
 	"heathhub/internal/model"
 	"heathhub/internal/repository"
 	"heathhub/pkg/auth"
+
+	"github.com/google/uuid"
 )
 
 type AuthResult struct {
@@ -51,6 +53,7 @@ func (s *AuthService) LoginWithGoogleIDToken(idToken string) (*AuthResult, error
 		user = existing
 	} else {
 		newUser := &model.User{
+			ID:       uuid.New(),
 			Email:    gUser.Email,
 			Name:     gUser.Name,
 			Picture:  gUser.Picture,

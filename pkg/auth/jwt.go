@@ -12,13 +12,13 @@ import (
 
 type TokenService struct {
 	secret string
-	Rdb    *redis.Client
+	rdb    *redis.Client
 }
 
 func NewTokenService(secret string, rdb *redis.Client) *TokenService {
 	return &TokenService{
 		secret: secret,
-		Rdb:    rdb,
+		rdb:    rdb,
 	}
 }
 
@@ -56,7 +56,7 @@ func (t *TokenService) GenerateRefreshJWT(email string) (string, error) {
 		return "", err
 	}
 
-	if err := t.Rdb.Set(context.Background(), "refresh:"+jti, email, exp_time).Err(); err != nil {
+	if err := t.rdb.Set(context.Background(), "refresh:"+jti, email, exp_time).Err(); err != nil {
 		return "", err
 	}
 
@@ -82,4 +82,52 @@ func (t *TokenService) ValidateJWT(tokenString string) (jwt.MapClaims, error) {
 	}
 
 	return nil, errors.New("invalid token")
+}
+
+func (t *TokenService) ValidateRefreshToken(refreshToken string) (string, error) {
+
+	claims, err := t.ValidateJWT(refreshToken)
+	if err != nil {
+		return "", errors.New("invalid refresh token")
+	}
+
+	if claims["type"] != "refresh" {
+		return "", errors.New("token is not refresh type")
+	}
+
+	jti, ok := claims["jti"].(string)
+	if !ok {
+		return "", errors.New("missing jti")
+	}
+
+	email, ok := claims["email"].(string)
+	if !ok {
+		return "", errors.New("missing email")
+	}
+
+	val, err := t.rdb.Get(context.Background(), "refresh:"+jti).Result()
+	if err != nil || val != email {
+		return "", errors.New("refresh token expired or revoked")
+	}
+
+	return email, nil
+}
+
+func (t *TokenService) RevokeRefreshToken(refreshToken string) error {
+
+	claims, err := t.ValidateJWT(refreshToken)
+	if err != nil {
+		return errors.New("invalid refresh token")
+	}
+
+	if claims["type"] != "refresh" {
+		return errors.New("token is not refresh type")
+	}
+
+	jti, ok := claims["jti"].(string)
+	if !ok {
+		return errors.New("missing jti")
+	}
+
+	return t.rdb.Del(context.Background(), "refresh:"+jti).Err()
 }

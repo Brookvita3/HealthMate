@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -39,7 +38,7 @@ func (h *AuthHandler) GoogleLogin(c *gin.Context) {
 	})
 }
 
-func (h *AuthHandler) RefreshAccessToken(c *gin.Context) {
+func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	var req struct {
 		RefreshToken string `json:"refresh_token"`
 	}
@@ -48,18 +47,9 @@ func (h *AuthHandler) RefreshAccessToken(c *gin.Context) {
 		return
 	}
 
-	claims, err := h.AuthService.TokenService.ValidateJWT(req.RefreshToken)
-	if err != nil || claims["type"] != "refresh" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
-		return
-	}
-
-	jti := claims["jti"].(string)
-	email := claims["email"].(string)
-
-	val, err := h.AuthService.TokenService.Rdb.Get(context.Background(), "refresh:"+jti).Result()
-	if err != nil || val != email {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Refresh token expired or revoked"})
+	email, err := h.AuthService.TokenService.ValidateRefreshToken(req.RefreshToken)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -72,4 +62,21 @@ func (h *AuthHandler) RefreshAccessToken(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"access_token": accessToken,
 	})
+}
+func (h *AuthHandler) LogOut(c *gin.Context) {
+	var req struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	err := h.AuthService.TokenService.RevokeRefreshToken(req.RefreshToken)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to revoke token"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Token revoked"})
 }

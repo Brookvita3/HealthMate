@@ -24,7 +24,7 @@ func SetupRouter(app *app.App) *gin.Engine {
 
 func SetupAuthRoutes(r *gin.Engine, authHandler *handler.AuthHandler, tokenService *auth.TokenService) {
 	r.POST("/auth/google", authHandler.GoogleLogin)
-	r.POST("/auth/refresh", authHandler.RefreshAccessToken)
+	r.POST("/auth/refresh", authHandler.RefreshToken)
 
 	authRoutes := r.Group("/auth")
 	authRoutes.Use(middleware.AuthMiddleware(tokenService))
@@ -33,5 +33,6 @@ func SetupAuthRoutes(r *gin.Engine, authHandler *handler.AuthHandler, tokenServi
 			email := c.GetString("email")
 			c.JSON(http.StatusOK, gin.H{"email": email})
 		})
+		authRoutes.POST("/logout", authHandler.LogOut)
 	}
 }

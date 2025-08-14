@@ -76,8 +76,6 @@ func (s *AuthService) LoginWithGoogleIDToken(idToken string) (*AuthResult, error
 		User:         user,
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
-		AccessTTL:    300,
-		RefreshTTL:   3600,
 	}, nil
 
 }

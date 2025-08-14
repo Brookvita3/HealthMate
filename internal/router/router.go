@@ -24,8 +24,9 @@ func SetupRouter(app *app.App) *gin.Engine {
 
 func SetupAuthRoutes(r *gin.Engine, authHandler *handler.AuthHandler, tokenService *auth.TokenService) {
 	r.POST("/auth/google", authHandler.GoogleLogin)
+	r.POST("/auth/refresh", authHandler.RefreshAccessToken)
 
-	authRoutes := r.Group("/")
+	authRoutes := r.Group("/auth")
 	authRoutes.Use(middleware.AuthMiddleware(tokenService))
 	{
 		authRoutes.GET("/profile", func(c *gin.Context) {

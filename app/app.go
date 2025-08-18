@@ -1,8 +1,9 @@
 package app
 
 import (
-	"github.com/redis/go-redis/v9"
 	"heathhub/config"
+
+	"github.com/redis/go-redis/v9"
 
 	"heathhub/internal/handler"
 	"heathhub/internal/repository"
@@ -13,6 +14,7 @@ import (
 type App struct {
 	TokenService *auth.TokenService
 	AuthHandler  *handler.AuthHandler
+	DataHandler  *handler.DataHandler
 }
 
 func NewApp(cfg config.Config) *App {
@@ -30,8 +32,11 @@ func NewApp(cfg config.Config) *App {
 
 	authHandler := handler.NewAuthHandler(authService)
 
+	dataHandler := handler.NewDataHandler()
+
 	return &App{
 		TokenService: tokenService,
 		AuthHandler:  authHandler,
+		DataHandler:  dataHandler,
 	}
 }

@@ -18,6 +18,7 @@ func SetupRouter(app *app.App) *gin.Engine {
 	r.Use(middleware.ErrorHandler())
 
 	SetupAuthRoutes(r, app.AuthHandler, app.TokenService)
+	SetupDataRoutes(r, app.DataHandler)
 
 	return r
 }
@@ -35,4 +36,8 @@ func SetupAuthRoutes(r *gin.Engine, authHandler *handler.AuthHandler, tokenServi
 		})
 		authRoutes.POST("/logout", authHandler.LogOut)
 	}
+}
+
+func SetupDataRoutes(r *gin.Engine, dataHandler *handler.DataHandler) {
+	r.POST("/api/health", dataHandler.SendData)
 }

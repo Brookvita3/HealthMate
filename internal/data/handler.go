@@ -1,4 +1,4 @@
-package handler
+package data
 
 import (
 	"log"
@@ -7,14 +7,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type DataHandler struct {
+type Handler struct {
 }
 
-func NewDataHandler() *DataHandler {
-	return &DataHandler{}
+func NewDataHandler() *Handler {
+	return &Handler{}
 }
 
-func (h *DataHandler) SendData(c *gin.Context) {
+func (h *Handler) SendData(c *gin.Context) {
 	var req struct {
 		Beats int `json:"beats"`
 	}

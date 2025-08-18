@@ -1,22 +1,33 @@
-package handler
+// File: internal/auth/handler.go
+package auth
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-
-	"healthmate/internal/service"
 )
 
-type AuthHandler struct {
-	AuthService *service.AuthService
+type Service interface {
+	LoginWithGoogleIDToken(ctx context.Context, idToken string) (*LoginResult, error)
+	RefreshAccessToken(ctx context.Context, refreshToken string) (string, error)
+	Logout(ctx context.Context, refreshToken string) error
+	AuthMiddleware() gin.HandlerFunc
 }
 
-func NewAuthHandler(s *service.AuthService) *AuthHandler {
-	return &AuthHandler{AuthService: s}
+type Handler struct {
+	service Service
 }
 
-func (h *AuthHandler) GoogleLogin(c *gin.Context) {
+func NewHandler(s Service) *Handler {
+	return &Handler{service: s}
+}
+
+func (h *Handler) AuthMiddleware() gin.HandlerFunc {
+	return h.service.AuthMiddleware()
+}
+
+func (h *Handler) GoogleLogin(c *gin.Context) {
 	var req struct {
 		IDToken string `json:"id_token"`
 	}
@@ -25,9 +36,7 @@ func (h *AuthHandler) GoogleLogin(c *gin.Context) {
 		return
 	}
 
-	requestContext := c.Request.Context()
-
-	result, err := h.AuthService.LoginWithGoogleIDToken(requestContext, req.IDToken)
+	result, err := h.service.LoginWithGoogleIDToken(c.Request.Context(), req.IDToken)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
@@ -40,7 +49,7 @@ func (h *AuthHandler) GoogleLogin(c *gin.Context) {
 	})
 }
 
-func (h *AuthHandler) RefreshToken(c *gin.Context) {
+func (h *Handler) RefreshToken(c *gin.Context) {
 	var req struct {
 		RefreshToken string `json:"refresh_token"`
 	}
@@ -49,9 +58,7 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 		return
 	}
 
-	requestContext := c.Request.Context()
-
-	newAccessToken, err := h.AuthService.RefreshAccessToken(requestContext, req.RefreshToken)
+	newAccessToken, err := h.service.RefreshAccessToken(c.Request.Context(), req.RefreshToken)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
@@ -62,7 +69,7 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	})
 }
 
-func (h *AuthHandler) LogOut(c *gin.Context) {
+func (h *Handler) LogOut(c *gin.Context) {
 	var req struct {
 		RefreshToken string `json:"refresh_token"`
 	}
@@ -71,9 +78,7 @@ func (h *AuthHandler) LogOut(c *gin.Context) {
 		return
 	}
 
-	requestContext := c.Request.Context()
-
-	err := h.AuthService.Logout(requestContext, req.RefreshToken)
+	err := h.service.Logout(c.Request.Context(), req.RefreshToken)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return

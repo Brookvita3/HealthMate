@@ -1,8 +1,8 @@
-package model
+package datahealth
 
 import "github.com/google/uuid"
 
-type User struct {
+type UserHealth struct {
 	ID       uuid.UUID `json:"id"`
 	Email    string    `json:"email"`
 	Name     string    `json:"name"`

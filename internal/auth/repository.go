@@ -1,30 +1,33 @@
-package repository
+package auth
 
 import (
 	"encoding/json"
 	"errors"
 	"os"
 	"sync"
-
-	"healthmate/internal/model"
 )
 
-type UserRepository struct {
-	filePath string
-	mu       sync.Mutex
-	users    map[string]*model.User // key: email
+type Repository interface {
+	FindByEmail(email string) (*User, error)
+	Create(user *User) error
 }
 
-func NewUserRepository(filePath string) *UserRepository {
-	repo := &UserRepository{
+type userRepository struct {
+	filePath string
+	mu       sync.Mutex
+	users    map[string]*User
+}
+
+func NewRepository(filePath string) Repository {
+	repo := &userRepository{
 		filePath: filePath,
-		users:    make(map[string]*model.User),
+		users:    make(map[string]*User),
 	}
 	repo.loadFromFile()
 	return repo
 }
 
-func (r *UserRepository) loadFromFile() error {
+func (r *userRepository) loadFromFile() error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -42,7 +45,7 @@ func (r *UserRepository) loadFromFile() error {
 	return json.Unmarshal(bytes, &r.users)
 }
 
-func (r *UserRepository) saveToFile() error {
+func (r *userRepository) saveToFile() error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -54,7 +57,7 @@ func (r *UserRepository) saveToFile() error {
 	return os.WriteFile(r.filePath, bytes, 0644)
 }
 
-func (r *UserRepository) FindByEmail(email string) (*model.User, error) {
+func (r *userRepository) FindByEmail(email string) (*User, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -65,10 +68,11 @@ func (r *UserRepository) FindByEmail(email string) (*model.User, error) {
 	return user, nil
 }
 
-func (r *UserRepository) Create(user *model.User) error {
+func (r *userRepository) Create(user *User) error {
 	r.mu.Lock()
 
 	if _, exists := r.users[user.Email]; exists {
+		r.mu.Unlock()
 		return errors.New("user already exists")
 	}
 	r.users[user.Email] = user

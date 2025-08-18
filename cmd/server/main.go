@@ -1,19 +1,40 @@
 package main
 
 import (
-	"os"
+	"log"
 
 	"healthmate/app"
 	"healthmate/config"
-	"healthmate/internal/router"
+	"healthmate/internal/auth"
+	"healthmate/internal/data"
+	"healthmate/internal/platform/cache"
+	"healthmate/internal/platform/web"
+	"healthmate/pkg/jwtauth"
 )
 
 func main() {
 	cfg := config.LoadConfig()
 
-	app := app.NewApp(cfg)
+	redisClient, err := cache.NewRedisClient(cfg.RedisAddr, cfg.RedisPassword, 0)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+	log.Println("Successfully connected to Redis.")
+	defer redisClient.Close()
 
-	r := router.SetupRouter(app)
+	userRepo := auth.NewRepository("users.json")
 
-	r.Run(":" + os.Getenv("PORT"))
+	tokenService := jwtauth.NewTokenService(cfg.JWTSecret, redisClient)
+
+	authService := auth.NewAuthService(userRepo, tokenService, cfg.GoogleClientID)
+
+	authHandler := auth.NewHandler(authService)
+
+	dataHandler := data.NewDataHandler()
+
+	router := web.NewRouter(authHandler, dataHandler)
+
+	application := app.NewApp(router)
+
+	application.Start(":" + cfg.Port)
 }

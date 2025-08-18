@@ -1,42 +1,24 @@
 package app
 
 import (
-	"healthmate/config"
+	"log"
 
-	"github.com/redis/go-redis/v9"
-
-	"healthmate/internal/handler"
-	"healthmate/internal/repository"
-	"healthmate/internal/service"
-	"healthmate/pkg/auth"
+	"github.com/gin-gonic/gin"
 )
 
 type App struct {
-	TokenService *auth.TokenService
-	AuthHandler  *handler.AuthHandler
-	DataHandler  *handler.DataHandler
+	Router *gin.Engine
 }
 
-func NewApp(cfg config.Config) *App {
-
-	redisClient := redis.NewClient(&redis.Options{
-		Addr:     cfg.RedisAddr,
-		Password: cfg.RedisPassword,
-	})
-
-	userRepo := repository.NewUserRepository("users.json")
-
-	tokenService := auth.NewTokenService(cfg.JWTSecret, redisClient)
-
-	authService := service.NewAuthService(userRepo, tokenService, cfg.GoogleClientID)
-
-	authHandler := handler.NewAuthHandler(authService)
-
-	dataHandler := handler.NewDataHandler()
-
+func NewApp(router *gin.Engine) *App {
 	return &App{
-		TokenService: tokenService,
-		AuthHandler:  authHandler,
-		DataHandler:  dataHandler,
+		Router: router,
+	}
+}
+
+func (a *App) Start(addr string) {
+	log.Printf("Server starting on %s", addr)
+	if err := a.Router.Run(addr); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
 	}
 }

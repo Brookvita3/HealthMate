@@ -28,7 +28,7 @@ func NewApp(cfg config.Config) *App {
 
 	tokenService := auth.NewTokenService(cfg.JWTSecret, redisClient)
 
-	authService := service.NewAuthService(userRepo, tokenService)
+	authService := service.NewAuthService(userRepo, tokenService, cfg.GoogleClientID)
 
 	authHandler := handler.NewAuthHandler(authService)
 

@@ -25,7 +25,9 @@ func (h *AuthHandler) GoogleLogin(c *gin.Context) {
 		return
 	}
 
-	result, err := h.AuthService.LoginWithGoogleIDToken(req.IDToken)
+	requestContext := c.Request.Context()
+
+	result, err := h.AuthService.LoginWithGoogleIDToken(requestContext, req.IDToken)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
@@ -47,22 +49,19 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 		return
 	}
 
-	email, err := h.AuthService.TokenService.ValidateRefreshToken(req.RefreshToken)
+	requestContext := c.Request.Context()
+
+	newAccessToken, err := h.AuthService.RefreshAccessToken(requestContext, req.RefreshToken)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	accessToken, err := h.AuthService.TokenService.GenerateAccessJWT(email)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
-		return
-	}
-
 	c.JSON(http.StatusOK, gin.H{
-		"access_token": accessToken,
+		"access_token": newAccessToken,
 	})
 }
+
 func (h *AuthHandler) LogOut(c *gin.Context) {
 	var req struct {
 		RefreshToken string `json:"refresh_token"`
@@ -72,11 +71,13 @@ func (h *AuthHandler) LogOut(c *gin.Context) {
 		return
 	}
 
-	err := h.AuthService.TokenService.RevokeRefreshToken(req.RefreshToken)
+	requestContext := c.Request.Context()
+
+	err := h.AuthService.Logout(requestContext, req.RefreshToken)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to revoke token"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Token revoked"})
+	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }

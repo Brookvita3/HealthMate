@@ -37,7 +37,7 @@ func (t *TokenService) GenerateAccessJWT(email string) (string, error) {
 	return token.SignedString([]byte(t.secret))
 }
 
-func (t *TokenService) GenerateRefreshJWT(email string) (string, error) {
+func (t *TokenService) GenerateRefreshJWT(ctx context.Context, email string) (string, error) {
 
 	jti := uuid.New().String()
 	exp_time := 1 * time.Hour
@@ -56,7 +56,7 @@ func (t *TokenService) GenerateRefreshJWT(email string) (string, error) {
 		return "", err
 	}
 
-	if err := t.rdb.Set(context.Background(), "refresh:"+jti, email, exp_time).Err(); err != nil {
+	if err := t.rdb.Set(ctx, "refresh:"+jti, email, exp_time).Err(); err != nil {
 		return "", err
 	}
 
@@ -84,7 +84,7 @@ func (t *TokenService) ValidateJWT(tokenString string) (jwt.MapClaims, error) {
 	return nil, errors.New("invalid token")
 }
 
-func (t *TokenService) ValidateRefreshToken(refreshToken string) (string, error) {
+func (t *TokenService) ValidateRefreshToken(ctx context.Context, refreshToken string) (string, error) {
 
 	claims, err := t.ValidateJWT(refreshToken)
 	if err != nil {
@@ -105,7 +105,7 @@ func (t *TokenService) ValidateRefreshToken(refreshToken string) (string, error)
 		return "", errors.New("missing email")
 	}
 
-	val, err := t.rdb.Get(context.Background(), "refresh:"+jti).Result()
+	val, err := t.rdb.Get(ctx, "refresh:"+jti).Result()
 	if err != nil || val != email {
 		return "", errors.New("refresh token expired or revoked")
 	}
@@ -113,7 +113,7 @@ func (t *TokenService) ValidateRefreshToken(refreshToken string) (string, error)
 	return email, nil
 }
 
-func (t *TokenService) RevokeRefreshToken(refreshToken string) error {
+func (t *TokenService) RevokeRefreshToken(ctx context.Context, refreshToken string) error {
 
 	claims, err := t.ValidateJWT(refreshToken)
 	if err != nil {
@@ -129,5 +129,5 @@ func (t *TokenService) RevokeRefreshToken(refreshToken string) error {
 		return errors.New("missing jti")
 	}
 
-	return t.rdb.Del(context.Background(), "refresh:"+jti).Err()
+	return t.rdb.Del(ctx, "refresh:"+jti).Err()
 }

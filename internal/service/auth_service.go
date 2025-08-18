@@ -1,16 +1,16 @@
 package service
 
 import (
-	"encoding/json"
+	"context"
 	"errors"
 	"log"
-	"net/http"
 
 	"heathhub/internal/model"
 	"heathhub/internal/repository"
 	"heathhub/pkg/auth"
 
 	"github.com/google/uuid"
+	"google.golang.org/api/idtoken"
 )
 
 type AuthResult struct {
@@ -22,23 +22,29 @@ type AuthResult struct {
 }
 
 type gUser struct {
-	Email   string `json:"email"`
-	Name    string `json:"name"`
-	Picture string `json:"picture"`
+	Email         string `json:"email"`
+	EmailVerified bool   `json:"email_verified"`
+	Name          string `json:"name"`
+	Picture       string `json:"picture"`
+	GivenName     string `json:"given_name"`
+	FamilyName    string `json:"family_name"`
+	Locale        string `json:"locale"`
+	Sub           string `json:"sub"`
 }
 
 type AuthService struct {
-	UserRepo     *repository.UserRepository
-	TokenService *auth.TokenService
+	UserRepo       *repository.UserRepository
+	TokenService   *auth.TokenService
+	googleClientID string
 }
 
-func NewAuthService(repo *repository.UserRepository, tokenService *auth.TokenService) *AuthService {
-	return &AuthService{UserRepo: repo, TokenService: tokenService}
+func NewAuthService(repo *repository.UserRepository, tokenService *auth.TokenService, googleClientID string) *AuthService {
+	return &AuthService{UserRepo: repo, TokenService: tokenService, googleClientID: googleClientID}
 }
 
-func (s *AuthService) LoginWithGoogleIDToken(idToken string) (*AuthResult, error) {
+func (s *AuthService) LoginWithGoogleIDToken(ctx context.Context, idToken string) (*AuthResult, error) {
 
-	gUser, err := verifyGoogleIDToken(idToken)
+	gUser, err := s.verifyGoogleIDToken(ctx, idToken)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +76,7 @@ func (s *AuthService) LoginWithGoogleIDToken(idToken string) (*AuthResult, error
 		return nil, err
 	}
 
-	refreshToken, err := s.TokenService.GenerateRefreshJWT(user.Email)
+	refreshToken, err := s.TokenService.GenerateRefreshJWT(ctx, user.Email)
 	if err != nil {
 		return nil, err
 	}
@@ -83,20 +89,53 @@ func (s *AuthService) LoginWithGoogleIDToken(idToken string) (*AuthResult, error
 
 }
 
-func verifyGoogleIDToken(idToken string) (*gUser, error) {
+func (s *AuthService) RefreshAccessToken(ctx context.Context, refreshToken string) (string, error) {
 
-	resp, err := http.Get("https://oauth2.googleapis.com/tokeninfo?id_token=" + idToken)
-	if err != nil || resp.StatusCode != 200 {
-		log.Println("error: ", resp.Body)
+	email, err := s.TokenService.ValidateRefreshToken(ctx, refreshToken)
+	if err != nil {
+		return "", err
+	}
+
+	newAccessToken, err := s.TokenService.GenerateAccessJWT(email)
+	if err != nil {
+		log.Printf("error when generating new access token for  %s: %v", email, err)
+		return "", errors.New("failed to generate new access token")
+	}
+
+	return newAccessToken, nil
+}
+
+func (s *AuthService) Logout(ctx context.Context, refreshToken string) error {
+
+	err := s.TokenService.RevokeRefreshToken(ctx, refreshToken)
+	if err != nil {
+		log.Printf("error when revoking refresh token: %v", err)
+		return errors.New("failed to revoke refresh token")
+	}
+	return nil
+}
+
+func (s *AuthService) verifyGoogleIDToken(ctx context.Context, idToken string) (*gUser, error) {
+
+	payload, err := idtoken.Validate(ctx, idToken, s.googleClientID)
+	if err != nil {
+		log.Println("Lỗi xác thực ID token:", err)
 		return nil, errors.New("invalid Google token")
 	}
-	defer resp.Body.Close()
 
-	var gUser gUser
-
-	if err := json.NewDecoder(resp.Body).Decode(&gUser); err != nil {
-		return nil, errors.New("failed to parse Google user info")
+	gUser := &gUser{
+		Email:         payload.Claims["email"].(string),
+		EmailVerified: payload.Claims["email_verified"].(bool),
+		Name:          payload.Claims["name"].(string),
+		Picture:       payload.Claims["picture"].(string),
+		GivenName:     payload.Claims["given_name"].(string),
+		FamilyName:    payload.Claims["family_name"].(string),
+		Sub:           payload.Claims["sub"].(string),
 	}
 
-	return &gUser, nil
+	if payload.Issuer != "accounts.google.com" && payload.Issuer != "https://accounts.google.com" {
+		return nil, errors.New("invalid token issuer")
+	}
+
+	return gUser, nil
 }

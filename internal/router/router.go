@@ -5,10 +5,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"heathhub/app"
-	"heathhub/internal/handler"
-	"heathhub/internal/middleware"
-	"heathhub/pkg/auth"
+	"healthmate/app"
+	"healthmate/internal/handler"
+	"healthmate/internal/middleware"
+	"healthmate/pkg/auth"
 )
 
 func SetupRouter(app *app.App) *gin.Engine {

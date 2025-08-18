@@ -1,14 +1,14 @@
 package app
 
 import (
-	"heathhub/config"
+	"healthmate/config"
 
 	"github.com/redis/go-redis/v9"
 
-	"heathhub/internal/handler"
-	"heathhub/internal/repository"
-	"heathhub/internal/service"
-	"heathhub/pkg/auth"
+	"healthmate/internal/handler"
+	"healthmate/internal/repository"
+	"healthmate/internal/service"
+	"healthmate/pkg/auth"
 )
 
 type App struct {

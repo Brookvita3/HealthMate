@@ -1,4 +1,4 @@
-module heathhub
+module healthmate
 
 go 1.23.4
 

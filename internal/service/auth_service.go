@@ -5,9 +5,9 @@ import (
 	"errors"
 	"log"
 
-	"heathhub/internal/model"
-	"heathhub/internal/repository"
-	"heathhub/pkg/auth"
+	"healthmate/internal/model"
+	"healthmate/internal/repository"
+	"healthmate/pkg/auth"
 
 	"github.com/google/uuid"
 	"google.golang.org/api/idtoken"

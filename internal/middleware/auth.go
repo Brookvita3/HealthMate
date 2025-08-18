@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"heathhub/pkg/auth"
+	"healthmate/pkg/auth"
 )
 
 func AuthMiddleware(tokenService *auth.TokenService) gin.HandlerFunc {

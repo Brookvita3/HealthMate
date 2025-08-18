@@ -6,7 +6,7 @@ import (
 	"os"
 	"sync"
 
-	"heathhub/internal/model"
+	"healthmate/internal/model"
 )
 
 type UserRepository struct {

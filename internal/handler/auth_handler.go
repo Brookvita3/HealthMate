@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"heathhub/internal/service"
+	"healthmate/internal/service"
 )
 
 type AuthHandler struct {

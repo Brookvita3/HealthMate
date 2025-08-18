@@ -3,9 +3,9 @@ package main
 import (
 	"os"
 
-	"heathhub/app"
-	"heathhub/config"
-	"heathhub/internal/router"
+	"healthmate/app"
+	"healthmate/config"
+	"healthmate/internal/router"
 )
 
 func main() {

@@ -96,12 +96,12 @@ func (s *serviceImpl) LoginWithEmail(ctx context.Context, email, password string
 		return nil, errors.New("invalid credentials")
 	}
 
-	accessToken, err := s.tokenService.GenerateAccessJWT(existing.ID.String())
+	accessToken, err := s.tokenService.GenerateAccessJWT(email)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := s.tokenService.GenerateRefreshJWT(ctx, existing.ID.String())
+	refreshToken, err := s.tokenService.GenerateRefreshJWT(ctx, email)
 	if err != nil {
 		return nil, err
 	}

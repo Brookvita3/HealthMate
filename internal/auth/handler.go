@@ -1,4 +1,3 @@
-// File: internal/auth/handler.go
 package auth
 
 import (
@@ -9,7 +8,10 @@ import (
 )
 
 type Service interface {
+	RegisterWithEmail(ctx context.Context, email, password, name string) (*User, error)
 	LoginWithGoogleIDToken(ctx context.Context, idToken string) (*LoginResult, error)
+	LoginWithEmail(ctx context.Context, email, password string) (*LoginResult, error)
+	SetPasswordForUser(ctx context.Context, userID, newPassword string) error
 	RefreshAccessToken(ctx context.Context, refreshToken string) (string, error)
 	Logout(ctx context.Context, refreshToken string) error
 	AuthMiddleware() gin.HandlerFunc
@@ -85,4 +87,80 @@ func (h *Handler) LogOut(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
+}
+
+func (h *Handler) Register(c *gin.Context) {
+	var req struct {
+		Email    string `json:"email" binding:"required,email"`
+		Password string `json:"password" binding:"required,min=8"`
+		Name     string `json:"name" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request: " + err.Error()})
+		return
+	}
+
+	user, err := h.service.RegisterWithEmail(c.Request.Context(), req.Email, req.Password, req.Name)
+	if err != nil {
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, user)
+}
+
+func (h *Handler) AppLogin(c *gin.Context) {
+	var req struct {
+		Email    string `json:"email" binding:"required,email"`
+		Password string `json:"password" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request: " + err.Error()})
+		return
+	}
+
+	result, err := h.service.LoginWithEmail(c.Request.Context(), req.Email, req.Password)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"access_token":  result.AccessToken,
+		"refresh_token": result.RefreshToken,
+		"user":          result.User,
+	})
+}
+
+func (h *Handler) SetPassword(c *gin.Context) {
+	emailFromToken, exists := c.Get("email")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token context"})
+		return
+	}
+
+	var req struct {
+		Password string `json:"password" binding:"required,min=8"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
+		return
+	}
+
+	emailStr, ok := emailFromToken.(string)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error: email format is incorrect"})
+		return
+	}
+
+	err := h.service.SetPasswordForUser(c.Request.Context(), emailStr, req.Password)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "password set successfully"})
 }

@@ -15,17 +15,19 @@ func NewDataHandler() *Handler {
 }
 
 func (h *Handler) SendData(c *gin.Context) {
-	var req struct {
-		Beats int `json:"beats"`
+	type HealthData struct {
+		Type      string `json:"type"`
+		Value     int64  `json:"value"`
+		Timestamp int64  `json:"timestamp"`
 	}
+
+	var req []HealthData
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
 
-	log.Println(req.Beats)
+	log.Println(req)
 
-	c.JSON(http.StatusOK, gin.H{
-		"steps": req.Beats,
-	})
+	c.Status(http.StatusNoContent)
 }

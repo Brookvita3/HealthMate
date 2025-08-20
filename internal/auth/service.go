@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/api/idtoken"
 
 	"healthmate/pkg/jwtauth"
@@ -42,6 +43,91 @@ func NewAuthService(repo Repository, tokenService *jwtauth.TokenService, googleC
 	}
 }
 
+func (s *serviceImpl) RegisterWithEmail(ctx context.Context, email, password, name string) (*User, error) {
+	existing, err := s.userRepo.FindByEmail(email)
+	if err != nil {
+		return nil, err
+	}
+
+	if existing != nil {
+		if existing.Provider == "google" {
+			return nil, errors.New("this email is already associated with a Google account. Please log in with Google and set a password in your account settings")
+		}
+		return nil, errors.New("user with this email already exists")
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		log.Printf("Error hashing password: %v", err)
+		return nil, errors.New("failed to process registration")
+	}
+
+	newUser := &User{
+		ID:       uuid.New(),
+		Email:    email,
+		Name:     name,
+		Provider: "HealthMate",
+		Password: string(hashedPassword),
+	}
+
+	if err := s.userRepo.Create(newUser); err != nil {
+		return nil, err
+	}
+
+	return newUser, nil
+}
+
+func (s *serviceImpl) LoginWithEmail(ctx context.Context, email, password string) (*LoginResult, error) {
+	existing, err := s.userRepo.FindByEmail(email)
+	if err != nil {
+		return nil, err
+	}
+
+	if existing == nil {
+		return nil, errors.New("invalid credentials")
+	}
+
+	if existing.Password == "" {
+		return nil, errors.New("this account was created with Google, please log in using your Google account")
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(existing.Password), []byte(password))
+	if err != nil {
+		return nil, errors.New("invalid credentials")
+	}
+
+	accessToken, err := s.tokenService.GenerateAccessJWT(existing.ID.String())
+	if err != nil {
+		return nil, err
+	}
+
+	refreshToken, err := s.tokenService.GenerateRefreshJWT(ctx, existing.ID.String())
+	if err != nil {
+		return nil, err
+	}
+
+	return &LoginResult{
+		User:         existing,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}, nil
+}
+
+func (s *serviceImpl) SetPasswordForUser(ctx context.Context, email string, newPassword string) error {
+	user, err := s.userRepo.FindByEmail(email)
+	if err != nil || user == nil {
+		return errors.New("user not found")
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		log.Printf("Error hashing password for user %s: %v", email, err)
+		return errors.New("failed to set new password")
+	}
+
+	return s.userRepo.SetPassword(ctx, email, string(hashedPassword))
+}
+
 func (s *serviceImpl) AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
@@ -66,7 +152,6 @@ func (s *serviceImpl) AuthMiddleware() gin.HandlerFunc {
 		}
 
 		c.Set("email", claims["email"])
-		c.Set("userID", claims["sub"])
 		c.Next()
 	}
 }
@@ -88,6 +173,7 @@ func (s *serviceImpl) LoginWithGoogleIDToken(ctx context.Context, idToken string
 	} else {
 		newUser := &User{
 			ID:       uuid.New(),
+			GoogleID: gUser.Sub,
 			Email:    gUser.Email,
 			Name:     gUser.Name,
 			Picture:  gUser.Picture,

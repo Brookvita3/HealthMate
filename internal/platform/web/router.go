@@ -18,9 +18,10 @@ func NewRouter(
 	authHandler *auth.Handler,
 	dataHandler *data.Handler,
 ) *gin.Engine {
-	r := gin.New()
+	r := gin.Default()
 
 	r.Use(gin.Recovery())
+	r.RedirectTrailingSlash = false
 	r.Use(middleware.ErrorHandler())
 
 	apiV1 := r.Group("/api/v1")
@@ -30,9 +31,12 @@ func NewRouter(
 	{
 		authGroup.POST("/google", authHandler.GoogleLogin)
 		authGroup.POST("/refresh", authHandler.RefreshToken)
+		authGroup.POST("/register", authHandler.Register)
+		authGroup.POST("/app", authHandler.AppLogin)
 
 		authGroup.Use(authHandler.AuthMiddleware())
 		authGroup.POST("/logout", authHandler.LogOut)
+		authGroup.POST("/password", authHandler.SetPassword)
 	}
 
 	// ===== Profile routes =====

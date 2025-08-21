@@ -96,12 +96,12 @@ func (s *serviceImpl) LoginWithEmail(ctx context.Context, email, password string
 		return nil, errors.New("invalid credentials")
 	}
 
-	accessToken, err := s.tokenService.GenerateAccessJWT(email)
+	accessToken, err := s.tokenService.GenerateAccessJWT(existing.Email, existing.ID.String())
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := s.tokenService.GenerateRefreshJWT(ctx, email)
+	refreshToken, err := s.tokenService.GenerateRefreshJWT(ctx, existing.Email, existing.ID.String())
 	if err != nil {
 		return nil, err
 	}
@@ -152,6 +152,7 @@ func (s *serviceImpl) AuthMiddleware() gin.HandlerFunc {
 		}
 
 		c.Set("email", claims["email"])
+		c.Set("userId", claims["sub"])
 		c.Next()
 	}
 }
@@ -185,12 +186,12 @@ func (s *serviceImpl) LoginWithGoogleIDToken(ctx context.Context, idToken string
 		user = newUser
 	}
 
-	accessToken, err := s.tokenService.GenerateAccessJWT(user.Email)
+	accessToken, err := s.tokenService.GenerateAccessJWT(user.Email, user.ID.String())
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := s.tokenService.GenerateRefreshJWT(ctx, user.Email)
+	refreshToken, err := s.tokenService.GenerateRefreshJWT(ctx, user.Email, user.ID.String())
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +214,7 @@ func (s *serviceImpl) RefreshAccessToken(ctx context.Context, refreshToken strin
 		return "", errors.New("user not found for refresh token")
 	}
 
-	newAccessToken, err := s.tokenService.GenerateAccessJWT(email)
+	newAccessToken, err := s.tokenService.GenerateAccessJWT(email, user.ID.String())
 	if err != nil {
 		log.Printf("error when generating new access token for %s: %v", email, err)
 		return "", errors.New("failed to generate new access token")

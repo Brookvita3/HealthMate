@@ -22,12 +22,13 @@ func NewTokenService(secret string, rdb *redis.Client) *TokenService {
 	}
 }
 
-func (t *TokenService) GenerateAccessJWT(email string) (string, error) {
+func (t *TokenService) GenerateAccessJWT(email, id string) (string, error) {
 
 	exp_time := 5 * time.Minute
 
 	claims := jwt.MapClaims{
 		"email": email,
+		"sub":   id,
 		"type":  "access",
 		"exp":   time.Now().Add(exp_time).Unix(),
 		"iat":   time.Now().Unix(),
@@ -37,13 +38,14 @@ func (t *TokenService) GenerateAccessJWT(email string) (string, error) {
 	return token.SignedString([]byte(t.secret))
 }
 
-func (t *TokenService) GenerateRefreshJWT(ctx context.Context, email string) (string, error) {
+func (t *TokenService) GenerateRefreshJWT(ctx context.Context, email, id string) (string, error) {
 
 	jti := uuid.New().String()
 	exp_time := 1 * time.Hour
 
 	claims := jwt.MapClaims{
 		"email": email,
+		"sub":   id,
 		"type":  "refresh",
 		"exp":   time.Now().Add(exp_time).Unix(),
 		"iat":   time.Now().Unix(),
@@ -56,7 +58,7 @@ func (t *TokenService) GenerateRefreshJWT(ctx context.Context, email string) (st
 		return "", err
 	}
 
-	if err := t.rdb.Set(ctx, "refresh:"+jti, email, exp_time).Err(); err != nil {
+	if err := t.rdb.Set(ctx, "refresh:"+jti, id, exp_time).Err(); err != nil {
 		return "", err
 	}
 

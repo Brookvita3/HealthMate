@@ -2,12 +2,15 @@ package web
 
 import (
 	"net/http"
+	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
 	"healthmate/internal/auth"
 	"healthmate/internal/data"
 	"healthmate/internal/platform/web/middleware"
+	"healthmate/internal/realtime"
 )
 
 func SetupDataRoutes(r *gin.Engine, dataHandler *data.Handler) {
@@ -17,8 +20,18 @@ func SetupDataRoutes(r *gin.Engine, dataHandler *data.Handler) {
 func NewRouter(
 	authHandler *auth.Handler,
 	dataHandler *data.Handler,
+	rtHandler *realtime.Handler,
 ) *gin.Engine {
 	r := gin.Default()
+
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length", "X-Requested-With"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 
 	r.Use(gin.Recovery())
 	r.RedirectTrailingSlash = false
@@ -55,6 +68,12 @@ func NewRouter(
 	{
 		healthGroup.Use(authHandler.AuthMiddleware())
 		healthGroup.POST("/", dataHandler.SendData)
+	}
+
+	wsGroup := apiV1.Group("/ws")
+	{
+		wsGroup.Use(authHandler.AuthMiddleware())
+		wsGroup.GET("/", rtHandler.ServeWs)
 	}
 
 	return r

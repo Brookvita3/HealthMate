@@ -9,6 +9,7 @@ import (
 	"healthmate/internal/data"
 	"healthmate/internal/platform/cache"
 	"healthmate/internal/platform/web"
+	"healthmate/internal/realtime"
 	"healthmate/pkg/jwtauth"
 )
 
@@ -22,6 +23,9 @@ func main() {
 	log.Println("Successfully connected to Redis.")
 	defer redisClient.Close()
 
+	rtManager := realtime.NewManager()
+	go rtManager.Run()
+
 	userRepo := auth.NewRepository("users.json")
 
 	tokenService := jwtauth.NewTokenService(cfg.JWTSecret, redisClient)
@@ -32,7 +36,9 @@ func main() {
 
 	dataHandler := data.NewDataHandler()
 
-	router := web.NewRouter(authHandler, dataHandler)
+	rtHandler := realtime.NewHandler(rtManager)
+
+	router := web.NewRouter(authHandler, dataHandler, rtHandler)
 
 	application := app.NewApp(router)
 

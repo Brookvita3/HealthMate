@@ -102,17 +102,17 @@ func (t *TokenService) ValidateRefreshToken(ctx context.Context, refreshToken st
 		return "", errors.New("missing jti")
 	}
 
-	email, ok := claims["email"].(string)
+	_, ok = claims["email"].(string)
 	if !ok {
 		return "", errors.New("missing email")
 	}
 
 	val, err := t.rdb.Get(ctx, "refresh:"+jti).Result()
-	if err != nil || val != email {
+	if err != nil {
 		return "", errors.New("refresh token expired or revoked")
 	}
 
-	return email, nil
+	return val, nil
 }
 
 func (t *TokenService) RevokeRefreshToken(ctx context.Context, refreshToken string) error {

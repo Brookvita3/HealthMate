@@ -34,7 +34,7 @@ func NewRouter(
 	}))
 
 	r.Use(gin.Recovery())
-	r.RedirectTrailingSlash = false
+	r.RedirectTrailingSlash = true
 	r.Use(middleware.ErrorHandler())
 
 	apiV1 := r.Group("/api/v1")
@@ -56,7 +56,7 @@ func NewRouter(
 	profileGroup := apiV1.Group("/profile")
 	{
 		profileGroup.Use(authHandler.AuthMiddleware())
-		profileGroup.GET("/", func(c *gin.Context) {
+		profileGroup.GET("", func(c *gin.Context) {
 			email := c.GetString("email")
 			userID := c.GetString("userID")
 			c.JSON(http.StatusOK, gin.H{"email": email, "userID": userID})
@@ -67,13 +67,14 @@ func NewRouter(
 	healthGroup := apiV1.Group("/health")
 	{
 		healthGroup.Use(authHandler.AuthMiddleware())
-		healthGroup.POST("/", dataHandler.SendData)
+		healthGroup.POST("", dataHandler.SendData)
 	}
 
+	// ===== Websocket routes =====
 	wsGroup := apiV1.Group("/ws")
 	{
 		wsGroup.Use(authHandler.AuthMiddleware())
-		wsGroup.GET("/", rtHandler.ServeWs)
+		wsGroup.GET("", rtHandler.ServeWs)
 	}
 
 	return r

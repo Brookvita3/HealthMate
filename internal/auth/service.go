@@ -204,19 +204,19 @@ func (s *serviceImpl) LoginWithGoogleIDToken(ctx context.Context, idToken string
 }
 
 func (s *serviceImpl) RefreshAccessToken(ctx context.Context, refreshToken string) (string, error) {
-	email, err := s.tokenService.ValidateRefreshToken(ctx, refreshToken)
+	userId, err := s.tokenService.ValidateRefreshToken(ctx, refreshToken)
 	if err != nil {
 		return "", err
 	}
 
-	user, err := s.userRepo.FindByEmail(ctx, email)
+	user, err := s.userRepo.FindByID(ctx, userId)
 	if err != nil || user == nil {
 		return "", errors.New("user not found for refresh token")
 	}
 
-	newAccessToken, err := s.tokenService.GenerateAccessJWT(email, user.ID.String())
+	newAccessToken, err := s.tokenService.GenerateAccessJWT(user.Email, user.ID.String())
 	if err != nil {
-		log.Printf("error when generating new access token for %s: %v", email, err)
+		log.Printf("error when generating new access token for %s: %v", user.Email, err)
 		return "", errors.New("failed to generate new access token")
 	}
 

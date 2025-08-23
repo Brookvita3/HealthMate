@@ -235,7 +235,7 @@ func (s *serviceImpl) Logout(ctx context.Context, refreshToken string) error {
 func (s *serviceImpl) verifyGoogleIDToken(ctx context.Context, idToken string) (*gUser, error) {
 	payload, err := idtoken.Validate(ctx, idToken, s.googleClientID)
 	if err != nil {
-		log.Println("Lỗi xác thực ID token:", err)
+		log.Println("error when verifying ID token:", err)
 		return nil, errors.New("invalid Google token")
 	}
 

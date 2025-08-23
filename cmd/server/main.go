@@ -3,7 +3,11 @@ package main
 import (
 	"context"
 	"log"
+	"path/filepath"
 
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"healthmate/app"
@@ -20,6 +24,7 @@ func main() {
 	cfg := config.LoadConfig()
 
 	redisClient, err := cache.NewRedisClient(cfg.RedisAddr, cfg.RedisPassword, 0)
+	log.Printf("Redis URL: %s", config.LoadConfig().RedisAddr)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
@@ -36,6 +41,8 @@ func main() {
 	}
 	log.Println("Successfully connected to Postgres.")
 	defer pool.Close()
+
+	runDBMigration(config.LoadConfig().PostgreURL)
 
 	userRepo := auth.NewRepository(pool)
 
@@ -54,4 +61,37 @@ func main() {
 	application := app.NewApp(router)
 
 	application.Start(":" + cfg.Port)
+}
+
+func runDBMigration(databaseUrl string) {
+	absPath, err := filepath.Abs("migration")
+	if err != nil {
+		log.Fatalf("cannot find absolute path: %v", err)
+	}
+
+	log.Printf("Using migration path: %s", absPath)
+
+	migrationPath := "file://" + filepath.ToSlash(absPath)
+
+	m, err := migrate.New(migrationPath, databaseUrl)
+	if err != nil {
+		log.Fatalf("cannot create new migrate instance: %v", err)
+	}
+
+	version, dirty, err := m.Version()
+	log.Printf("DB version: %d, dirty: %v, error: %v", version, dirty, err)
+
+	err = m.Up()
+
+	if err != nil {
+		log.Printf("migrate up finished with error: %v", err)
+	} else {
+		log.Println("migrate up finished without error.")
+	}
+
+	if err != nil && err != migrate.ErrNoChange {
+		log.Fatalf("failed to run migrate up: %v", err)
+	}
+
+	log.Println("DB migrated successfully")
 }

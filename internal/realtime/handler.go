@@ -26,12 +26,12 @@ func NewHandler(manager *Manager) *Handler {
 
 // ServeWs forwards WebSocket request
 func (h *Handler) ServeWs(c *gin.Context) {
-	userID, ok := c.Get("userID")
-	if !ok || userID == "" {
+	userId, ok := c.Get("userId")
+	if !ok || userId == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
-	userIDStr, _ := userID.(string)
+	userIDStr, _ := userId.(string)
 
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {

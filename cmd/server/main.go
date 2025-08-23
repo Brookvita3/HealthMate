@@ -1,7 +1,10 @@
 package main
 
 import (
+	"context"
 	"log"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"healthmate/app"
 	"healthmate/config"
@@ -26,7 +29,15 @@ func main() {
 	rtManager := realtime.NewManager()
 	go rtManager.Run()
 
-	userRepo := auth.NewRepository("users.json")
+	pool, err := pgxpool.New(context.Background(), config.LoadConfig().PostgreURL)
+	log.Printf("Postgres URL: %s", config.LoadConfig().PostgreURL)
+	if err != nil {
+		log.Fatal("Unable to create connection pool: ", err.Error())
+	}
+	log.Println("Successfully connected to Postgres.")
+	defer pool.Close()
+
+	userRepo := auth.NewRepository(pool)
 
 	tokenService := jwtauth.NewTokenService(cfg.JWTSecret, redisClient)
 

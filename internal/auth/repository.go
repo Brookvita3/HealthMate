@@ -2,113 +2,88 @@ package auth
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"os"
-	"sync"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Repository interface {
-	FindByEmail(email string) (*User, error)
-	FindByID(id string) (*User, error)
-	Create(user *User) error
+	FindByEmail(ctx context.Context, email string) (*User, error)
+	FindByID(ctx context.Context, id string) (*User, error)
+	Create(ctx context.Context, user *User) error
 	SetPassword(ctx context.Context, email string, passwordHash string) error
 }
 
-type userRepository struct {
-	filePath string
-	mu       sync.Mutex
-	users    map[string]*User
+type postgresRepository struct {
+	pool *pgxpool.Pool
 }
 
-func NewRepository(filePath string) Repository {
-	repo := &userRepository{
-		filePath: filePath,
-		users:    make(map[string]*User),
+func NewRepository(pool *pgxpool.Pool) Repository {
+	return &postgresRepository{
+		pool: pool,
 	}
-	repo.loadFromFile()
-	return repo
 }
 
-func (r *userRepository) loadFromFile() error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+func (r *postgresRepository) FindByEmail(ctx context.Context, email string) (*User, error) {
+	user := &User{}
 
-	bytes, err := os.ReadFile(r.filePath)
+	query := `SELECT id, email, name, google_id, password, picture, provider FROM users WHERE email = $1`
+
+	row := r.pool.QueryRow(ctx, query, email)
+
+	err := row.Scan(&user.ID, &user.Email, &user.Name, &user.GoogleID, &user.Password, &user.Picture, &user.Provider)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
 		}
-		return err
-	}
-	if len(bytes) == 0 {
-		return nil
+		return nil, err
 	}
 
-	return json.Unmarshal(bytes, &r.users)
-}
-
-func (r *userRepository) saveToFile() error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	bytes, err := json.MarshalIndent(r.users, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	return os.WriteFile(r.filePath, bytes, 0644)
-}
-
-func (r *userRepository) FindByEmail(email string) (*User, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	user, exists := r.users[email]
-	if !exists {
-		return nil, nil
-	}
 	return user, nil
 }
 
-func (r *userRepository) FindByID(id string) (*User, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+func (r *postgresRepository) FindByID(ctx context.Context, id string) (*User, error) {
+	user := &User{}
 
-	for _, user := range r.users {
-		if user.ID.String() == id {
-			return user, nil
+	query := `SELECT id, email, name, google_id, password, picture, provider FROM users WHERE id = $1`
+
+	row := r.pool.QueryRow(ctx, query, id)
+
+	err := row.Scan(&user.ID, &user.Email, &user.Name, &user.GoogleID, &user.Password, &user.Picture, &user.Provider)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
 		}
+		return nil, err
 	}
 
-	return nil, nil
+	return user, nil
 }
 
-func (r *userRepository) SetPassword(ctx context.Context, email string, passwordHash string) error {
-	r.mu.Lock()
+func (r *postgresRepository) Create(ctx context.Context, user *User) error {
+	query := `INSERT INTO users (id, email, name, google_id, password, picture, provider) VALUES ($1, $2, $3, $4, $5, $6, $7)`
 
-	user, exists := r.users[email]
-	if !exists {
-		r.mu.Unlock()
+	_, err := r.pool.Exec(ctx, query, user.ID, user.Email, user.Name, user.GoogleID, user.Password, user.Picture, user.Provider)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *postgresRepository) SetPassword(ctx context.Context, email string, passwordHash string) error {
+	query := `UPDATE users SET password = $1 WHERE email = $2`
+
+	commandTag, err := r.pool.Exec(ctx, query, passwordHash, email)
+	if err != nil {
+		return err
+	}
+
+	if commandTag.RowsAffected() == 0 {
 		return errors.New("user not found")
 	}
 
-	user.Password = passwordHash
-	r.users[email] = user
-
-	r.mu.Unlock()
-	return r.saveToFile()
-}
-
-func (r *userRepository) Create(user *User) error {
-	r.mu.Lock()
-
-	if _, exists := r.users[user.Email]; exists {
-		r.mu.Unlock()
-		return errors.New("user already exists")
-	}
-	r.users[user.Email] = user
-
-	r.mu.Unlock()
-	return r.saveToFile()
+	return nil
 }

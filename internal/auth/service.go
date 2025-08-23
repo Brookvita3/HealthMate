@@ -44,7 +44,7 @@ func NewAuthService(repo Repository, tokenService *jwtauth.TokenService, googleC
 }
 
 func (s *serviceImpl) RegisterWithEmail(ctx context.Context, email, password, name string) (*User, error) {
-	existing, err := s.userRepo.FindByEmail(email)
+	existing, err := s.userRepo.FindByEmail(ctx, email)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func (s *serviceImpl) RegisterWithEmail(ctx context.Context, email, password, na
 		Password: string(hashedPassword),
 	}
 
-	if err := s.userRepo.Create(newUser); err != nil {
+	if err := s.userRepo.Create(ctx, newUser); err != nil {
 		return nil, err
 	}
 
@@ -78,7 +78,7 @@ func (s *serviceImpl) RegisterWithEmail(ctx context.Context, email, password, na
 }
 
 func (s *serviceImpl) LoginWithEmail(ctx context.Context, email, password string) (*LoginResult, error) {
-	existing, err := s.userRepo.FindByEmail(email)
+	existing, err := s.userRepo.FindByEmail(ctx, email)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +114,7 @@ func (s *serviceImpl) LoginWithEmail(ctx context.Context, email, password string
 }
 
 func (s *serviceImpl) SetPasswordForUser(ctx context.Context, email string, newPassword string) error {
-	user, err := s.userRepo.FindByEmail(email)
+	user, err := s.userRepo.FindByEmail(ctx, email)
 	if err != nil || user == nil {
 		return errors.New("user not found")
 	}
@@ -163,7 +163,7 @@ func (s *serviceImpl) LoginWithGoogleIDToken(ctx context.Context, idToken string
 		return nil, err
 	}
 
-	existing, err := s.userRepo.FindByEmail(gUser.Email)
+	existing, err := s.userRepo.FindByEmail(ctx, gUser.Email)
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +180,7 @@ func (s *serviceImpl) LoginWithGoogleIDToken(ctx context.Context, idToken string
 			Picture:  gUser.Picture,
 			Provider: "google",
 		}
-		if err := s.userRepo.Create(newUser); err != nil {
+		if err := s.userRepo.Create(ctx, newUser); err != nil {
 			return nil, err
 		}
 		user = newUser
@@ -209,7 +209,7 @@ func (s *serviceImpl) RefreshAccessToken(ctx context.Context, refreshToken strin
 		return "", err
 	}
 
-	user, err := s.userRepo.FindByEmail(email)
+	user, err := s.userRepo.FindByEmail(ctx, email)
 	if err != nil || user == nil {
 		return "", errors.New("user not found for refresh token")
 	}

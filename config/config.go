@@ -13,6 +13,7 @@ type Config struct {
 	RedisPassword  string
 	Port           string
 	GoogleClientID string
+	PostgreURL     string
 }
 
 func LoadConfig() Config {
@@ -26,6 +27,7 @@ func LoadConfig() Config {
 		RedisPassword:  os.Getenv("REDIS_PASSWORD"),
 		Port:           os.Getenv("PORT"),
 		GoogleClientID: os.Getenv("GOOGLE_CLIENT_ID"),
+		PostgreURL:     os.Getenv("POSTGRES_URL"),
 	}
 
 	return config

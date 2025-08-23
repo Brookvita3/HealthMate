@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"healthmate/internal/common"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -135,7 +136,7 @@ func (h *Handler) AppLogin(c *gin.Context) {
 }
 
 func (h *Handler) SetPassword(c *gin.Context) {
-	emailFromToken, exists := c.Get("email")
+	emailFromToken, exists := c.Get(string(common.UserIDKey))
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token context"})
 		return

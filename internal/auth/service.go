@@ -12,6 +12,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/api/idtoken"
 
+	"healthmate/internal/common"
 	"healthmate/pkg/jwtauth"
 )
 
@@ -151,8 +152,8 @@ func (s *serviceImpl) AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		c.Set("email", claims["email"])
-		c.Set("userId", claims["sub"])
+		c.Set(string(common.EmailKey), claims["email"])
+		c.Set(string(common.UserIDKey), claims["sub"])
 		c.Next()
 	}
 }

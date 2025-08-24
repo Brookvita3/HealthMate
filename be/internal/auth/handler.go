@@ -137,7 +137,7 @@ func (h *Handler) AppLogin(c *gin.Context) {
 }
 
 func (h *Handler) SetPassword(c *gin.Context) {
-	userIdfromToken, exists := c.Get(string(common.UserIDKey))
+	userIdfromToken, exists := c.Get(string(common.UserIdKey))
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token context"})
 		return

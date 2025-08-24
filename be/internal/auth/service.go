@@ -47,7 +47,7 @@ func NewAuthService(repo user.Repository, tokenService *jwtauth.TokenService, go
 }
 
 func (s *serviceImpl) RegisterWithEmail(ctx context.Context, email, password, name string) (*user.User, error) { // << CHANGED return type
-	existing, err := s.userRepo.FindByEmail(ctx, email)
+	existing, err := s.userRepo.GetUserByEmail(ctx, email)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (s *serviceImpl) RegisterWithEmail(ctx context.Context, email, password, na
 		Status:   "active",
 	}
 
-	if err := s.userRepo.Create(ctx, newUser); err != nil {
+	if err := s.userRepo.CreateUser(ctx, newUser); err != nil {
 		return nil, err
 	}
 
@@ -83,7 +83,7 @@ func (s *serviceImpl) RegisterWithEmail(ctx context.Context, email, password, na
 }
 
 func (s *serviceImpl) LoginWithEmail(ctx context.Context, email, password string) (*LoginResult, error) {
-	existing, err := s.userRepo.FindByEmail(ctx, email)
+	existing, err := s.userRepo.GetUserByEmail(ctx, email)
 	if err != nil {
 		return nil, err
 	}
@@ -125,11 +125,11 @@ func (s *serviceImpl) SetPasswordForUser(ctx context.Context, id string, newPass
 		return errors.New("failed to set new password")
 	}
 
-	userID, err := uuid.Parse(id)
+	userId, err := uuid.Parse(id)
 	if err != nil {
 		return errors.New("invalid user ID format")
 	}
-	return s.userRepo.UpdatePassword(ctx, userID, string(hashedPassword))
+	return s.userRepo.UpdatePassword(ctx, userId, string(hashedPassword))
 }
 
 func (s *serviceImpl) AuthMiddleware() gin.HandlerFunc {
@@ -156,7 +156,7 @@ func (s *serviceImpl) AuthMiddleware() gin.HandlerFunc {
 		}
 
 		c.Set(string(common.EmailKey), claims["email"])
-		c.Set(string(common.UserIDKey), claims["sub"])
+		c.Set(string(common.UserIdKey), claims["sub"])
 		c.Next()
 	}
 }
@@ -167,7 +167,7 @@ func (s *serviceImpl) LoginWithGoogleIDToken(ctx context.Context, idToken string
 		return nil, err
 	}
 
-	existing, err := s.userRepo.FindByEmail(ctx, gUser.Email)
+	existing, err := s.userRepo.GetUserByEmail(ctx, gUser.Email)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +187,7 @@ func (s *serviceImpl) LoginWithGoogleIDToken(ctx context.Context, idToken string
 			Role:     "user",
 			Status:   "active",
 		}
-		if err := s.userRepo.Create(ctx, newUser); err != nil {
+		if err := s.userRepo.CreateUser(ctx, newUser); err != nil {
 			return nil, err
 		}
 		userToAuth = newUser
@@ -216,12 +216,12 @@ func (s *serviceImpl) RefreshAccessToken(ctx context.Context, refreshToken strin
 		return "", err
 	}
 
-	userID, err := uuid.Parse(userIdStr)
+	userId, err := uuid.Parse(userIdStr)
 	if err != nil {
 		return "", errors.New("invalid user ID format in refresh token")
 	}
 
-	user, err := s.userRepo.FindByID(ctx, userID)
+	user, err := s.userRepo.GetUserByID(ctx, userId)
 	if err != nil || user == nil {
 		return "", errors.New("user not found for refresh token")
 	}

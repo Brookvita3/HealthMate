@@ -3,9 +3,9 @@ package user
 import (
 	"context"
 	"errors"
+	"strconv"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -19,8 +19,8 @@ func NewRepository(pool *pgxpool.Pool) Repository {
 	}
 }
 
-// Create inserts a new user record into the database.
-func (r *postgresRepository) Create(ctx context.Context, user *User) error {
+// CreateUser inserts a new user record into the database.
+func (r *postgresRepository) CreateUser(ctx context.Context, user *User) error {
 	query := `
 		INSERT INTO users (id, email, name, picture, role, status, provider, google_id, password)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
@@ -40,9 +40,9 @@ func (r *postgresRepository) Create(ctx context.Context, user *User) error {
 	return err
 }
 
-// FindByEmail searches for a user by email.
+// GetUserByEmail searches for a user by email.
 // Returns (nil, nil) if not found.
-func (r *postgresRepository) FindByEmail(ctx context.Context, email string) (*User, error) {
+func (r *postgresRepository) GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	query := `
 		SELECT id, email, name, picture, role, status, provider, google_id, password, created_at, updated_at
 		FROM users
@@ -52,9 +52,9 @@ func (r *postgresRepository) FindByEmail(ctx context.Context, email string) (*Us
 	return r.scanUser(row)
 }
 
-// FindByID searches for a user by ID (UUID).
+// GetUserByID searches for a user by ID (UUID).
 // Returns (nil, nil) if not found.
-func (r *postgresRepository) FindByID(ctx context.Context, id uuid.UUID) (*User, error) {
+func (r *postgresRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) {
 	query := `
 		SELECT id, email, name, picture, role, status, provider, google_id, password, created_at, updated_at
 		FROM users
@@ -83,10 +83,75 @@ func (r *postgresRepository) UpdatePassword(ctx context.Context, id uuid.UUID, p
 	return nil
 }
 
-// =====HELPER FUNCTIONS=====
+// ListUsers retrieves a list of users based on filter and pagination parameters.
+// It dynamically constructs the query to handle optional searching.
+func (r *postgresRepository) ListUsers(ctx context.Context, params ListUsersParams) ([]User, error) {
+	query := `SELECT id, email, name, picture, role, status, provider, google_id, password, created_at, updated_at
+			  FROM users
+			  WHERE status = "active"`
+	args := []any{}
+	argID := 1
 
-// scanUser is a helper function to scan a result row into a User struct.
-func (r *postgresRepository) scanUser(row pgx.Row) (*User, error) {
+	// Append a WHERE clause if a search term is provided.
+	if params.Search != "" {
+		query += ` WHERE name ILIKE $1 OR email ILIKE $1`
+		args = append(args, "%"+params.Search+"%")
+		argID++
+	}
+
+	// Add ordering and pagination using the current argument ID.
+	query += ` ORDER BY created_at DESC LIMIT $` + strconv.Itoa(argID) + ` OFFSET $` + strconv.Itoa(argID+1)
+	args = append(args, params.Limit)
+	args = append(args, params.Offset)
+
+	rows, err := r.pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []User
+	for rows.Next() {
+		user, err := r.scanUser(rows)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, *user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
+func (r *postgresRepository) UpdateUser(ctx context.Context, id uuid.UUID, params UpdateUserParams) error {
+	query := `UPDATE users SET name = $1, updated_at = NOW() WHERE id = $2`
+
+	cmdTag, err := r.pool.Exec(ctx, query, params.Name, id)
+	if err != nil {
+		return err
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return errors.New("user not found")
+	}
+	return nil
+}
+
+// =============================================================================
+// HELPER METHODS
+// =============================================================================
+
+// scannable defines a contract for types that can be scanned by pgx,
+// such as *pgx.Row and *pgx.Rows. This allows for a reusable scanUser function.
+type scannable interface {
+	Scan(dest ...any) error
+}
+
+// scanUser is a helper function that scans a database row into a User struct.
+// It accepts any type that satisfies the scannable interface.
+func (r *postgresRepository) scanUser(row scannable) (*User, error) {
 	var u User
 	err := row.Scan(
 		&u.ID,
@@ -103,9 +168,6 @@ func (r *postgresRepository) scanUser(row pgx.Row) (*User, error) {
 	)
 
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
-		}
 		return nil, err
 	}
 

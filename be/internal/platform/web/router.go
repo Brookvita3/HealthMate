@@ -58,8 +58,8 @@ func NewRouter(
 		profileGroup.Use(authHandler.AuthMiddleware())
 		profileGroup.GET("", func(c *gin.Context) {
 			email := c.GetString("email")
-			userID := c.GetString("userID")
-			c.JSON(http.StatusOK, gin.H{"email": email, "userID": userID})
+			userId := c.GetString("userId")
+			c.JSON(http.StatusOK, gin.H{"email": email, "userID": userId})
 		})
 	}
 

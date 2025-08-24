@@ -17,6 +17,7 @@ import (
 	"healthmate/internal/platform/cache"
 	"healthmate/internal/platform/web"
 	"healthmate/internal/realtime"
+	"healthmate/internal/user"
 	"healthmate/pkg/jwtauth"
 )
 
@@ -44,7 +45,7 @@ func main() {
 
 	runDBMigration(config.LoadConfig().PostgreURL)
 
-	userRepo := auth.NewRepository(pool)
+	userRepo := user.NewRepository(pool)
 
 	tokenService := jwtauth.NewTokenService(cfg.JWTSecret, redisClient)
 

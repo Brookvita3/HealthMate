@@ -9,17 +9,19 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/api/idtoken"
 
 	"healthmate/internal/common"
+	"healthmate/internal/user"
 	"healthmate/pkg/jwtauth"
 )
 
 type LoginResult struct {
-	User         *User
-	AccessToken  string
-	RefreshToken string
+	User         *user.User `json:"user"`
+	AccessToken  string     `json:"access_token"`
+	RefreshToken string     `json:"refresh_token"`
 }
 
 type gUser struct {
@@ -31,12 +33,12 @@ type gUser struct {
 }
 
 type serviceImpl struct {
-	userRepo       Repository
+	userRepo       user.Repository
 	tokenService   *jwtauth.TokenService
 	googleClientID string
 }
 
-func NewAuthService(repo Repository, tokenService *jwtauth.TokenService, googleClientID string) Service {
+func NewAuthService(repo user.Repository, tokenService *jwtauth.TokenService, googleClientID string) Service { // << CHANGED
 	return &serviceImpl{
 		userRepo:       repo,
 		tokenService:   tokenService,
@@ -44,7 +46,7 @@ func NewAuthService(repo Repository, tokenService *jwtauth.TokenService, googleC
 	}
 }
 
-func (s *serviceImpl) RegisterWithEmail(ctx context.Context, email, password, name string) (*User, error) {
+func (s *serviceImpl) RegisterWithEmail(ctx context.Context, email, password, name string) (*user.User, error) { // << CHANGED return type
 	existing, err := s.userRepo.FindByEmail(ctx, email)
 	if err != nil {
 		return nil, err
@@ -63,12 +65,14 @@ func (s *serviceImpl) RegisterWithEmail(ctx context.Context, email, password, na
 		return nil, errors.New("failed to process registration")
 	}
 
-	newUser := &User{
+	newUser := &user.User{
 		ID:       uuid.New(),
 		Email:    email,
 		Name:     name,
 		Provider: "HealthMate",
-		Password: string(hashedPassword),
+		Password: pgtype.Text{String: string(hashedPassword), Valid: true},
+		Role:     "user",
+		Status:   "active",
 	}
 
 	if err := s.userRepo.Create(ctx, newUser); err != nil {
@@ -88,11 +92,11 @@ func (s *serviceImpl) LoginWithEmail(ctx context.Context, email, password string
 		return nil, errors.New("invalid credentials")
 	}
 
-	if existing.Password == "" {
+	if !existing.Password.Valid {
 		return nil, errors.New("this account was created with Google, please log in using your Google account")
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(existing.Password), []byte(password))
+	err = bcrypt.CompareHashAndPassword([]byte(existing.Password.String), []byte(password))
 	if err != nil {
 		return nil, errors.New("invalid credentials")
 	}
@@ -114,19 +118,18 @@ func (s *serviceImpl) LoginWithEmail(ctx context.Context, email, password string
 	}, nil
 }
 
-func (s *serviceImpl) SetPasswordForUser(ctx context.Context, email string, newPassword string) error {
-	user, err := s.userRepo.FindByEmail(ctx, email)
-	if err != nil || user == nil {
-		return errors.New("user not found")
-	}
-
+func (s *serviceImpl) SetPasswordForUser(ctx context.Context, id string, newPassword string) error {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
-		log.Printf("Error hashing password for user %s: %v", email, err)
+		log.Printf("Error hashing password for user %s: %v", id, err)
 		return errors.New("failed to set new password")
 	}
 
-	return s.userRepo.SetPassword(ctx, email, string(hashedPassword))
+	userID, err := uuid.Parse(id)
+	if err != nil {
+		return errors.New("invalid user ID format")
+	}
+	return s.userRepo.UpdatePassword(ctx, userID, string(hashedPassword))
 }
 
 func (s *serviceImpl) AuthMiddleware() gin.HandlerFunc {
@@ -169,48 +172,56 @@ func (s *serviceImpl) LoginWithGoogleIDToken(ctx context.Context, idToken string
 		return nil, err
 	}
 
-	var user *User
+	var userToAuth *user.User
 	if existing != nil {
-		user = existing
+		userToAuth = existing
 	} else {
-		newUser := &User{
+		newUser := &user.User{
 			ID:       uuid.New(),
-			GoogleID: gUser.Sub,
 			Email:    gUser.Email,
 			Name:     gUser.Name,
-			Picture:  gUser.Picture,
 			Provider: "google",
+			GoogleID: pgtype.Text{String: gUser.Sub, Valid: true},
+			Picture:  pgtype.Text{String: gUser.Picture, Valid: true},
+			Password: pgtype.Text{Valid: false},
+			Role:     "user",
+			Status:   "active",
 		}
 		if err := s.userRepo.Create(ctx, newUser); err != nil {
 			return nil, err
 		}
-		user = newUser
+		userToAuth = newUser
 	}
 
-	accessToken, err := s.tokenService.GenerateAccessJWT(user.Email, user.ID.String())
+	accessToken, err := s.tokenService.GenerateAccessJWT(userToAuth.Email, userToAuth.ID.String())
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := s.tokenService.GenerateRefreshJWT(ctx, user.Email, user.ID.String())
+	refreshToken, err := s.tokenService.GenerateRefreshJWT(ctx, userToAuth.Email, userToAuth.ID.String())
 	if err != nil {
 		return nil, err
 	}
 
 	return &LoginResult{
-		User:         user,
+		User:         userToAuth,
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	}, nil
 }
 
 func (s *serviceImpl) RefreshAccessToken(ctx context.Context, refreshToken string) (string, error) {
-	userId, err := s.tokenService.ValidateRefreshToken(ctx, refreshToken)
+	userIdStr, err := s.tokenService.ValidateRefreshToken(ctx, refreshToken)
 	if err != nil {
 		return "", err
 	}
 
-	user, err := s.userRepo.FindByID(ctx, userId)
+	userID, err := uuid.Parse(userIdStr)
+	if err != nil {
+		return "", errors.New("invalid user ID format in refresh token")
+	}
+
+	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil || user == nil {
 		return "", errors.New("user not found for refresh token")
 	}

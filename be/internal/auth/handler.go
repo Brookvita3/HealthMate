@@ -3,13 +3,14 @@ package auth
 import (
 	"context"
 	"healthmate/internal/common"
+	"healthmate/internal/user"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
 type Service interface {
-	RegisterWithEmail(ctx context.Context, email, password, name string) (*User, error)
+	RegisterWithEmail(ctx context.Context, email, password, name string) (*user.User, error)
 	LoginWithGoogleIDToken(ctx context.Context, idToken string) (*LoginResult, error)
 	LoginWithEmail(ctx context.Context, email, password string) (*LoginResult, error)
 	SetPasswordForUser(ctx context.Context, userID, newPassword string) error
@@ -136,7 +137,7 @@ func (h *Handler) AppLogin(c *gin.Context) {
 }
 
 func (h *Handler) SetPassword(c *gin.Context) {
-	emailFromToken, exists := c.Get(string(common.UserIDKey))
+	userIdfromToken, exists := c.Get(string(common.UserIDKey))
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token context"})
 		return
@@ -151,13 +152,13 @@ func (h *Handler) SetPassword(c *gin.Context) {
 		return
 	}
 
-	emailStr, ok := emailFromToken.(string)
+	userId, ok := userIdfromToken.(string)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error: email format is incorrect"})
 		return
 	}
 
-	err := h.service.SetPasswordForUser(c.Request.Context(), emailStr, req.Password)
+	err := h.service.SetPasswordForUser(c.Request.Context(), userId, req.Password)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

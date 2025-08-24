@@ -1,7 +1,6 @@
 package web
 
 import (
-	"net/http"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -11,6 +10,7 @@ import (
 	"healthmate/internal/data"
 	"healthmate/internal/platform/web/middleware"
 	"healthmate/internal/realtime"
+	"healthmate/internal/user"
 )
 
 func SetupDataRoutes(r *gin.Engine, dataHandler *data.Handler) {
@@ -21,6 +21,7 @@ func NewRouter(
 	authHandler *auth.Handler,
 	dataHandler *data.Handler,
 	rtHandler *realtime.Handler,
+	userHandler *user.Handler,
 ) *gin.Engine {
 	r := gin.Default()
 
@@ -52,15 +53,13 @@ func NewRouter(
 		authGroup.POST("/password", authHandler.SetPassword)
 	}
 
-	// ===== Profile routes =====
-	profileGroup := apiV1.Group("/profile")
+	// ===== Users routes =====
+	userRoutes := apiV1.Group("/users")
+	userRoutes.Use(authHandler.AuthMiddleware())
 	{
-		profileGroup.Use(authHandler.AuthMiddleware())
-		profileGroup.GET("", func(c *gin.Context) {
-			email := c.GetString("email")
-			userId := c.GetString("userId")
-			c.JSON(http.StatusOK, gin.H{"email": email, "userID": userId})
-		})
+		userRoutes.GET("/me", userHandler.GetProfile)
+		userRoutes.PUT("/me", userHandler.UpdateProfile)
+		userRoutes.GET("", userHandler.ListUsers) // /api/v1/users?search=john&limit=10&offset=20
 	}
 
 	// ===== Health routes =====

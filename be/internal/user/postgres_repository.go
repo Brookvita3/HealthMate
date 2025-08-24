@@ -87,14 +87,13 @@ func (r *postgresRepository) UpdatePassword(ctx context.Context, id uuid.UUID, p
 // It dynamically constructs the query to handle optional searching.
 func (r *postgresRepository) ListUsers(ctx context.Context, params ListUsersParams) ([]User, error) {
 	query := `SELECT id, email, name, picture, role, status, provider, google_id, password, created_at, updated_at
-			  FROM users
-			  WHERE status = "active"`
+			  FROM users`
 	args := []any{}
 	argID := 1
 
 	// Append a WHERE clause if a search term is provided.
 	if params.Search != "" {
-		query += ` WHERE name ILIKE $1 OR email ILIKE $1`
+		query += ` WHERE name ILIKE $1 OR email ILIKE $1 AND status = 'active'`
 		args = append(args, "%"+params.Search+"%")
 		argID++
 	}

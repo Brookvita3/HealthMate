@@ -51,13 +51,17 @@ func main() {
 
 	authService := auth.NewAuthService(userRepo, tokenService, cfg.GoogleClientID)
 
+	userService := user.NewUserService(userRepo)
+
 	authHandler := auth.NewHandler(authService)
 
 	dataHandler := data.NewDataHandler()
 
 	rtHandler := realtime.NewHandler(rtManager)
 
-	router := web.NewRouter(authHandler, dataHandler, rtHandler)
+	userHandler := user.NewHandler(userService)
+
+	router := web.NewRouter(authHandler, dataHandler, rtHandler, userHandler)
 
 	application := app.NewApp(router)
 

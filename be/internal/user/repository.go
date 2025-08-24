@@ -33,4 +33,7 @@ type Repository interface {
 
 	// UpdateUser updates a user's mutable profile data.
 	UpdateUser(ctx context.Context, id uuid.UUID, params UpdateUserParams) error
+
+	// ListUsers retrieves a list of users based on filter and pagination parameters.
+	ListUsers(ctx context.Context, params ListUsersParams) ([]User, error)
 }

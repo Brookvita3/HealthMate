@@ -6,6 +6,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
+	"healthmate/internal/admin"
 	"healthmate/internal/auth"
 	"healthmate/internal/data"
 	"healthmate/internal/platform/web/middleware"
@@ -22,6 +23,7 @@ func NewRouter(
 	dataHandler *data.Handler,
 	rtHandler *realtime.Handler,
 	userHandler *user.Handler,
+	adminHandler *admin.Handler,
 ) *gin.Engine {
 	r := gin.Default()
 
@@ -64,16 +66,23 @@ func NewRouter(
 
 	// ===== Health routes =====
 	healthGroup := apiV1.Group("/health")
+	healthGroup.Use(authHandler.AuthMiddleware())
 	{
-		healthGroup.Use(authHandler.AuthMiddleware())
 		healthGroup.POST("", dataHandler.SendData)
 	}
 
 	// ===== Websocket routes =====
 	wsGroup := apiV1.Group("/ws")
+	wsGroup.Use(authHandler.AuthMiddleware())
 	{
-		wsGroup.Use(authHandler.AuthMiddleware())
 		wsGroup.GET("", rtHandler.ServeWs)
+	}
+
+	// ===== Admin routes =====
+	adminGroup := apiV1.Group("/admin")
+	adminGroup.Use(authHandler.AuthMiddleware(), middleware.AdminOnly())
+	{
+		adminGroup.GET("/users", adminHandler.ListUsers)
 	}
 
 	return r

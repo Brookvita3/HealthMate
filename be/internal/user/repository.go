@@ -11,6 +11,7 @@ type ListUsersParams struct {
 	Search string // A search query to filter by name or email.
 	Limit  int    // The number of users to return.
 	Offset int    // The starting point for the user list.
+	Status string // An optional filter for user status (e.g., 'active', 'banned').
 }
 
 // UpdateUserParams contains the parameters for updating a user's profile.

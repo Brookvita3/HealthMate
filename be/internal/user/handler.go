@@ -84,6 +84,7 @@ func (h *Handler) ListUsers(c *gin.Context) {
 		Search: search,
 		Limit:  limit,
 		Offset: offset,
+		Status: "active",
 	}
 
 	users, err := h.service.ListUsers(c.Request.Context(), params)

@@ -12,6 +12,7 @@ import (
 
 	"healthmate/app"
 	"healthmate/config"
+	"healthmate/internal/admin"
 	"healthmate/internal/auth"
 	"healthmate/internal/data"
 	"healthmate/internal/platform/cache"
@@ -53,6 +54,8 @@ func main() {
 
 	userService := user.NewUserService(userRepo)
 
+	adminService := admin.NewAdminService(userRepo)
+
 	authHandler := auth.NewHandler(authService)
 
 	dataHandler := data.NewDataHandler()
@@ -61,7 +64,9 @@ func main() {
 
 	userHandler := user.NewHandler(userService)
 
-	router := web.NewRouter(authHandler, dataHandler, rtHandler, userHandler)
+	adminHandler := admin.NewHandler(adminService)
+
+	router := web.NewRouter(authHandler, dataHandler, rtHandler, userHandler, adminHandler)
 
 	application := app.NewApp(router)
 

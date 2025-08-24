@@ -22,7 +22,7 @@ func NewTokenService(secret string, rdb *redis.Client) *TokenService {
 	}
 }
 
-func (t *TokenService) GenerateAccessJWT(email, id string) (string, error) {
+func (t *TokenService) GenerateAccessJWT(email, id, role string) (string, error) {
 
 	exp_time := 5 * time.Minute
 
@@ -30,6 +30,7 @@ func (t *TokenService) GenerateAccessJWT(email, id string) (string, error) {
 		"email": email,
 		"sub":   id,
 		"type":  "access",
+		"role":  role,
 		"exp":   time.Now().Add(exp_time).Unix(),
 		"iat":   time.Now().Unix(),
 	}
@@ -38,7 +39,7 @@ func (t *TokenService) GenerateAccessJWT(email, id string) (string, error) {
 	return token.SignedString([]byte(t.secret))
 }
 
-func (t *TokenService) GenerateRefreshJWT(ctx context.Context, email, id string) (string, error) {
+func (t *TokenService) GenerateRefreshJWT(ctx context.Context, email, id, role string) (string, error) {
 
 	jti := uuid.New().String()
 	exp_time := 1 * time.Hour
@@ -47,6 +48,7 @@ func (t *TokenService) GenerateRefreshJWT(ctx context.Context, email, id string)
 		"email": email,
 		"sub":   id,
 		"type":  "refresh",
+		"role":  role,
 		"exp":   time.Now().Add(exp_time).Unix(),
 		"iat":   time.Now().Unix(),
 		"jti":   jti,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -84,21 +85,35 @@ func (r *postgresRepository) UpdatePassword(ctx context.Context, id uuid.UUID, p
 }
 
 // ListUsers retrieves a list of users based on filter and pagination parameters.
-// It dynamically constructs the query to handle optional searching.
+// It dynamically and safely constructs the query to handle optional filters.
 func (r *postgresRepository) ListUsers(ctx context.Context, params ListUsersParams) ([]User, error) {
 	query := `SELECT id, email, name, picture, role, status, provider, google_id, password, created_at, updated_at
 			  FROM users`
-	args := []any{}
-	argID := 1
 
-	// Append a WHERE clause if a search term is provided.
+	var conditions []string
+	var args []any
+	argID := 1 // Argument placeholder counter ($1, $2, etc.)
+
+	// Condition 1: Add a status filter IF it's provided in the params.
+	if params.Status != "" {
+		conditions = append(conditions, "status = $"+strconv.Itoa(argID))
+		args = append(args, params.Status)
+		argID++
+	}
+
+	// Condition 2: Add a search filter if a search term is provided.
 	if params.Search != "" {
-		query += ` WHERE name ILIKE $1 OR email ILIKE $1 AND status = 'active'`
+		condition := "(name ILIKE $" + strconv.Itoa(argID) + " OR email ILIKE $" + strconv.Itoa(argID) + ")"
+		conditions = append(conditions, condition)
 		args = append(args, "%"+params.Search+"%")
 		argID++
 	}
 
-	// Add ordering and pagination using the current argument ID.
+	// If there are any conditions, join them with "AND" and append to the main query.
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+
 	query += ` ORDER BY created_at DESC LIMIT $` + strconv.Itoa(argID) + ` OFFSET $` + strconv.Itoa(argID+1)
 	args = append(args, params.Limit)
 	args = append(args, params.Offset)

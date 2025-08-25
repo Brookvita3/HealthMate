@@ -83,6 +83,8 @@ func NewRouter(
 	adminGroup.Use(authHandler.AuthMiddleware(), middleware.AdminOnly())
 	{
 		adminGroup.GET("/users", adminHandler.ListUsers)
+		adminGroup.PUT("/users/:userId/ban", adminHandler.BanUser)
+		adminGroup.PUT("/users/:userId/unban", adminHandler.UnbanUser)
 	}
 
 	return r

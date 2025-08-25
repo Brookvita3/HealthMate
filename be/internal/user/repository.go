@@ -37,4 +37,7 @@ type Repository interface {
 
 	// ListUsers retrieves a list of users based on filter and pagination parameters.
 	ListUsers(ctx context.Context, params ListUsersParams) ([]User, error)
+
+	// UpdateStatus changes a user's status (e.g., to 'banned').
+	UpdateStatus(ctx context.Context, id uuid.UUID, status string) error
 }

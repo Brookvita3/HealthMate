@@ -4,10 +4,14 @@ import (
 	"context"
 
 	"healthmate/internal/user"
+
+	"github.com/google/uuid"
 )
 
 type Service interface {
 	ListUsers(ctx context.Context, params user.ListUsersParams) ([]user.User, error)
+	BanUser(ctx context.Context, id uuid.UUID) error
+	UnbanUser(ctx context.Context, id uuid.UUID) error
 }
 
 type serviceImpl struct {
@@ -27,4 +31,12 @@ func (s *serviceImpl) ListUsers(ctx context.Context, params user.ListUsersParams
 		params.Limit = 20
 	}
 	return s.userRepo.ListUsers(ctx, params)
+}
+
+func (s *serviceImpl) BanUser(ctx context.Context, id uuid.UUID) error {
+	return s.userRepo.UpdateStatus(ctx, id, "banned")
+}
+
+func (s *serviceImpl) UnbanUser(ctx context.Context, id uuid.UUID) error {
+	return s.userRepo.UpdateStatus(ctx, id, "active")
 }

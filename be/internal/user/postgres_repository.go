@@ -153,6 +153,19 @@ func (r *postgresRepository) UpdateUser(ctx context.Context, id uuid.UUID, param
 	return nil
 }
 
+func (r *postgresRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status string) error {
+	query := `UPDATE users SET status = $1, updated_at = NOW() WHERE id = $2`
+
+	cmdTag, err := r.pool.Exec(ctx, query, status, id)
+	if err != nil {
+		return err
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return errors.New("user not found")
+	}
+	return nil
+}
+
 // =============================================================================
 // HELPER METHODS
 // =============================================================================

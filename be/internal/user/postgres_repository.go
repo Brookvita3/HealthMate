@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -20,7 +21,6 @@ func NewRepository(pool *pgxpool.Pool) Repository {
 	}
 }
 
-// CreateUser inserts a new user record into the database.
 func (r *postgresRepository) CreateUser(ctx context.Context, user *User) error {
 	query := `
 		INSERT INTO users (id, email, name, picture, role, status, provider, google_id, password)
@@ -41,8 +41,6 @@ func (r *postgresRepository) CreateUser(ctx context.Context, user *User) error {
 	return err
 }
 
-// GetUserByEmail searches for a user by email.
-// Returns (nil, nil) if not found.
 func (r *postgresRepository) GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	query := `
 		SELECT id, email, name, picture, role, status, provider, google_id, password, created_at, updated_at
@@ -50,11 +48,17 @@ func (r *postgresRepository) GetUserByEmail(ctx context.Context, email string) (
 		WHERE email = $1`
 
 	row := r.pool.QueryRow(ctx, query, email)
-	return r.scanUser(row)
+
+	user, err := r.scanUser(row)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrUserNotFound
+		}
+		return nil, err
+	}
+	return user, nil
 }
 
-// GetUserByID searches for a user by ID (UUID).
-// Returns (nil, nil) if not found.
 func (r *postgresRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) {
 	query := `
 		SELECT id, email, name, picture, role, status, provider, google_id, password, created_at, updated_at
@@ -62,10 +66,17 @@ func (r *postgresRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*Us
 		WHERE id = $1`
 
 	row := r.pool.QueryRow(ctx, query, id)
-	return r.scanUser(row)
+
+	user, err := r.scanUser(row)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrUserNotFound
+		}
+		return nil, err
+	}
+	return user, nil
 }
 
-// UpdatePassword updates the hashed password for the user with the given email.
 func (r *postgresRepository) UpdatePassword(ctx context.Context, id uuid.UUID, passwordHash string) error {
 	query := `
 		UPDATE users
@@ -78,14 +89,12 @@ func (r *postgresRepository) UpdatePassword(ctx context.Context, id uuid.UUID, p
 	}
 
 	if cmdTag.RowsAffected() == 0 {
-		return errors.New("user not found or password unchanged")
+		return ErrUserNotFound
 	}
 
 	return nil
 }
 
-// ListUsers retrieves a list of users based on filter and pagination parameters.
-// It dynamically and safely constructs the query to handle optional filters.
 func (r *postgresRepository) ListUsers(ctx context.Context, params ListUsersParams) ([]User, error) {
 	query := `SELECT id, email, name, picture, role, status, provider, google_id, password, created_at, updated_at
 			  FROM users`
@@ -114,6 +123,7 @@ func (r *postgresRepository) ListUsers(ctx context.Context, params ListUsersPara
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
 
+	// Add ordering and pagination.
 	query += ` ORDER BY created_at DESC LIMIT $` + strconv.Itoa(argID) + ` OFFSET $` + strconv.Itoa(argID+1)
 	args = append(args, params.Limit)
 	args = append(args, params.Offset)
@@ -148,7 +158,7 @@ func (r *postgresRepository) UpdateUser(ctx context.Context, id uuid.UUID, param
 		return err
 	}
 	if cmdTag.RowsAffected() == 0 {
-		return errors.New("user not found")
+		return ErrUserNotFound
 	}
 	return nil
 }
@@ -161,7 +171,7 @@ func (r *postgresRepository) UpdateStatus(ctx context.Context, id uuid.UUID, sta
 		return err
 	}
 	if cmdTag.RowsAffected() == 0 {
-		return errors.New("user not found")
+		return ErrUserNotFound
 	}
 	return nil
 }

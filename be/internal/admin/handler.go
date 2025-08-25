@@ -1,13 +1,14 @@
-// Package admin provides HTTP handlers for administrative endpoints.
 package admin
 
 import (
-	"healthmate/internal/user"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+
+	"healthmate/internal/common"
+	"healthmate/internal/user"
 )
 
 const (
@@ -47,7 +48,7 @@ func (h *Handler) ListUsers(c *gin.Context) {
 
 	users, err := h.service.ListUsers(c.Request.Context(), params)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list users"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -59,18 +60,18 @@ func (h *Handler) ListUsers(c *gin.Context) {
 }
 
 func (h *Handler) BanUser(c *gin.Context) {
-	userID, err := uuid.Parse(c.Param("userId"))
+	id, err := uuid.Parse(c.Param("userId"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID format"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": common.ErrInvalidUUIDFormat.Error()})
 		return
 	}
 
-	if err := h.service.BanUser(c.Request.Context(), userID); err != nil {
-		if err.Error() == "user not found" {
+	if err := h.service.BanUser(c.Request.Context(), id); err != nil {
+		if err.Error() == user.ErrUserNotFound.Error() {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to ban user"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -78,18 +79,18 @@ func (h *Handler) BanUser(c *gin.Context) {
 }
 
 func (h *Handler) UnbanUser(c *gin.Context) {
-	userID, err := uuid.Parse(c.Param("userId"))
+	id, err := uuid.Parse(c.Param("userId"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID format"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": common.ErrMissingContextParam.Error()})
 		return
 	}
 
-	if err := h.service.UnbanUser(c.Request.Context(), userID); err != nil {
-		if err.Error() == "user not found" {
+	if err := h.service.UnbanUser(c.Request.Context(), id); err != nil {
+		if err.Error() == user.ErrUserNotFound.Error() {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to unban user"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 

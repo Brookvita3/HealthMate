@@ -20,24 +20,30 @@ type UpdateUserParams struct {
 }
 
 type Repository interface {
-	// GetUserByEmail retrieves a single user by their unique email address.
+	// GetUserByEmail searches for a user by email.
+	// It returns ErrUserNotFound if no user is found.
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
 
-	// GetUserByID retrieves a single user by their unique ID.
+	// GetUserByID searches for a user by id (UUID).
+	// It returns ErrUserNotFound if no user is found.
 	GetUserByID(ctx context.Context, id uuid.UUID) (*User, error)
 
-	// CreateUser creates a new user in the database.
+	// CreateUser inserts a new user record into the database.
 	CreateUser(ctx context.Context, user *User) error
 
-	// UpdatePassword updates a user's password hash.
+	// UpdatePassword updates the hashed password for the user with the given email.
+	// It returns ErrUserNotFound if no user is found.
 	UpdatePassword(ctx context.Context, id uuid.UUID, passwordHash string) error
 
-	// UpdateUser updates a user's mutable profile data.
+	// UpdateUser updates a user's mutable profile data (e.g., name).
+	// It returns ErrUserNotFound if no user is found.
 	UpdateUser(ctx context.Context, id uuid.UUID, params UpdateUserParams) error
 
 	// ListUsers retrieves a list of users based on filter and pagination parameters.
+	// It dynamically and safely constructs the query to handle optional filters.
 	ListUsers(ctx context.Context, params ListUsersParams) ([]User, error)
 
-	// UpdateStatus changes a user's status (e.g., to 'banned').
+	// UpdateStatus changes the status of a user.
+	// It returns ErrUserNotFound if no user is found.
 	UpdateStatus(ctx context.Context, id uuid.UUID, status string) error
 }

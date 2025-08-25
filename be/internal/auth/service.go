@@ -32,6 +32,16 @@ type gUser struct {
 	Sub           string `json:"sub"`
 }
 
+type Service interface {
+	RegisterWithEmail(ctx context.Context, email, password, name string) (*user.User, error)
+	LoginWithGoogleIDToken(ctx context.Context, idToken string) (*LoginResult, error)
+	LoginWithEmail(ctx context.Context, email, password string) (*LoginResult, error)
+	SetPasswordForUser(ctx context.Context, id uuid.UUID, newPassword string) error
+	RefreshAccessToken(ctx context.Context, refreshToken string) (string, error)
+	Logout(ctx context.Context, refreshToken string) error
+	AuthMiddleware() gin.HandlerFunc
+}
+
 type serviceImpl struct {
 	userRepo       user.Repository
 	tokenService   *jwtauth.TokenService
@@ -48,21 +58,21 @@ func NewAuthService(repo user.Repository, tokenService *jwtauth.TokenService, go
 
 func (s *serviceImpl) RegisterWithEmail(ctx context.Context, email, password, name string) (*user.User, error) { // << CHANGED return type
 	existing, err := s.userRepo.GetUserByEmail(ctx, email)
-	if err != nil {
+	if err != nil && !errors.Is(err, user.ErrUserNotFound) {
 		return nil, err
 	}
 
 	if existing != nil {
 		if existing.Provider == "google" {
-			return nil, errors.New("this email is already associated with a Google account. Please log in with Google and set a password in your account settings")
+			return nil, user.ErrEmailAssociatedWithGoogle
 		}
-		return nil, errors.New("user with this email already exists")
+		return nil, user.ErrUserAlreadyExists
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Printf("Error hashing password: %v", err)
-		return nil, errors.New("failed to process registration")
+		return nil, common.ErrInternalServer
 	}
 
 	newUser := &user.User{
@@ -85,20 +95,16 @@ func (s *serviceImpl) RegisterWithEmail(ctx context.Context, email, password, na
 func (s *serviceImpl) LoginWithEmail(ctx context.Context, email, password string) (*LoginResult, error) {
 	existing, err := s.userRepo.GetUserByEmail(ctx, email)
 	if err != nil {
-		return nil, err
-	}
-
-	if existing == nil {
-		return nil, errors.New("invalid credentials")
+		return nil, user.ErrInvalidCredentials
 	}
 
 	if !existing.Password.Valid {
-		return nil, errors.New("this account was created with Google, please log in using your Google account")
+		return nil, user.ErrPasswordNotSet
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(existing.Password.String), []byte(password))
 	if err != nil {
-		return nil, errors.New("invalid credentials")
+		return nil, user.ErrInvalidCredentials
 	}
 
 	accessToken, err := s.tokenService.GenerateAccessJWT(existing.Email, existing.ID.String(), existing.Role)
@@ -118,18 +124,13 @@ func (s *serviceImpl) LoginWithEmail(ctx context.Context, email, password string
 	}, nil
 }
 
-func (s *serviceImpl) SetPasswordForUser(ctx context.Context, id string, newPassword string) error {
+func (s *serviceImpl) SetPasswordForUser(ctx context.Context, id uuid.UUID, newPassword string) error {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
 		log.Printf("Error hashing password for user %s: %v", id, err)
-		return errors.New("failed to set new password")
+		return common.ErrInternalServer
 	}
-
-	userId, err := uuid.Parse(id)
-	if err != nil {
-		return errors.New("invalid user ID format")
-	}
-	return s.userRepo.UpdatePassword(ctx, userId, string(hashedPassword))
+	return s.userRepo.UpdatePassword(ctx, id, string(hashedPassword))
 }
 
 func (s *serviceImpl) AuthMiddleware() gin.HandlerFunc {
@@ -169,7 +170,7 @@ func (s *serviceImpl) LoginWithGoogleIDToken(ctx context.Context, idToken string
 	}
 
 	existing, err := s.userRepo.GetUserByEmail(ctx, gUser.Email)
-	if err != nil {
+	if err != nil && !errors.Is(err, user.ErrUserNotFound) {
 		return nil, err
 	}
 
@@ -194,12 +195,12 @@ func (s *serviceImpl) LoginWithGoogleIDToken(ctx context.Context, idToken string
 		userToAuth = newUser
 	}
 
-	accessToken, err := s.tokenService.GenerateAccessJWT(userToAuth.Email, userToAuth.ID.String(), existing.Role)
+	accessToken, err := s.tokenService.GenerateAccessJWT(userToAuth.Email, userToAuth.ID.String(), userToAuth.Role)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := s.tokenService.GenerateRefreshJWT(ctx, userToAuth.Email, userToAuth.ID.String(), existing.Role)
+	refreshToken, err := s.tokenService.GenerateRefreshJWT(ctx, userToAuth.Email, userToAuth.ID.String(), userToAuth.Role)
 	if err != nil {
 		return nil, err
 	}
@@ -212,35 +213,29 @@ func (s *serviceImpl) LoginWithGoogleIDToken(ctx context.Context, idToken string
 }
 
 func (s *serviceImpl) RefreshAccessToken(ctx context.Context, refreshToken string) (string, error) {
-	userIdStr, err := s.tokenService.ValidateRefreshToken(ctx, refreshToken)
+	userId, err := s.tokenService.ValidateRefreshToken(ctx, refreshToken)
 	if err != nil {
 		return "", err
 	}
 
-	userId, err := uuid.Parse(userIdStr)
+	id, err := uuid.Parse(userId)
 	if err != nil {
-		return "", errors.New("invalid user ID format in refresh token")
+		return "", common.ErrInvalidUUIDFormat
 	}
 
-	user, err := s.userRepo.GetUserByID(ctx, userId)
-	if err != nil || user == nil {
-		return "", errors.New("user not found for refresh token")
-	}
-
-	newAccessToken, err := s.tokenService.GenerateAccessJWT(user.Email, user.ID.String(), user.Role)
+	user, err := s.userRepo.GetUserByID(ctx, id)
 	if err != nil {
-		log.Printf("error when generating new access token for %s: %v", user.Email, err)
-		return "", errors.New("failed to generate new access token")
+		return "", err
 	}
 
-	return newAccessToken, nil
+	return s.tokenService.GenerateAccessJWT(user.Email, user.ID.String(), user.Role)
 }
 
 func (s *serviceImpl) Logout(ctx context.Context, refreshToken string) error {
 	err := s.tokenService.RevokeRefreshToken(ctx, refreshToken)
 	if err != nil {
 		log.Printf("error when revoking refresh token: %v", err)
-		return errors.New("failed to revoke refresh token")
+		return err
 	}
 	return nil
 }
@@ -249,7 +244,7 @@ func (s *serviceImpl) verifyGoogleIDToken(ctx context.Context, idToken string) (
 	payload, err := idtoken.Validate(ctx, idToken, s.googleClientID)
 	if err != nil {
 		log.Println("error when verifying ID token:", err)
-		return nil, errors.New("invalid Google token")
+		return nil, common.ErrInvalidRequest
 	}
 
 	gUser := &gUser{

@@ -1,23 +1,13 @@
 package auth
 
 import (
-	"context"
-	"healthmate/internal/common"
-	"healthmate/internal/user"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
-)
+	"healthmate/internal/common"
 
-type Service interface {
-	RegisterWithEmail(ctx context.Context, email, password, name string) (*user.User, error)
-	LoginWithGoogleIDToken(ctx context.Context, idToken string) (*LoginResult, error)
-	LoginWithEmail(ctx context.Context, email, password string) (*LoginResult, error)
-	SetPasswordForUser(ctx context.Context, userID, newPassword string) error
-	RefreshAccessToken(ctx context.Context, refreshToken string) (string, error)
-	Logout(ctx context.Context, refreshToken string) error
-	AuthMiddleware() gin.HandlerFunc
-}
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+)
 
 type Handler struct {
 	service Service
@@ -36,7 +26,7 @@ func (h *Handler) GoogleLogin(c *gin.Context) {
 		IDToken string `json:"id_token"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": common.ErrInvalidRequest.Error()})
 		return
 	}
 
@@ -58,7 +48,7 @@ func (h *Handler) RefreshToken(c *gin.Context) {
 		RefreshToken string `json:"refresh_token"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": common.ErrInvalidRequest.Error()})
 		return
 	}
 
@@ -78,7 +68,7 @@ func (h *Handler) LogOut(c *gin.Context) {
 		RefreshToken string `json:"refresh_token"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": common.ErrInvalidRequest.Error()})
 		return
 	}
 
@@ -99,7 +89,7 @@ func (h *Handler) Register(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": common.ErrInvalidRequest.Error()})
 		return
 	}
 
@@ -119,7 +109,7 @@ func (h *Handler) AppLogin(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": common.ErrInvalidRequest.Error()})
 		return
 	}
 
@@ -139,7 +129,7 @@ func (h *Handler) AppLogin(c *gin.Context) {
 func (h *Handler) SetPassword(c *gin.Context) {
 	userIdfromToken, exists := c.Get(string(common.UserIdKey))
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token context"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": common.ErrMissingContextParam.Error()})
 		return
 	}
 
@@ -148,18 +138,17 @@ func (h *Handler) SetPassword(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": common.ErrInvalidRequest.Error()})
 		return
 	}
 
-	userId, ok := userIdfromToken.(string)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error: email format is incorrect"})
-		return
-	}
-
-	err := h.service.SetPasswordForUser(c.Request.Context(), userId, req.Password)
+	id, err := uuid.Parse(userIdfromToken.(string))
 	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": common.ErrInvalidUUIDFormat.Error()})
+		return
+	}
+
+	if err := h.service.SetPasswordForUser(c.Request.Context(), id, req.Password); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

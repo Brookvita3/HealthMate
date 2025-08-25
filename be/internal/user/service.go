@@ -2,7 +2,7 @@ package user
 
 import (
 	"context"
-	"errors"
+	"healthmate/internal/common"
 
 	"github.com/google/uuid"
 )
@@ -22,19 +22,12 @@ func NewUserService(repo Repository) Service {
 }
 
 func (s *serviceImpl) GetUserProfile(ctx context.Context, id uuid.UUID) (*User, error) {
-	user, err := s.repo.GetUserByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	if user == nil {
-		return nil, errors.New("user not found")
-	}
-	return user, nil
+	return s.repo.GetUserByID(ctx, id)
 }
 
 func (s *serviceImpl) UpdateUserProfile(ctx context.Context, id uuid.UUID, params UpdateUserParams) error {
 	if params.Name == "" {
-		return errors.New("user name cannot be empty")
+		return common.ErrInvalidRequest
 	}
 	return s.repo.UpdateUser(ctx, id, params)
 }

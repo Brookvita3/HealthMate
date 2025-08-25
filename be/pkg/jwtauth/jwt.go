@@ -88,6 +88,7 @@ func (t *TokenService) ValidateJWT(tokenString string) (jwt.MapClaims, error) {
 	return nil, errors.New("invalid token")
 }
 
+// Return userId from refresh token if valid
 func (t *TokenService) ValidateRefreshToken(ctx context.Context, refreshToken string) (string, error) {
 
 	claims, err := t.ValidateJWT(refreshToken)

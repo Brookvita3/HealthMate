@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"healthmate/internal/common" // Assuming this is where your context keys are defined
+	"healthmate/internal/common"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -24,25 +24,25 @@ func NewHandler(s Service) *Handler {
 }
 
 func (h *Handler) GetProfile(c *gin.Context) {
-	userIDStr, exists := c.Get(string(common.UserIdKey))
+	userId, exists := c.Get(string(common.UserIdKey))
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "user ID not found in token context"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": common.ErrMissingContextParam.Error()})
 		return
 	}
 
-	userID, err := uuid.Parse(userIDStr.(string))
+	id, err := uuid.Parse(userId.(string))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID format in token"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": common.ErrInvalidUUIDFormat.Error()})
 		return
 	}
 
-	profile, err := h.service.GetUserProfile(c.Request.Context(), userID)
+	profile, err := h.service.GetUserProfile(c.Request.Context(), id)
 	if err != nil {
-		if err.Error() == "user not found" {
+		if err == ErrUserNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not retrieve profile"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": common.ErrInternalServer.Error()})
 		return
 	}
 
@@ -50,16 +50,24 @@ func (h *Handler) GetProfile(c *gin.Context) {
 }
 
 func (h *Handler) UpdateProfile(c *gin.Context) {
-	userIDStr, _ := c.Get(string(common.UserIdKey))
-	userID, _ := uuid.Parse(userIDStr.(string))
-
-	var req UpdateUserParams
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body: " + err.Error()})
+	userId, exists := c.Get(string(common.UserIdKey))
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": common.ErrMissingContextParam.Error()})
+		return
+	}
+	id, err := uuid.Parse(userId.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": common.ErrInvalidUUIDFormat.Error()})
 		return
 	}
 
-	if err := h.service.UpdateUserProfile(c.Request.Context(), userID, req); err != nil {
+	var req UpdateUserParams
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": common.ErrInvalidRequest.Error()})
+		return
+	}
+
+	if err := h.service.UpdateUserProfile(c.Request.Context(), id, req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -89,7 +97,7 @@ func (h *Handler) ListUsers(c *gin.Context) {
 
 	users, err := h.service.ListUsers(c.Request.Context(), params)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list users"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 

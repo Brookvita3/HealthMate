@@ -9,7 +9,8 @@ import (
 
 type Config struct {
 	JWTSecret      string
-	RedisAddr      string
+	RedisURL       string
+	RedisUsername  string
 	RedisPassword  string
 	Port           string
 	GoogleClientID string
@@ -23,7 +24,8 @@ func LoadConfig() Config {
 
 	config := Config{
 		JWTSecret:      os.Getenv("JWT_SECRET"),
-		RedisAddr:      os.Getenv("REDIS_ADDR"),
+		RedisURL:       os.Getenv("REDIS_URL"),
+		RedisUsername:  os.Getenv("REDIS_USERNAME"),
 		RedisPassword:  os.Getenv("REDIS_PASSWORD"),
 		Port:           os.Getenv("PORT"),
 		GoogleClientID: os.Getenv("GOOGLE_CLIENT_ID"),

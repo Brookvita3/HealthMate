@@ -2,19 +2,27 @@ package cache
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"time"
 
 	"github.com/redis/go-redis/v9"
 )
 
-func NewRedisClient(addr, password string, db int) (*redis.Client, error) {
-	// 1. Tạo client với các tùy chọn
-	client := redis.NewClient(&redis.Options{
+func NewRedisClient(addr, username, password string, db int, useTLS bool) (*redis.Client, error) {
+
+	opts := &redis.Options{
 		Addr:     addr,
+		Username: username,
 		Password: password,
 		DB:       db,
-	})
+	}
+
+	if useTLS {
+		opts.TLSConfig = &tls.Config{}
+	}
+
+	client := redis.NewClient(opts)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

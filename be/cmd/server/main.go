@@ -25,8 +25,8 @@ import (
 func main() {
 	cfg := config.LoadConfig()
 
-	redisClient, err := cache.NewRedisClient(cfg.RedisAddr, cfg.RedisPassword, 0)
-	log.Printf("Redis URL: %s", config.LoadConfig().RedisAddr)
+	redisClient, err := cache.NewRedisClient(cfg.RedisURL, cfg.RedisUsername, cfg.RedisPassword, 0, true)
+	log.Printf("Redis URL: %s", config.LoadConfig().RedisURL)
 	if err != nil {
 		log.Fatal(err.Error())
 	}

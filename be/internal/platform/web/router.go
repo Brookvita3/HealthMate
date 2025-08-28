@@ -8,6 +8,7 @@ import (
 
 	"healthmate/internal/admin"
 	"healthmate/internal/auth"
+	"healthmate/internal/connection"
 	"healthmate/internal/data"
 	"healthmate/internal/platform/web/middleware"
 	"healthmate/internal/realtime"
@@ -24,6 +25,7 @@ func NewRouter(
 	rtHandler *realtime.Handler,
 	userHandler *user.Handler,
 	adminHandler *admin.Handler,
+	connHandler *connection.Handler,
 ) *gin.Engine {
 	r := gin.Default()
 
@@ -85,6 +87,16 @@ func NewRouter(
 		adminGroup.GET("/users", adminHandler.ListUsers)
 		adminGroup.PUT("/users/:userId/ban", adminHandler.BanUser)
 		adminGroup.PUT("/users/:userId/unban", adminHandler.UnbanUser)
+	}
+
+	// ===== Connection routes =====
+	connGroup := apiV1.Group("/connections")
+	connGroup.Use(authHandler.AuthMiddleware())
+	{
+		connGroup.POST("", connHandler.SendRequest)
+		connGroup.PUT("/request/:requesterId", connHandler.RespondToRequest)
+		connGroup.GET("/:userId", connHandler.GetConnectionByPair)
+		connGroup.DELETE("/:userId", connHandler.DeleteConnection)
 	}
 
 	return r

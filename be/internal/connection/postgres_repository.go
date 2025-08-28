@@ -18,11 +18,11 @@ func NewRepository(pool *pgxpool.Pool) Repository {
 }
 
 func (r *postgresRepository) Create(ctx context.Context, conn *Connection) error {
-	u1, u2 := orderUserIDs(conn.UserOneID, conn.UserTwoID)
+	u1, u2 := orderUserIDs(conn.UserOneId, conn.UserTwoId)
 
 	query := `INSERT INTO connections (user_one_id, user_two_id, requester_id, status)
 			  VALUES ($1, $2, $3, $4)`
-	_, err := r.pool.Exec(ctx, query, u1, u2, conn.RequesterID, conn.Status)
+	_, err := r.pool.Exec(ctx, query, u1, u2, conn.RequesterId, conn.Status)
 
 	return err
 }
@@ -142,9 +142,9 @@ type scannable interface {
 func (r *postgresRepository) scanConnection(row scannable) (*Connection, error) {
 	var conn Connection
 	err := row.Scan(
-		&conn.UserOneID,
-		&conn.UserTwoID,
-		&conn.RequesterID,
+		&conn.UserOneId,
+		&conn.UserTwoId,
+		&conn.RequesterId,
 		&conn.Status,
 		&conn.CreatedAt,
 		&conn.UpdatedAt,

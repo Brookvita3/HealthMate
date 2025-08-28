@@ -16,9 +16,9 @@ const (
 
 // Connection đại diện cho một mối quan hệ giữa hai người dùng.
 type Connection struct {
-	UserOneID   uuid.UUID `json:"user_one_id" db:"user_one_id"`
-	UserTwoID   uuid.UUID `json:"user_two_id" db:"user_two_id"`
-	RequesterID uuid.UUID `json:"requester_id" db:"requester_id"`
+	UserOneId   uuid.UUID `json:"user_one_id" db:"user_one_id"`
+	UserTwoId   uuid.UUID `json:"user_two_id" db:"user_two_id"`
+	RequesterId uuid.UUID `json:"requester_id" db:"requester_id"`
 	Status      Status    `json:"status" db:"status"`
 	CreatedAt   time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`

@@ -14,6 +14,7 @@ import (
 	"healthmate/config"
 	"healthmate/internal/admin"
 	"healthmate/internal/auth"
+	"healthmate/internal/connection"
 	"healthmate/internal/data"
 	"healthmate/internal/platform/cache"
 	"healthmate/internal/platform/web"
@@ -25,7 +26,7 @@ import (
 func main() {
 	cfg := config.LoadConfig()
 
-	redisClient, err := cache.NewRedisClient(cfg.RedisURL, cfg.RedisUsername, cfg.RedisPassword, 0, true)
+	redisClient, err := cache.NewRedisClient(cfg.RedisURL, cfg.RedisUsername, cfg.RedisPassword, 0, false)
 	log.Printf("Redis URL: %s", config.LoadConfig().RedisURL)
 	if err != nil {
 		log.Fatal(err.Error())
@@ -48,6 +49,8 @@ func main() {
 
 	userRepo := user.NewRepository(pool)
 
+	connRepo := connection.NewRepository(pool)
+
 	tokenService := jwtauth.NewTokenService(cfg.JWTSecret, redisClient)
 
 	authService := auth.NewAuthService(userRepo, tokenService, cfg.GoogleClientID)
@@ -55,6 +58,8 @@ func main() {
 	userService := user.NewUserService(userRepo)
 
 	adminService := admin.NewAdminService(userRepo)
+
+	connService := connection.NewService(connRepo, userRepo)
 
 	authHandler := auth.NewHandler(authService)
 
@@ -66,7 +71,9 @@ func main() {
 
 	adminHandler := admin.NewHandler(adminService)
 
-	router := web.NewRouter(authHandler, dataHandler, rtHandler, userHandler, adminHandler)
+	connHandler := connection.NewHandler(connService)
+
+	router := web.NewRouter(authHandler, dataHandler, rtHandler, userHandler, adminHandler, connHandler)
 
 	application := app.NewApp(router)
 

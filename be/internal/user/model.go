@@ -7,7 +7,7 @@ import (
 )
 
 type User struct {
-	ID      uuid.UUID   `json:"id" db:"id"`
+	Id      uuid.UUID   `json:"id" db:"id"`
 	Email   string      `json:"email" db:"email"`
 	Name    string      `json:"name" db:"name"`
 	Picture pgtype.Text `json:"picture,omitempty" db:"picture"` // Allows NULL

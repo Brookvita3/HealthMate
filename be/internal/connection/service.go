@@ -45,7 +45,7 @@ func (s *service) CreateRequest(ctx context.Context, requesterId, receiverId uui
 		return ErrInvalidRequest
 	}
 
-	_, err := s.userRepo.GetUserByID(ctx, receiverId)
+	_, err := s.userRepo.GetUserById(ctx, receiverId)
 	if err != nil {
 		return err
 	}

@@ -76,7 +76,7 @@ func (s *serviceImpl) RegisterWithEmail(ctx context.Context, email, password, na
 	}
 
 	newUser := &user.User{
-		ID:       uuid.New(),
+		Id:       uuid.New(),
 		Email:    email,
 		Name:     name,
 		Provider: "HealthMate",
@@ -107,12 +107,12 @@ func (s *serviceImpl) LoginWithEmail(ctx context.Context, email, password string
 		return nil, user.ErrInvalidCredentials
 	}
 
-	accessToken, err := s.tokenService.GenerateAccessJWT(existing.Email, existing.ID.String(), existing.Role)
+	accessToken, err := s.tokenService.GenerateAccessJWT(existing.Email, existing.Id.String(), existing.Role)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := s.tokenService.GenerateRefreshJWT(ctx, existing.Email, existing.ID.String(), existing.Role)
+	refreshToken, err := s.tokenService.GenerateRefreshJWT(ctx, existing.Email, existing.Id.String(), existing.Role)
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +179,7 @@ func (s *serviceImpl) LoginWithGoogleIDToken(ctx context.Context, idToken string
 		userToAuth = existing
 	} else {
 		newUser := &user.User{
-			ID:       uuid.New(),
+			Id:       uuid.New(),
 			Email:    gUser.Email,
 			Name:     gUser.Name,
 			Provider: "google",
@@ -195,12 +195,12 @@ func (s *serviceImpl) LoginWithGoogleIDToken(ctx context.Context, idToken string
 		userToAuth = newUser
 	}
 
-	accessToken, err := s.tokenService.GenerateAccessJWT(userToAuth.Email, userToAuth.ID.String(), userToAuth.Role)
+	accessToken, err := s.tokenService.GenerateAccessJWT(userToAuth.Email, userToAuth.Id.String(), userToAuth.Role)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := s.tokenService.GenerateRefreshJWT(ctx, userToAuth.Email, userToAuth.ID.String(), userToAuth.Role)
+	refreshToken, err := s.tokenService.GenerateRefreshJWT(ctx, userToAuth.Email, userToAuth.Id.String(), userToAuth.Role)
 	if err != nil {
 		return nil, err
 	}
@@ -223,12 +223,12 @@ func (s *serviceImpl) RefreshAccessToken(ctx context.Context, refreshToken strin
 		return "", common.ErrInvalidUUIDFormat
 	}
 
-	user, err := s.userRepo.GetUserByID(ctx, id)
+	user, err := s.userRepo.GetUserById(ctx, id)
 	if err != nil {
 		return "", err
 	}
 
-	return s.tokenService.GenerateAccessJWT(user.Email, user.ID.String(), user.Role)
+	return s.tokenService.GenerateAccessJWT(user.Email, user.Id.String(), user.Role)
 }
 
 func (s *serviceImpl) Logout(ctx context.Context, refreshToken string) error {

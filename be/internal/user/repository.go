@@ -26,7 +26,7 @@ type Repository interface {
 
 	// GetUserByID searches for a user by id (UUID).
 	// It returns ErrUserNotFound if no user is found.
-	GetUserByID(ctx context.Context, id uuid.UUID) (*User, error)
+	GetUserById(ctx context.Context, id uuid.UUID) (*User, error)
 
 	// CreateUser inserts a new user record into the database.
 	CreateUser(ctx context.Context, user *User) error

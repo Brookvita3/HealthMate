@@ -22,7 +22,7 @@ func NewUserService(repo Repository) Service {
 }
 
 func (s *serviceImpl) GetUserProfile(ctx context.Context, id uuid.UUID) (*User, error) {
-	return s.repo.GetUserByID(ctx, id)
+	return s.repo.GetUserById(ctx, id)
 }
 
 func (s *serviceImpl) UpdateUserProfile(ctx context.Context, id uuid.UUID, params UpdateUserParams) error {

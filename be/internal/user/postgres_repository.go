@@ -27,7 +27,7 @@ func (r *postgresRepository) CreateUser(ctx context.Context, user *User) error {
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
 
 	_, err := r.pool.Exec(ctx, query,
-		user.ID,
+		user.Id,
 		user.Email,
 		user.Name,
 		user.Picture,
@@ -59,7 +59,7 @@ func (r *postgresRepository) GetUserByEmail(ctx context.Context, email string) (
 	return user, nil
 }
 
-func (r *postgresRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) {
+func (r *postgresRepository) GetUserById(ctx context.Context, id uuid.UUID) (*User, error) {
 	query := `
 		SELECT id, email, name, picture, role, status, provider, google_id, password, created_at, updated_at
 		FROM users
@@ -191,7 +191,7 @@ type scannable interface {
 func (r *postgresRepository) scanUser(row scannable) (*User, error) {
 	var u User
 	err := row.Scan(
-		&u.ID,
+		&u.Id,
 		&u.Email,
 		&u.Name,
 		&u.Picture,

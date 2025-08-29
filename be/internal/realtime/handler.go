@@ -24,22 +24,16 @@ func NewHandler(manager *Manager) *Handler {
 	return &Handler{manager: manager}
 }
 
-// ServeWs forwards WebSocket request
-func (h *Handler) ServeWs(c *gin.Context) {
-	userId, ok := c.Get("userId")
-	if !ok || userId == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		return
-	}
-	userIDStr, _ := userId.(string)
+func (h *Handler) ServeWsGin(c *gin.Context) {
+	userIdStr := c.Query("userId")
 
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		log.Printf("Failed to upgrade connection for user %s: %v", userIDStr, err)
+		log.Printf("Failed to upgrade connection for user %s: %v", userIdStr, err)
 		return
 	}
 
-	client := NewClient(h.manager, conn, userIDStr)
+	client := NewClient(h.manager, conn, userIdStr)
 	h.manager.register <- client
 
 	go client.writePump()

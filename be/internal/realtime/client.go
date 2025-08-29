@@ -17,15 +17,15 @@ const (
 type Client struct {
 	manager *Manager
 	conn    *websocket.Conn
-	userID  string
+	userId  string
 	send    chan *OutgoingMessage
 }
 
-func NewClient(manager *Manager, conn *websocket.Conn, userID string) *Client {
+func NewClient(manager *Manager, conn *websocket.Conn, userId string) *Client {
 	return &Client{
 		manager: manager,
 		conn:    conn,
-		userID:  userID,
+		userId:  userId,
 		send:    make(chan *OutgoingMessage, 256),
 	}
 }
@@ -43,7 +43,9 @@ func (c *Client) readPump() {
 	for {
 		var msg IncomingMessage
 		if err := c.conn.ReadJSON(&msg); err != nil {
-			log.Printf("error reading json: %v", err)
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				log.Printf("error reading json: %v", err)
+			}
 			break
 		}
 		c.manager.processMessage(c, &msg)

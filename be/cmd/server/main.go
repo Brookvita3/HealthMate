@@ -34,9 +34,6 @@ func main() {
 	log.Println("Successfully connected to Redis.")
 	defer redisClient.Close()
 
-	rtManager := realtime.NewManager()
-	go rtManager.Run()
-
 	pool, err := pgxpool.New(context.Background(), config.LoadConfig().PostgreURL)
 	log.Printf("Postgres URL: %s", config.LoadConfig().PostgreURL)
 	if err != nil {
@@ -64,6 +61,10 @@ func main() {
 	authHandler := auth.NewHandler(authService)
 
 	dataHandler := data.NewDataHandler()
+
+	rtManager := realtime.NewManager(connService)
+
+	go rtManager.Run()
 
 	rtHandler := realtime.NewHandler(rtManager)
 

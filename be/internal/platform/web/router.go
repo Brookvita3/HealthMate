@@ -75,9 +75,10 @@ func NewRouter(
 
 	// ===== Websocket routes =====
 	wsGroup := apiV1.Group("/ws")
-	wsGroup.Use(authHandler.AuthMiddleware())
+	// Temporarily don't check auth
+	//wsGroup.Use(authHandler.AuthMiddleware())
 	{
-		wsGroup.GET("", rtHandler.ServeWs)
+		wsGroup.GET("", rtHandler.ServeWsGin)
 	}
 
 	// ===== Admin routes =====

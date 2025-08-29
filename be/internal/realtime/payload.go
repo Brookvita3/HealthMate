@@ -2,31 +2,61 @@ package realtime
 
 import "encoding/json"
 
-// Structure for all messages sent by the client
+// Action defines the type for incoming WebSocket message actions.
+type Action string
+
+// Constants for all supported client actions.
+const (
+	ActionSubscribeToUserData     Action = "subscribe_to_user_data"
+	ActionUnsubscribeFromUserData Action = "unsubscribe_from_user_data"
+	ActionWearableDataUpdate      Action = "wearable_data_update"
+)
+
+// Event defines the type for outgoing WebSocket message events.
+type Event string
+
+// Constants for all supported server events.
+const (
+	EventUserDataReceived  Event = "user_data_received"
+	EventError             Event = "error"
+	EventSubscribedSuccess Event = "subscribed_success"
+)
+
+// IncomingMessage is the structure for all messages sent from the client.
 type IncomingMessage struct {
-	Action  string          `json:"action"`
+	Action  Action          `json:"action"`
 	Payload json.RawMessage `json:"payload"`
 }
 
-// Structure for all messages sent from the server to the client
+// OutgoingMessage is the structure for all messages sent from the server.
 type OutgoingMessage struct {
-	Event   string      `json:"event"`
+	Event   Event       `json:"event"`
 	Payload interface{} `json:"payload"`
 }
 
-// Payload when the client wants to subscribe/unsubscribe
-type SubscribePayload struct {
-	TargetUserID string `json:"target_user_id"`
-	GroupID      string `json:"group_id"` // check group
+// UserTargetPayload is the payload for actions that target a specific user.
+type UserTargetPayload struct {
+	TargetUserId string `json:"target_user_id"`
 }
 
-// Payload when the client sends wearable data
+// WearableDataPayload is the payload when the client sends wearable data.
 type WearableDataPayload struct {
-	Data json.RawMessage `json:"data"` // raw data
+	Data json.RawMessage `json:"data"`
 }
 
-// Payload sent by the server when new data is available
+// UserDataBroadcastPayload is the payload for the user_data_received event.
 type UserDataBroadcastPayload struct {
-	FromUserID string          `json:"from_user_id"`
+	FromUserId string          `json:"from_user_id"`
 	Data       json.RawMessage `json:"data"`
+}
+
+// ErrorPayload is the payload for the error event.
+type ErrorPayload struct {
+	Message string `json:"message"`
+	Action  Action `json:"action,omitempty"`
+}
+
+// Payload cho event subscribed_success
+type SubscribedSuccessPayload struct {
+	TargetUserId string `json:"target_user_id"`
 }

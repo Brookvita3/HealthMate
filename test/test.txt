@@ -1,0 +1,69 @@
+// package main
+
+// import (
+// 	"fmt"
+// 	"io"
+// 	"log"
+// 	"net/http"
+// 	"os"
+// )
+
+// // fetchAndSaveData là một hàm chung để gọi một URL và lưu nội dung phản hồi vào một file.
+// // Nó nhận vào URL của API và tên file để lưu dữ liệu.
+// func fetchAndSaveData(apiURL string, outputFilename string) error {
+// 	fmt.Printf("Đang lấy dữ liệu từ: %s...\n", apiURL)
+
+// 	// 1. Thực hiện yêu cầu GET đến API
+// 	resp, err := http.Get(apiURL)
+// 	if err != nil {
+// 		return fmt.Errorf("lỗi khi thực hiện yêu cầu đến %s: %w", apiURL, err)
+// 	}
+// 	// Đảm bảo body của response sẽ được đóng lại sau khi hàm kết thúc
+// 	defer resp.Body.Close()
+
+// 	// 2. Kiểm tra mã trạng thái HTTP (status code)
+// 	if resp.StatusCode != http.StatusOK {
+// 		return fmt.Errorf("API trả về mã trạng thái không thành công: %s", resp.Status)
+// 	}
+
+// 	// 3. Đọc nội dung của response
+// 	body, err := io.ReadAll(resp.Body)
+// 	if err != nil {
+// 		return fmt.Errorf("lỗi khi đọc nội dung response: %w", err)
+// 	}
+
+// 	// 4. Ghi nội dung đã đọc vào file local
+// 	// Cờ 0644 là quyền truy cập file thông thường (chủ sở hữu có thể đọc/ghi, người khác chỉ có thể đọc)
+// 	err = os.WriteFile(outputFilename, body, 0644)
+// 	if err != nil {
+// 		return fmt.Errorf("lỗi khi ghi dữ liệu vào file %s: %w", outputFilename, err)
+// 	}
+
+// 	fmt.Printf("=> Đã lưu dữ liệu thành công vào file: %s\n\n", outputFilename)
+// 	return nil
+// }
+
+// func main() {
+// 	// --- Lấy dữ liệu từ openFDA ---
+// 	// Lấy thông tin nhãn của 5 loại thuốc đầu tiên để làm ví dụ
+// 	// Bạn có thể tăng giá trị `limit` để lấy nhiều dữ liệu hơn
+// 	openFDA_URL := "https://api.fda.gov/drug/label.json?limit=5"
+// 	openFDA_File := "openfda_drugs_raw.json"
+
+// 	if err := fetchAndSaveData(openFDA_URL, openFDA_File); err != nil {
+// 		// log.Fatal sẽ in lỗi và thoát chương trình
+// 		log.Fatalf("Không thể lấy dữ liệu từ openFDA: %v", err)
+// 	}
+
+// 	// --- Lấy dữ liệu từ RxNorm ---
+// 	// Lấy thông tin về các loại thuốc có liên quan đến "aspirin" để làm ví dụ
+// 	// RxNorm rất hữu ích để tìm các tên thuốc và thành phần liên quan
+// 	rxNorm_URL := "https://rxnav.nlm.nih.gov/REST/drugs.json?name=nizoral"
+// 	rxNorm_File := "rxnorm_nizoral_raw.json"
+
+// 	if err := fetchAndSaveData(rxNorm_URL, rxNorm_File); err != nil {
+// 		log.Fatalf("Không thể lấy dữ liệu từ RxNorm: %v", err)
+// 	}
+
+// 	fmt.Println("Hoàn tất! Tất cả dữ liệu thô đã được tải về.")
+// }

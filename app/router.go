@@ -1,7 +1,16 @@
 package app
 
+import (
+	_ "healthmate/docs"
+
+	"github.com/swaggo/files"
+	"github.com/swaggo/gin-swagger"
+)
+
 func (a *App) SetupRoutes() {
 	apiV1 := a.Router.Group("/api/v1")
+
+	a.Router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// ===== Auth routes =====
 	authGroup := apiV1.Group("/auth")

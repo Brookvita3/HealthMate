@@ -12,6 +12,18 @@ import (
 	"healthmate/config"
 )
 
+// @title HealthMate API
+// @version 1.0
+// @description This is the API for the HealthMate application.
+
+// @host localhost:8080
+// @BasePath /api/v1
+// @schemes http https
+
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
 func main() {
 	cfg := config.LoadConfig()
 

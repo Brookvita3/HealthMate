@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"healthmate/internal/common"
+	"healthmate/internal/user"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -19,10 +20,32 @@ func NewHandler(s Service, tokenService TokenService) *Handler {
 	return &Handler{service: s, tokenService: tokenService}
 }
 
+type ErrorResponse struct {
+	Error string `json:"error"`
+}
+
+type GoogleLoginRequest struct {
+	IDToken string `json:"id_token" binding:"required"`
+}
+
+// LoginSuccessResponse chứa token và thông tin người dùng khi đăng nhập thành công.
+type LoginSuccessResponse struct {
+	AccessToken  string    `json:"access_token"`
+	RefreshToken string    `json:"refresh_token"`
+	User         user.User `json:"user"`
+}
+
+// GoogleLogin handles user login via Google ID token.
+// @Summary      Google Login
+// @Description  Authenticates a user using a Google ID token and returns access/refresh tokens.
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        token body GoogleLoginRequest true "Google ID Token"
+// @Success      200   {object}  LoginSuccessResponse
+// @Router       /auth/google [post]
 func (h *Handler) GoogleLogin(c *gin.Context) {
-	var req struct {
-		IDToken string `json:"id_token"`
-	}
+	var req GoogleLoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": common.ErrInvalidRequest.Error()})
 		return
@@ -34,10 +57,10 @@ func (h *Handler) GoogleLogin(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"access_token":  result.AccessToken,
-		"refresh_token": result.RefreshToken,
-		"user":          result.User,
+	c.JSON(http.StatusOK, LoginSuccessResponse{
+		AccessToken:  result.AccessToken,
+		RefreshToken: result.RefreshToken,
+		User:         *result.User,
 	})
 }
 

@@ -1,0 +1,104 @@
+basePath: /api/v1
+definitions:
+  auth.GoogleLoginRequest:
+    properties:
+      id_token:
+        type: string
+    required:
+    - id_token
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: This is the API for the HealthMate application.
+  title: HealthMate API
+  version: "1.0"
+paths:
+  /auth/google:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates a user using a Google ID token and returns access/refresh
+        tokens.
+      parameters:
+      - description: Google ID Token
+        in: body
+        name: token
+        required: true
+        schema:
+          $ref: '#/definitions/auth.GoogleLoginRequest'
+      produces:
+      - application/json
+      responses: {}
+      summary: Google Login
+      tags:
+      - Auth
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates a user using email and password, returns access/refresh
+        tokens.
+      produces:
+      - application/json
+      responses: {}
+      summary: Email/Password Login
+      tags:
+      - Auth
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Logs the user out by invalidating the provided refresh token.
+      produces:
+      - application/json
+      responses: {}
+      summary: User Logout
+      tags:
+      - Auth
+  /auth/password:
+    post:
+      consumes:
+      - application/json
+      description: Sets a password for the currently authenticated user. Requires
+        Bearer token.
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - ApiKeyAuth: []
+      summary: Set User Password
+      tags:
+      - User
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Provides a new access token if the given refresh token is valid.
+      produces:
+      - application/json
+      responses: {}
+      summary: Refresh Access Token
+      tags:
+      - Auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new user account with email, password, and name.
+      produces:
+      - application/json
+      responses: {}
+      summary: Register New User
+      tags:
+      - Auth
+schemes:
+- http
+- https
+securityDefinitions:
+  ApiKeyAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

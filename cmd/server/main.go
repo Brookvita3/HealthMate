@@ -1,81 +1,27 @@
 package main
 
 import (
-	"context"
 	"log"
 	"path/filepath"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"healthmate/app"
 	"healthmate/config"
-	"healthmate/internal/admin"
-	"healthmate/internal/auth"
-	"healthmate/internal/connection"
-	"healthmate/internal/data"
-	"healthmate/internal/platform/redis"
-	"healthmate/internal/platform/web"
-	"healthmate/internal/realtime"
-	"healthmate/internal/user"
 )
 
 func main() {
 	cfg := config.LoadConfig()
 
-	redisClient, err := redis.NewRedisClientFromURL(cfg.RedisURL)
-	log.Printf("Redis URL: %s", config.LoadConfig().RedisURL)
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-	log.Println("Successfully connected to Redis.")
-	defer redisClient.Close()
+	runDBMigration(cfg.PostgreURL)
 
-	pool, err := pgxpool.New(context.Background(), config.LoadConfig().PostgreURL)
-	log.Printf("Postgres URL: %s", config.LoadConfig().PostgreURL)
-	if err != nil {
-		log.Fatal("Unable to create connection pool: ", err.Error())
-	}
-	log.Println("Successfully connected to Postgres.")
-	defer pool.Close()
+	application := app.NewApp(&cfg)
 
-	runDBMigration(config.LoadConfig().PostgreURL)
+	defer application.Shutdown()
 
-	userRepo := user.NewRepository(pool)
-
-	connRepo := connection.NewRepository(pool)
-
-	JWTTokenService := auth.NewJWTTokenService(cfg.JWTSecret, redisClient)
-
-	authService := auth.NewAuthService(userRepo, JWTTokenService, cfg.GoogleClientID)
-
-	userService := user.NewUserService(userRepo)
-
-	adminService := admin.NewAdminService(userRepo)
-
-	connService := connection.NewService(connRepo, userRepo)
-
-	authHandler := auth.NewHandler(authService)
-
-	dataHandler := data.NewDataHandler()
-
-	rtManager := realtime.NewManager(connService)
-
-	go rtManager.Run()
-
-	rtHandler := realtime.NewHandler(rtManager)
-
-	userHandler := user.NewHandler(userService)
-
-	adminHandler := admin.NewHandler(adminService)
-
-	connHandler := connection.NewHandler(connService)
-
-	router := web.NewRouter(authHandler, dataHandler, rtHandler, userHandler, adminHandler, connHandler)
-
-	application := app.NewApp(router)
+	application.SetupRoutes()
 
 	application.Start(":" + cfg.Port)
 }

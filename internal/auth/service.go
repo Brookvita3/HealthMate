@@ -4,10 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
-	"net/http"
-	"strings"
 
-	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"golang.org/x/crypto/bcrypt"
@@ -38,19 +35,18 @@ type Service interface {
 	SetPasswordForUser(ctx context.Context, id uuid.UUID, newPassword string) error
 	RefreshAccessToken(ctx context.Context, refreshToken string) (string, error)
 	Logout(ctx context.Context, refreshToken string) error
-	AuthMiddleware() gin.HandlerFunc
 }
 
 type serviceImpl struct {
 	userRepo       user.Repository
-	tokenService   *JWTTokenService
+	tokenService   TokenService
 	googleClientID string
 }
 
-func NewAuthService(repo user.Repository, JWTTokenService *JWTTokenService, googleClientID string) Service { // << CHANGED
+func NewAuthService(repo user.Repository, tokenService TokenService, googleClientID string) Service {
 	return &serviceImpl{
 		userRepo:       repo,
-		tokenService:   JWTTokenService,
+		tokenService:   tokenService,
 		googleClientID: googleClientID,
 	}
 }
@@ -106,12 +102,12 @@ func (s *serviceImpl) LoginWithEmail(ctx context.Context, email, password string
 		return nil, user.ErrInvalidCredentials
 	}
 
-	accessToken, err := s.tokenService.GenerateAccessJWT(existing)
+	accessToken, err := s.tokenService.GenerateAccessToken(existing)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := s.tokenService.GenerateRefreshJWT(ctx, existing)
+	refreshToken, err := s.tokenService.GenerateRefreshToken(ctx, existing)
 	if err != nil {
 		return nil, err
 	}
@@ -130,36 +126,6 @@ func (s *serviceImpl) SetPasswordForUser(ctx context.Context, id uuid.UUID, newP
 		return common.ErrInternalServer
 	}
 	return s.userRepo.UpdatePassword(ctx, id, string(hashedPassword))
-}
-
-func (s *serviceImpl) AuthMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing Authorization header"})
-			c.Abort()
-			return
-		}
-
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid Authorization header format"})
-			c.Abort()
-			return
-		}
-
-		claims, err := s.tokenService.ValidateJWT(parts[1])
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
-			c.Abort()
-			return
-		}
-
-		c.Set(string(common.EmailKey), claims["email"])
-		c.Set(string(common.UserIdKey), claims["sub"])
-		c.Set(string(common.Role), claims["role"])
-		c.Next()
-	}
 }
 
 func (s *serviceImpl) LoginWithGoogleIDToken(ctx context.Context, idToken string) (*LoginResult, error) {
@@ -194,12 +160,12 @@ func (s *serviceImpl) LoginWithGoogleIDToken(ctx context.Context, idToken string
 		userToAuth = newUser
 	}
 
-	accessToken, err := s.tokenService.GenerateAccessJWT(userToAuth)
+	accessToken, err := s.tokenService.GenerateAccessToken(userToAuth)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := s.tokenService.GenerateRefreshJWT(ctx, userToAuth)
+	refreshToken, err := s.tokenService.GenerateRefreshToken(ctx, userToAuth)
 	if err != nil {
 		return nil, err
 	}
@@ -227,7 +193,7 @@ func (s *serviceImpl) RefreshAccessToken(ctx context.Context, refreshToken strin
 		return "", err
 	}
 
-	return s.tokenService.GenerateAccessJWT(user)
+	return s.tokenService.GenerateAccessToken(user)
 }
 
 func (s *serviceImpl) Logout(ctx context.Context, refreshToken string) error {

@@ -2,6 +2,7 @@ package auth
 
 import (
 	"net/http"
+	"strings"
 
 	"healthmate/internal/common"
 
@@ -10,15 +11,12 @@ import (
 )
 
 type Handler struct {
-	service Service
+	service      Service
+	tokenService TokenService
 }
 
-func NewHandler(s Service) *Handler {
-	return &Handler{service: s}
-}
-
-func (h *Handler) AuthMiddleware() gin.HandlerFunc {
-	return h.service.AuthMiddleware()
+func NewHandler(s Service, tokenService TokenService) *Handler {
+	return &Handler{service: s, tokenService: tokenService}
 }
 
 func (h *Handler) GoogleLogin(c *gin.Context) {
@@ -154,4 +152,34 @@ func (h *Handler) SetPassword(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "password set successfully"})
+}
+
+func (h *Handler) AuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing Authorization header"})
+			c.Abort()
+			return
+		}
+
+		parts := strings.SplitN(authHeader, " ", 2)
+		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid Authorization header format"})
+			c.Abort()
+			return
+		}
+
+		claims, err := h.tokenService.ValidateToken(parts[1])
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+			c.Abort()
+			return
+		}
+
+		c.Set(string(common.EmailKey), claims["email"])
+		c.Set(string(common.UserIdKey), claims["sub"])
+		c.Set(string(common.Role), claims["role"])
+		c.Next()
+	}
 }

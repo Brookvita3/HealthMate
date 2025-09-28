@@ -23,7 +23,7 @@ func NewJWTTokenService(secret string, rdb *redis.Client) *JWTTokenService {
 	}
 }
 
-func (t *JWTTokenService) GenerateAccessJWT(user *user.User) (string, error) {
+func (t *JWTTokenService) GenerateAccessToken(user *user.User) (string, error) {
 
 	exp_time := 5 * time.Minute
 
@@ -40,7 +40,7 @@ func (t *JWTTokenService) GenerateAccessJWT(user *user.User) (string, error) {
 	return token.SignedString([]byte(t.secret))
 }
 
-func (t *JWTTokenService) GenerateRefreshJWT(ctx context.Context, user *user.User) (string, error) {
+func (t *JWTTokenService) GenerateRefreshToken(ctx context.Context, user *user.User) (string, error) {
 
 	jti := uuid.New().String()
 	exp_time := 1 * time.Hour
@@ -68,7 +68,7 @@ func (t *JWTTokenService) GenerateRefreshJWT(ctx context.Context, user *user.Use
 	return signedToken, nil
 }
 
-func (t *JWTTokenService) ValidateJWT(tokenString string) (jwt.MapClaims, error) {
+func (t *JWTTokenService) ValidateToken(tokenString string) (map[string]any, error) {
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -92,7 +92,7 @@ func (t *JWTTokenService) ValidateJWT(tokenString string) (jwt.MapClaims, error)
 // Return userId from refresh token if valid
 func (t *JWTTokenService) ValidateRefreshToken(ctx context.Context, refreshToken string) (string, error) {
 
-	claims, err := t.ValidateJWT(refreshToken)
+	claims, err := t.ValidateToken(refreshToken)
 	if err != nil {
 		return "", errors.New("invalid refresh token")
 	}
@@ -121,7 +121,7 @@ func (t *JWTTokenService) ValidateRefreshToken(ctx context.Context, refreshToken
 
 func (t *JWTTokenService) RevokeRefreshToken(ctx context.Context, refreshToken string) error {
 
-	claims, err := t.ValidateJWT(refreshToken)
+	claims, err := t.ValidateToken(refreshToken)
 	if err != nil {
 		return errors.New("invalid refresh token")
 	}

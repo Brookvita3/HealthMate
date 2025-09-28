@@ -1,8 +1,9 @@
-package jwtauth
+package auth
 
 import (
 	"context"
 	"errors"
+	"healthmate/internal/user"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -10,27 +11,27 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-type TokenService struct {
+type JWTTokenService struct {
 	secret string
 	rdb    *redis.Client
 }
 
-func NewTokenService(secret string, rdb *redis.Client) *TokenService {
-	return &TokenService{
+func NewJWTTokenService(secret string, rdb *redis.Client) *JWTTokenService {
+	return &JWTTokenService{
 		secret: secret,
 		rdb:    rdb,
 	}
 }
 
-func (t *TokenService) GenerateAccessJWT(email, id, role string) (string, error) {
+func (t *JWTTokenService) GenerateAccessJWT(user *user.User) (string, error) {
 
 	exp_time := 5 * time.Minute
 
 	claims := jwt.MapClaims{
-		"email": email,
-		"sub":   id,
+		"email": user.Email,
+		"sub":   user.Id,
 		"type":  "access",
-		"role":  role,
+		"role":  user.Role,
 		"exp":   time.Now().Add(exp_time).Unix(),
 		"iat":   time.Now().Unix(),
 	}
@@ -39,16 +40,16 @@ func (t *TokenService) GenerateAccessJWT(email, id, role string) (string, error)
 	return token.SignedString([]byte(t.secret))
 }
 
-func (t *TokenService) GenerateRefreshJWT(ctx context.Context, email, id, role string) (string, error) {
+func (t *JWTTokenService) GenerateRefreshJWT(ctx context.Context, user *user.User) (string, error) {
 
 	jti := uuid.New().String()
 	exp_time := 1 * time.Hour
 
 	claims := jwt.MapClaims{
-		"email": email,
-		"sub":   id,
+		"email": user.Email,
+		"sub":   user.Id,
 		"type":  "refresh",
-		"role":  role,
+		"role":  user.Role,
 		"exp":   time.Now().Add(exp_time).Unix(),
 		"iat":   time.Now().Unix(),
 		"jti":   jti,
@@ -60,14 +61,14 @@ func (t *TokenService) GenerateRefreshJWT(ctx context.Context, email, id, role s
 		return "", err
 	}
 
-	if err := t.rdb.Set(ctx, "refresh:"+jti, id, exp_time).Err(); err != nil {
+	if err := t.rdb.Set(ctx, "refresh:"+jti, user.Id, exp_time).Err(); err != nil {
 		return "", err
 	}
 
 	return signedToken, nil
 }
 
-func (t *TokenService) ValidateJWT(tokenString string) (jwt.MapClaims, error) {
+func (t *JWTTokenService) ValidateJWT(tokenString string) (jwt.MapClaims, error) {
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -89,7 +90,7 @@ func (t *TokenService) ValidateJWT(tokenString string) (jwt.MapClaims, error) {
 }
 
 // Return userId from refresh token if valid
-func (t *TokenService) ValidateRefreshToken(ctx context.Context, refreshToken string) (string, error) {
+func (t *JWTTokenService) ValidateRefreshToken(ctx context.Context, refreshToken string) (string, error) {
 
 	claims, err := t.ValidateJWT(refreshToken)
 	if err != nil {
@@ -118,7 +119,7 @@ func (t *TokenService) ValidateRefreshToken(ctx context.Context, refreshToken st
 	return val, nil
 }
 
-func (t *TokenService) RevokeRefreshToken(ctx context.Context, refreshToken string) error {
+func (t *JWTTokenService) RevokeRefreshToken(ctx context.Context, refreshToken string) error {
 
 	claims, err := t.ValidateJWT(refreshToken)
 	if err != nil {

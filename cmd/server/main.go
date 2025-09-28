@@ -16,17 +16,16 @@ import (
 	"healthmate/internal/auth"
 	"healthmate/internal/connection"
 	"healthmate/internal/data"
-	"healthmate/internal/platform/cache"
+	"healthmate/internal/platform/redis"
 	"healthmate/internal/platform/web"
 	"healthmate/internal/realtime"
 	"healthmate/internal/user"
-	"healthmate/pkg/jwtauth"
 )
 
 func main() {
 	cfg := config.LoadConfig()
 
-	redisClient, err := cache.NewRedisClient(cfg.RedisURL, cfg.RedisUsername, cfg.RedisPassword, 0, false)
+	redisClient, err := redis.NewRedisClientFromURL(cfg.RedisURL)
 	log.Printf("Redis URL: %s", config.LoadConfig().RedisURL)
 	if err != nil {
 		log.Fatal(err.Error())
@@ -48,9 +47,9 @@ func main() {
 
 	connRepo := connection.NewRepository(pool)
 
-	tokenService := jwtauth.NewTokenService(cfg.JWTSecret, redisClient)
+	JWTTokenService := auth.NewJWTTokenService(cfg.JWTSecret, redisClient)
 
-	authService := auth.NewAuthService(userRepo, tokenService, cfg.GoogleClientID)
+	authService := auth.NewAuthService(userRepo, JWTTokenService, cfg.GoogleClientID)
 
 	userService := user.NewUserService(userRepo)
 

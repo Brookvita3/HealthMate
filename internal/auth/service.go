@@ -15,7 +15,6 @@ import (
 
 	"healthmate/internal/common"
 	"healthmate/internal/user"
-	"healthmate/pkg/jwtauth"
 )
 
 type LoginResult struct {
@@ -44,19 +43,19 @@ type Service interface {
 
 type serviceImpl struct {
 	userRepo       user.Repository
-	tokenService   *jwtauth.TokenService
+	tokenService   *JWTTokenService
 	googleClientID string
 }
 
-func NewAuthService(repo user.Repository, tokenService *jwtauth.TokenService, googleClientID string) Service { // << CHANGED
+func NewAuthService(repo user.Repository, JWTTokenService *JWTTokenService, googleClientID string) Service { // << CHANGED
 	return &serviceImpl{
 		userRepo:       repo,
-		tokenService:   tokenService,
+		tokenService:   JWTTokenService,
 		googleClientID: googleClientID,
 	}
 }
 
-func (s *serviceImpl) RegisterWithEmail(ctx context.Context, email, password, name string) (*user.User, error) { // << CHANGED return type
+func (s *serviceImpl) RegisterWithEmail(ctx context.Context, email, password, name string) (*user.User, error) {
 	existing, err := s.userRepo.GetUserByEmail(ctx, email)
 	if err != nil && !errors.Is(err, user.ErrUserNotFound) {
 		return nil, err
@@ -82,7 +81,7 @@ func (s *serviceImpl) RegisterWithEmail(ctx context.Context, email, password, na
 		Provider: "HealthMate",
 		Password: pgtype.Text{String: string(hashedPassword), Valid: true},
 		Role:     "user",
-		Status:   "active",
+		Status:   "unverified",
 	}
 
 	if err := s.userRepo.CreateUser(ctx, newUser); err != nil {
@@ -107,12 +106,12 @@ func (s *serviceImpl) LoginWithEmail(ctx context.Context, email, password string
 		return nil, user.ErrInvalidCredentials
 	}
 
-	accessToken, err := s.tokenService.GenerateAccessJWT(existing.Email, existing.Id.String(), existing.Role)
+	accessToken, err := s.tokenService.GenerateAccessJWT(existing)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := s.tokenService.GenerateRefreshJWT(ctx, existing.Email, existing.Id.String(), existing.Role)
+	refreshToken, err := s.tokenService.GenerateRefreshJWT(ctx, existing)
 	if err != nil {
 		return nil, err
 	}
@@ -195,12 +194,12 @@ func (s *serviceImpl) LoginWithGoogleIDToken(ctx context.Context, idToken string
 		userToAuth = newUser
 	}
 
-	accessToken, err := s.tokenService.GenerateAccessJWT(userToAuth.Email, userToAuth.Id.String(), userToAuth.Role)
+	accessToken, err := s.tokenService.GenerateAccessJWT(userToAuth)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := s.tokenService.GenerateRefreshJWT(ctx, userToAuth.Email, userToAuth.Id.String(), userToAuth.Role)
+	refreshToken, err := s.tokenService.GenerateRefreshJWT(ctx, userToAuth)
 	if err != nil {
 		return nil, err
 	}
@@ -228,7 +227,7 @@ func (s *serviceImpl) RefreshAccessToken(ctx context.Context, refreshToken strin
 		return "", err
 	}
 
-	return s.tokenService.GenerateAccessJWT(user.Email, user.Id.String(), user.Role)
+	return s.tokenService.GenerateAccessJWT(user)
 }
 
 func (s *serviceImpl) Logout(ctx context.Context, refreshToken string) error {

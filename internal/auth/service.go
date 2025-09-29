@@ -6,7 +6,6 @@ import (
 	"log"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/api/idtoken"
 
@@ -75,7 +74,7 @@ func (s *serviceImpl) RegisterWithEmail(ctx context.Context, email, password, na
 		Email:    email,
 		Name:     name,
 		Provider: "HealthMate",
-		Password: pgtype.Text{String: string(hashedPassword), Valid: true},
+		Password: string(hashedPassword),
 		Role:     "user",
 		Status:   "unverified",
 	}
@@ -93,11 +92,11 @@ func (s *serviceImpl) LoginWithEmail(ctx context.Context, email, password string
 		return nil, user.ErrInvalidCredentials
 	}
 
-	if !existing.Password.Valid {
+	if existing.Password == "" {
 		return nil, user.ErrPasswordNotSet
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(existing.Password.String), []byte(password))
+	err = bcrypt.CompareHashAndPassword([]byte(existing.Password), []byte(password))
 	if err != nil {
 		return nil, user.ErrInvalidCredentials
 	}
@@ -148,9 +147,8 @@ func (s *serviceImpl) LoginWithGoogleIDToken(ctx context.Context, idToken string
 			Email:    gUser.Email,
 			Name:     gUser.Name,
 			Provider: "google",
-			GoogleID: pgtype.Text{String: gUser.Sub, Valid: true},
-			Picture:  pgtype.Text{String: gUser.Picture, Valid: true},
-			Password: pgtype.Text{Valid: false},
+			GoogleID: gUser.Sub,
+			Picture:  gUser.Picture,
 			Role:     "user",
 			Status:   "active",
 		}

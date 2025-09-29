@@ -24,15 +24,45 @@ type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
+type SuccessMessageResponse struct {
+	Message string `json:"message"`
+}
+
 type GoogleLoginRequest struct {
 	IDToken string `json:"id_token" binding:"required"`
 }
 
-// LoginSuccessResponse chứa token và thông tin người dùng khi đăng nhập thành công.
 type LoginSuccessResponse struct {
 	AccessToken  string    `json:"access_token"`
 	RefreshToken string    `json:"refresh_token"`
 	User         user.User `json:"user"`
+}
+
+type RefreshTokenRequest struct {
+	RefreshToken string `json:"refresh_token" binding:"required"`
+}
+
+type RefreshTokenResponse struct {
+	AccessToken string `json:"access_token"`
+}
+
+type LogoutRequest struct {
+	RefreshToken string `json:"refresh_token" binding:"required"`
+}
+
+type RegisterRequest struct {
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required,min=8"`
+	Name     string `json:"name" binding:"required"`
+}
+
+type EmailLoginRequest struct {
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required"`
+}
+
+type SetPasswordRequest struct {
+	Password string `json:"password" binding:"required,min=8"`
 }
 
 // GoogleLogin handles user login via Google ID token.
@@ -47,13 +77,13 @@ type LoginSuccessResponse struct {
 func (h *Handler) GoogleLogin(c *gin.Context) {
 	var req GoogleLoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": common.ErrInvalidRequest.Error()})
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: common.ErrInvalidRequest.Error()})
 		return
 	}
 
 	result, err := h.service.LoginWithGoogleIDToken(c.Request.Context(), req.IDToken)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: err.Error()})
 		return
 	}
 
@@ -64,65 +94,95 @@ func (h *Handler) GoogleLogin(c *gin.Context) {
 	})
 }
 
+// RefreshToken generates a new access token from a refresh token.
+// @Summary      Refresh Access Token
+// @Description  Provides a new access token if the given refresh token is valid.
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        token body      RefreshTokenRequest  true  "Refresh Token"
+// @Success      200   {object}  RefreshTokenResponse
+// @Router       /auth/refresh [post]
 func (h *Handler) RefreshToken(c *gin.Context) {
-	var req struct {
-		RefreshToken string `json:"refresh_token"`
-	}
+	var req RefreshTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": common.ErrInvalidRequest.Error()})
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: common.ErrInvalidRequest.Error()})
 		return
 	}
 
 	newAccessToken, err := h.service.RefreshAccessToken(c.Request.Context(), req.RefreshToken)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"access_token": newAccessToken,
+	c.JSON(http.StatusOK, RefreshTokenResponse{
+		AccessToken: newAccessToken,
 	})
 }
 
+// LogOut invalidates a refresh token.
+// @Summary      User Logout
+// @Description  Logs the user out by invalidating the provided refresh token.
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        token body      LogoutRequest        true  "Refresh Token"
+// @Success      200   {object}  SuccessMessageResponse
+// @Router       /auth/logout [post]
 func (h *Handler) LogOut(c *gin.Context) {
-	var req struct {
-		RefreshToken string `json:"refresh_token"`
-	}
+	var req LogoutRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": common.ErrInvalidRequest.Error()})
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: common.ErrInvalidRequest.Error()})
 		return
 	}
 
 	err := h.service.Logout(c.Request.Context(), req.RefreshToken)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
+	c.JSON(http.StatusOK, SuccessMessageResponse{Message: "Logged out successfully"})
 }
 
+// Register creates a new user account.
+// @Summary      Register New User
+// @Description  Creates a new user account with email, password, and name.
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        user  body      RegisterRequest      true  "User registration info"
+// @Success      201   {object}  user.User
+// @Router       /auth/register [post]
 func (h *Handler) Register(c *gin.Context) {
-	var req struct {
-		Email    string `json:"email" binding:"required,email"`
-		Password string `json:"password" binding:"required,min=8"`
-		Name     string `json:"name" binding:"required"`
-	}
+	var req RegisterRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": common.ErrInvalidRequest.Error()})
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: common.ErrInvalidRequest.Error()})
 		return
 	}
 
 	user, err := h.service.RegisterWithEmail(c.Request.Context(), req.Email, req.Password, req.Name)
 	if err != nil {
-		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		c.JSON(http.StatusConflict, ErrorResponse{Error: err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusCreated, user)
 }
 
+// AppLogin handles user login via email and password.
+// @Summary      Email/Password Login
+// @Description  Authenticates a user using email and password, returns access/refresh tokens.
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        credentials body      EmailLoginRequest    true  "User Credentials"
+// @Success      200         {object}  LoginSuccessResponse
+// @Router       /auth/app [post]
 func (h *Handler) AppLogin(c *gin.Context) {
 	var req struct {
 		Email    string `json:"email" binding:"required,email"`
@@ -130,27 +190,36 @@ func (h *Handler) AppLogin(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": common.ErrInvalidRequest.Error()})
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: common.ErrInvalidRequest.Error()})
 		return
 	}
 
 	result, err := h.service.LoginWithEmail(c.Request.Context(), req.Email, req.Password)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"access_token":  result.AccessToken,
-		"refresh_token": result.RefreshToken,
-		"user":          result.User,
+	c.JSON(http.StatusOK, LoginSuccessResponse{
+		AccessToken:  result.AccessToken,
+		RefreshToken: result.RefreshToken,
+		User:         *result.User,
 	})
 }
 
+// @Summary      Set User Password
+// @Description  Sets a password for the currently authenticated user. Requires Bearer token.
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        password body      SetPasswordRequest     true  "New Password"
+// @Success      200      {object}  SuccessMessageResponse
+// @Router       /auth/password [post]
 func (h *Handler) SetPassword(c *gin.Context) {
 	userIdfromToken, exists := c.Get(string(common.UserIdKey))
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": common.ErrMissingContextParam.Error()})
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: common.ErrMissingContextParam.Error()})
 		return
 	}
 
@@ -159,43 +228,43 @@ func (h *Handler) SetPassword(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": common.ErrInvalidRequest.Error()})
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: common.ErrInvalidRequest.Error()})
 		return
 	}
 
 	id, err := uuid.Parse(userIdfromToken.(string))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": common.ErrInvalidUUIDFormat.Error()})
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: common.ErrInvalidUUIDFormat.Error()})
 		return
 	}
 
 	if err := h.service.SetPasswordForUser(c.Request.Context(), id, req.Password); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "password set successfully"})
+	c.JSON(http.StatusOK, SuccessMessageResponse{Message: "password set successfully"})
 }
 
 func (h *Handler) AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing Authorization header"})
+			c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "Missing Authorization header"})
 			c.Abort()
 			return
 		}
 
 		parts := strings.SplitN(authHeader, " ", 2)
 		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid Authorization header format"})
+			c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "Invalid Authorization header format"})
 			c.Abort()
 			return
 		}
 
 		claims, err := h.tokenService.ValidateToken(parts[1])
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+			c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "Invalid or expired token"})
 			c.Abort()
 			return
 		}

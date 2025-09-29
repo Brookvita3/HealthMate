@@ -5,11 +5,29 @@ import (
 	"errors"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+type postgresUser struct {
+	Id      uuid.UUID   `db:"id"`
+	Email   string      `db:"email"`
+	Name    string      `db:"name"`
+	Picture pgtype.Text `db:"picture"`
+	Role    string      `db:"role"`
+	Status  string      `db:"status"`
+
+	Provider string      `db:"provider"`
+	GoogleID pgtype.Text `db:"google_id"`
+	Password pgtype.Text `db:"password"`
+
+	CreatedAt time.Time `db:"created_at"`
+	UpdatedAt time.Time `db:"updated_at"`
+}
 
 type postgresRepository struct {
 	pool *pgxpool.Pool
@@ -25,17 +43,17 @@ func (r *postgresRepository) CreateUser(ctx context.Context, user *User) error {
 	query := `
 		INSERT INTO users (id, email, name, picture, role, status, provider, google_id, password)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
-
+	pUser := fromDomainUser(*user)
 	_, err := r.pool.Exec(ctx, query,
-		user.Id,
-		user.Email,
-		user.Name,
-		user.Picture,
-		user.Role,
-		user.Status,
-		user.Provider,
-		user.GoogleID,
-		user.Password,
+		pUser.Id,
+		pUser.Email,
+		pUser.Name,
+		pUser.Picture,
+		pUser.Role,
+		pUser.Status,
+		pUser.Provider,
+		pUser.GoogleID,
+		pUser.Password,
 	)
 
 	return err
@@ -49,14 +67,14 @@ func (r *postgresRepository) GetUserByEmail(ctx context.Context, email string) (
 
 	row := r.pool.QueryRow(ctx, query, email)
 
-	user, err := r.scanUser(row)
+	pUser, err := r.scanUser(row)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrUserNotFound
 		}
 		return nil, err
 	}
-	return user, nil
+	return toDomainUser(*pUser), nil
 }
 
 func (r *postgresRepository) GetUserById(ctx context.Context, id uuid.UUID) (*User, error) {
@@ -67,14 +85,14 @@ func (r *postgresRepository) GetUserById(ctx context.Context, id uuid.UUID) (*Us
 
 	row := r.pool.QueryRow(ctx, query, id)
 
-	user, err := r.scanUser(row)
+	pUser, err := r.scanUser(row)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrUserNotFound
 		}
 		return nil, err
 	}
-	return user, nil
+	return toDomainUser(*pUser), nil
 }
 
 func (r *postgresRepository) UpdatePassword(ctx context.Context, id uuid.UUID, passwordHash string) error {
@@ -136,10 +154,11 @@ func (r *postgresRepository) ListUsers(ctx context.Context, params ListUsersPara
 
 	var users []User
 	for rows.Next() {
-		user, err := r.scanUser(rows)
+		pUser, err := r.scanUser(rows)
 		if err != nil {
 			return nil, err
 		}
+		user := toDomainUser(*pUser)
 		users = append(users, *user)
 	}
 
@@ -188,8 +207,8 @@ type scannable interface {
 
 // scanUser is a helper function that scans a database row into a User struct.
 // It accepts any type that satisfies the scannable interface.
-func (r *postgresRepository) scanUser(row scannable) (*User, error) {
-	var u User
+func (r *postgresRepository) scanUser(row scannable) (*postgresUser, error) {
+	var u postgresUser
 	err := row.Scan(
 		&u.Id,
 		&u.Email,
@@ -209,4 +228,58 @@ func (r *postgresRepository) scanUser(row scannable) (*User, error) {
 	}
 
 	return &u, nil
+}
+
+// toDomainUser is a helper function that converts a postgresUser struct to a domain User struct.
+func toDomainUser(p postgresUser) *User {
+	u := &User{
+		Id:        p.Id,
+		Email:     p.Email,
+		Name:      p.Name,
+		Role:      p.Role,
+		Status:    p.Status,
+		Provider:  p.Provider,
+		CreatedAt: p.CreatedAt,
+		UpdatedAt: p.UpdatedAt,
+	}
+
+	if p.Picture.Valid {
+		u.Picture = p.Picture.String
+	}
+	if p.GoogleID.Valid {
+		u.GoogleID = p.GoogleID.String
+	}
+	if p.Password.Valid {
+		u.Password = p.Password.String
+	}
+
+	return u
+}
+
+// fromDomainUser is a helper function that converts a domain User struct to a postgresUser struct.
+func fromDomainUser(u User) *postgresUser {
+	p := &postgresUser{
+		Id:        u.Id,
+		Email:     u.Email,
+		Name:      u.Name,
+		Role:      u.Role,
+		Status:    u.Status,
+		Provider:  u.Provider,
+		CreatedAt: u.CreatedAt,
+		UpdatedAt: u.UpdatedAt,
+	}
+
+	if u.Picture != "" {
+		p.Picture = pgtype.Text{String: u.Picture, Valid: true}
+	}
+
+	if u.GoogleID != "" {
+		p.GoogleID = pgtype.Text{String: u.GoogleID, Valid: true}
+	}
+
+	if u.Password != "" {
+		p.Password = pgtype.Text{String: u.Password, Valid: true}
+	}
+
+	return p
 }

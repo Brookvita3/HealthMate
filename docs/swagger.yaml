@@ -1,11 +1,96 @@
 basePath: /api/v1
 definitions:
+  auth.EmailLoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
   auth.GoogleLoginRequest:
     properties:
       id_token:
         type: string
     required:
     - id_token
+    type: object
+  auth.LoginSuccessResponse:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+      user:
+        $ref: '#/definitions/user.User'
+    type: object
+  auth.LogoutRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  auth.RefreshTokenRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  auth.RefreshTokenResponse:
+    properties:
+      access_token:
+        type: string
+    type: object
+  auth.RegisterRequest:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        minLength: 8
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  auth.SetPasswordRequest:
+    properties:
+      password:
+        minLength: 8
+        type: string
+    required:
+    - password
+    type: object
+  auth.SuccessMessageResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  user.User:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      picture:
+        description: Allows NULL
+        type: string
+      role:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
     type: object
 host: localhost:8080
 info:
@@ -14,6 +99,29 @@ info:
   title: HealthMate API
   version: "1.0"
 paths:
+  /auth/app:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates a user using email and password, returns access/refresh
+        tokens.
+      parameters:
+      - description: User Credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/auth.EmailLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.LoginSuccessResponse'
+      summary: Email/Password Login
+      tags:
+      - Auth
   /auth/google:
     post:
       consumes:
@@ -29,20 +137,12 @@ paths:
           $ref: '#/definitions/auth.GoogleLoginRequest'
       produces:
       - application/json
-      responses: {}
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.LoginSuccessResponse'
       summary: Google Login
-      tags:
-      - Auth
-  /auth/login:
-    post:
-      consumes:
-      - application/json
-      description: Authenticates a user using email and password, returns access/refresh
-        tokens.
-      produces:
-      - application/json
-      responses: {}
-      summary: Email/Password Login
       tags:
       - Auth
   /auth/logout:
@@ -50,9 +150,22 @@ paths:
       consumes:
       - application/json
       description: Logs the user out by invalidating the provided refresh token.
+      parameters:
+      - description: Refresh Token
+        in: body
+        name: token
+        required: true
+        schema:
+          $ref: '#/definitions/auth.LogoutRequest'
       produces:
       - application/json
-      responses: {}
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.SuccessMessageResponse'
+      security:
+      - BearerAuth: []
       summary: User Logout
       tags:
       - Auth
@@ -62,22 +175,46 @@ paths:
       - application/json
       description: Sets a password for the currently authenticated user. Requires
         Bearer token.
+      parameters:
+      - description: New Password
+        in: body
+        name: password
+        required: true
+        schema:
+          $ref: '#/definitions/auth.SetPasswordRequest'
       produces:
       - application/json
-      responses: {}
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.SuccessMessageResponse'
       security:
-      - ApiKeyAuth: []
+      - BearerAuth: []
       summary: Set User Password
       tags:
-      - User
+      - Auth
   /auth/refresh:
     post:
       consumes:
       - application/json
       description: Provides a new access token if the given refresh token is valid.
+      parameters:
+      - description: Refresh Token
+        in: body
+        name: token
+        required: true
+        schema:
+          $ref: '#/definitions/auth.RefreshTokenRequest'
       produces:
       - application/json
-      responses: {}
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.RefreshTokenResponse'
+      security:
+      - BearerAuth: []
       summary: Refresh Access Token
       tags:
       - Auth
@@ -86,9 +223,20 @@ paths:
       consumes:
       - application/json
       description: Creates a new user account with email, password, and name.
+      parameters:
+      - description: User registration info
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/auth.RegisterRequest'
       produces:
       - application/json
-      responses: {}
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/user.User'
       summary: Register New User
       tags:
       - Auth
@@ -96,7 +244,7 @@ schemes:
 - http
 - https
 securityDefinitions:
-  ApiKeyAuth:
+  BearerAuth:
     description: Type "Bearer" followed by a space and JWT token.
     in: header
     name: Authorization

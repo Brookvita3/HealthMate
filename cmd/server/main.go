@@ -20,10 +20,10 @@ import (
 // @BasePath /api/v1
 // @schemes http https
 
-// @securityDefinitions.apikey ApiKeyAuth
-// @in header
-// @name Authorization
-// @description Type "Bearer" followed by a space and JWT token.
+// @SecurityDefinitions.apikey BearerAuth
+// @In header
+// @Name Authorization
+// @Description Type "Bearer" followed by a space and JWT token.
 func main() {
 	cfg := config.LoadConfig()
 

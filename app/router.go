@@ -2,15 +2,22 @@ package app
 
 import (
 	_ "healthmate/docs"
+	"healthmate/internal/platform/web/middleware"
 
+	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/swaggo/files"
 	"github.com/swaggo/gin-swagger"
 )
 
 func (a *App) SetupRoutes() {
+
 	apiV1 := a.Router.Group("/api/v1")
 
 	a.Router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	a.Router.GET("/metrics", gin.WrapH(promhttp.Handler()))
+
+	a.Router.Use(middleware.PrometheusMiddleware())
 
 	// ===== Auth routes =====
 	authGroup := apiV1.Group("/auth")

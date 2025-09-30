@@ -57,10 +57,7 @@ func (s *serviceImpl) RegisterWithEmail(ctx context.Context, email, password, na
 	}
 
 	if existing != nil {
-		if existing.Provider == "Google" {
-			return nil, user.ErrEmailAssociatedWithGoogle
-		}
-		return nil, user.ErrUserAlreadyExists
+		return nil, user.ErrEmailAlreadyRegistered
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)

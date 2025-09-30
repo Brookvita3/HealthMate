@@ -1,13 +1,16 @@
 package user
 
-import "errors"
+import (
+	"errors"
+	"healthmate/internal/common"
+)
 
 var (
 	// ErrUserNotFound is returned when a user is not found in the repository.
-	ErrUserNotFound = errors.New("user not found")
+	ErrUserNotFound = &common.BusinessError{Code: 404, Message: "user not found"}
 
 	// ErrUserAlreadyExists is returned when trying to create a user with an email that already exists in the system.
-	ErrUserAlreadyExists = errors.New("user with this email already exists")
+	ErrEmailAlreadyRegistered = &common.BusinessError{Code: 409, Message: "email is already registered"}
 
 	// ErrEmailAssociatedWithGoogle is returned when trying to register with an email that is already linked to a Google account.
 	ErrEmailAssociatedWithGoogle = errors.New("this email is already associated with a Google account")

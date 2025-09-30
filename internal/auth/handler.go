@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 
@@ -155,7 +156,10 @@ func (h *Handler) LogOut(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        user  body      RegisterRequest      true  "User registration info"
-// @Success      201   {object}  user.User
+// @Success      201  {object}  user.User
+// @Failure      404  {object}  ErrorResponse "user not found"
+// @Failure      409  {object}  ErrorResponse "email is already registered"
+// @Failure      500  {object}  ErrorResponse "an unexpected error occurred"
 // @Router       /auth/register [post]
 func (h *Handler) Register(c *gin.Context) {
 	var req RegisterRequest
@@ -166,8 +170,9 @@ func (h *Handler) Register(c *gin.Context) {
 	}
 
 	user, err := h.service.RegisterWithEmail(c.Request.Context(), req.Email, req.Password, req.Name)
+
 	if err != nil {
-		c.JSON(http.StatusConflict, ErrorResponse{Error: err.Error()})
+		h.handleError(c, err)
 		return
 	}
 
@@ -184,10 +189,7 @@ func (h *Handler) Register(c *gin.Context) {
 // @Success      200         {object}  LoginSuccessResponse
 // @Router       /auth/app [post]
 func (h *Handler) AppLogin(c *gin.Context) {
-	var req struct {
-		Email    string `json:"email" binding:"required,email"`
-		Password string `json:"password" binding:"required"`
-	}
+	var req EmailLoginRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, ErrorResponse{Error: common.ErrInvalidRequest.Error()})
@@ -273,5 +275,19 @@ func (h *Handler) AuthMiddleware() gin.HandlerFunc {
 		c.Set(string(common.UserIdKey), claims["sub"])
 		c.Set(string(common.Role), claims["role"])
 		c.Next()
+	}
+}
+
+// handleError is a helper function to return an error response to the client.
+// It checks if the error is a BusinessError and if so, returns a JSON response with the error code and message.
+// If the error is not a BusinessError, it returns a JSON response with a generic error message and a 500 status code.
+func (h *Handler) handleError(c *gin.Context, err error) {
+
+	var businessErr *common.BusinessError
+
+	if errors.As(err, &businessErr) {
+		c.JSON(businessErr.Code, ErrorResponse{Error: businessErr.Message})
+	} else {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "an unexpected error occurred"})
 	}
 }

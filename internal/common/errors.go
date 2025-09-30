@@ -2,6 +2,17 @@ package common
 
 import "errors"
 
+// BusinessError is a custom error type for business logic errors.
+type BusinessError struct {
+	Code    int
+	Message string
+}
+
+func (e *BusinessError) Error() string {
+	return e.Message
+}
+
+// Other errors
 var (
 	// ErrInvalidUUIDFormat is returned when a string value cannot be parsed into a valid UUID. This usually indicates a malformed URL parameter or request body.
 	ErrInvalidUUIDFormat = errors.New("invalid UUID format")

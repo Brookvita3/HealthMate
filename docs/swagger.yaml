@@ -10,6 +10,11 @@ definitions:
     - email
     - password
     type: object
+  auth.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
   auth.GoogleLoginRequest:
     properties:
       id_token:
@@ -237,6 +242,18 @@ paths:
           description: Created
           schema:
             $ref: '#/definitions/user.User'
+        "404":
+          description: user not found
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+        "409":
+          description: email is already registered
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+        "500":
+          description: an unexpected error occurred
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
       summary: Register New User
       tags:
       - Auth

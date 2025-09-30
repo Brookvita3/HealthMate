@@ -230,6 +230,24 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/user.User"
                         }
+                    },
+                    "404": {
+                        "description": "user not found",
+                        "schema": {
+                            "$ref": "#/definitions/auth.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "email is already registered",
+                        "schema": {
+                            "$ref": "#/definitions/auth.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "an unexpected error occurred",
+                        "schema": {
+                            "$ref": "#/definitions/auth.ErrorResponse"
+                        }
                     }
                 }
             }
@@ -247,6 +265,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "password": {
+                    "type": "string"
+                }
+            }
+        },
+        "auth.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
                     "type": "string"
                 }
             }

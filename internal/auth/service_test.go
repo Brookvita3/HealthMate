@@ -73,34 +73,19 @@ func TestRegisterWithEmail(t *testing.T) {
 		mockRepo.AssertExpectations(t)
 	})
 
-	t.Run("Register fail: User have App account", func(t *testing.T) {
+	t.Run("Register fail: User have account", func(t *testing.T) {
 
 		mockRepo.On("GetUserByEmail", mock.Anything, "exists@example.com").Return(&user.User{
-			Email:    "exists@example.com",
-			Provider: "HealthMate",
+			Email: "exists@example.com",
 		}, nil)
 
 		createdUser, err := authService.RegisterWithEmail(context.Background(), "exists@example.com", "password123", "Existing User")
 
 		assert.Error(t, err)
 		assert.Nil(t, createdUser)
-		assert.Equal(t, user.ErrUserAlreadyExists, err)
+		assert.Equal(t, user.ErrEmailAlreadyRegistered, err)
 
 		mockRepo.AssertExpectations(t)
 	})
 
-	t.Run("Register fail: User have Google account", func(t *testing.T) {
-
-		mockRepo.On("GetUserByEmail", mock.Anything, "google@example.com").Return(&user.User{
-			Email:    "google@example.com",
-			Provider: "Google",
-		}, nil)
-
-		createdUser, err := authService.RegisterWithEmail(context.Background(), "google@example.com", "password123", "Existing Google User")
-
-		assert.Error(t, err)
-		assert.Nil(t, createdUser)
-		assert.Equal(t, user.ErrEmailAssociatedWithGoogle, err)
-		mockRepo.AssertExpectations(t)
-	})
 }

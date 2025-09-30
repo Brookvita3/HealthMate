@@ -57,7 +57,7 @@ func (s *serviceImpl) RegisterWithEmail(ctx context.Context, email, password, na
 	}
 
 	if existing != nil {
-		if existing.Provider == "google" {
+		if existing.Provider == "Google" {
 			return nil, user.ErrEmailAssociatedWithGoogle
 		}
 		return nil, user.ErrUserAlreadyExists
@@ -146,7 +146,7 @@ func (s *serviceImpl) LoginWithGoogleIDToken(ctx context.Context, idToken string
 			Id:       uuid.New(),
 			Email:    gUser.Email,
 			Name:     gUser.Name,
-			Provider: "google",
+			Provider: "Google",
 			GoogleID: gUser.Sub,
 			Picture:  gUser.Picture,
 			Role:     "user",

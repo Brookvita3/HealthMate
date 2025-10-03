@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"healthmate/internal/cache"
 	"io"
 	"time"
 
@@ -13,7 +14,7 @@ import (
 )
 
 type RedisOTPService struct {
-	rdb *redis.Client
+	cache cache.Cache
 }
 
 const (
@@ -23,9 +24,9 @@ const (
 	otpRedisKeyPrefix = "otp:"
 )
 
-func NewRedisOTPService(rdb *redis.Client) *RedisOTPService {
+func NewRedisOTPService(cache cache.Cache) *RedisOTPService {
 	return &RedisOTPService{
-		rdb: rdb,
+		cache: cache,
 	}
 }
 
@@ -65,7 +66,7 @@ func (s *RedisOTPService) Generate(ctx context.Context, key string) (string, err
 	}
 
 	redisKey := otpRedisKeyPrefix + key
-	if err := s.rdb.Set(ctx, redisKey, recordJSON, otpExpiration).Err(); err != nil {
+	if err := s.cache.Set(ctx, redisKey, recordJSON, otpExpiration); err != nil {
 		return "", fmt.Errorf("failed to set otp in redis: %w", err)
 	}
 
@@ -74,7 +75,7 @@ func (s *RedisOTPService) Generate(ctx context.Context, key string) (string, err
 
 func (s *RedisOTPService) GetRecord(ctx context.Context, key string) (*Record, error) {
 	redisKey := otpRedisKeyPrefix + key
-	recordJSON, err := s.rdb.Get(ctx, redisKey).Result()
+	recordJSON, err := s.cache.Get(ctx, redisKey)
 	if err != nil {
 		if err == redis.Nil {
 			return nil, ErrOTPNotFound
@@ -109,7 +110,7 @@ func (s *RedisOTPService) Verify(ctx context.Context, key, inputOTP string) erro
 		ttl := otpExpiration - time.Since(time.Unix(rec.CreatedAt, 0))
 
 		redisKey := otpRedisKeyPrefix + key
-		s.rdb.Set(ctx, redisKey, recordJSON, ttl)
+		s.cache.Set(ctx, redisKey, recordJSON, ttl)
 
 		return ErrInvalidOTP
 	}
@@ -119,5 +120,5 @@ func (s *RedisOTPService) Verify(ctx context.Context, key, inputOTP string) erro
 
 func (s *RedisOTPService) Delete(ctx context.Context, key string) error {
 	redisKey := otpRedisKeyPrefix + key
-	return s.rdb.Del(ctx, redisKey).Err()
+	return s.cache.Delete(ctx, redisKey)
 }

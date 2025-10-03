@@ -45,8 +45,10 @@ func NewApp(cfg *config.Config) *App {
 
 	userRepo := user.NewRepository(pool)
 
-	JWTTokenService := auth.NewJWTTokenService(cfg.JWTSecret, redisClient)
-	RedisOTPService := auth.NewRedisOTPService(redisClient)
+	redisCache := redisPlatform.NewCacheWrapper(redisClient)
+
+	JWTTokenService := auth.NewJWTTokenService(cfg.JWTSecret, redisCache)
+	RedisOTPService := auth.NewRedisOTPService(redisCache)
 	authService := auth.NewAuthService(userRepo, JWTTokenService, RedisOTPService, cfg.GoogleClientID)
 
 	authHandler := auth.NewHandler(authService, JWTTokenService)

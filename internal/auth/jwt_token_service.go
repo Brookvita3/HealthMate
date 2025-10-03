@@ -3,23 +3,23 @@ package auth
 import (
 	"context"
 	"errors"
+	"healthmate/internal/cache"
 	"healthmate/internal/user"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/redis/go-redis/v9"
 )
 
 type JWTTokenService struct {
 	secret string
-	rdb    *redis.Client
+	cache  cache.Cache
 }
 
-func NewJWTTokenService(secret string, rdb *redis.Client) *JWTTokenService {
+func NewJWTTokenService(secret string, cache cache.Cache) *JWTTokenService {
 	return &JWTTokenService{
 		secret: secret,
-		rdb:    rdb,
+		cache:  cache,
 	}
 }
 
@@ -61,7 +61,7 @@ func (t *JWTTokenService) GenerateRefreshToken(ctx context.Context, user *user.U
 		return "", err
 	}
 
-	if err := t.rdb.Set(ctx, "refresh:"+jti, user.Id, exp_time).Err(); err != nil {
+	if err := t.cache.Set(ctx, "refresh:"+jti, user.Id, exp_time); err != nil {
 		return "", err
 	}
 
@@ -111,7 +111,7 @@ func (t *JWTTokenService) ValidateRefreshToken(ctx context.Context, refreshToken
 		return "", errors.New("missing email")
 	}
 
-	val, err := t.rdb.Get(ctx, "refresh:"+jti).Result()
+	val, err := t.cache.Get(ctx, "refresh:"+jti)
 	if err != nil {
 		return "", errors.New("refresh token expired or revoked")
 	}
@@ -135,5 +135,5 @@ func (t *JWTTokenService) RevokeRefreshToken(ctx context.Context, refreshToken s
 		return errors.New("missing jti")
 	}
 
-	return t.rdb.Del(ctx, "refresh:"+jti).Err()
+	return t.cache.Delete(ctx, "refresh:"+jti)
 }

@@ -2,7 +2,7 @@ package app
 
 import (
 	_ "healthmate/docs"
-	"healthmate/internal/platform/web/middleware"
+	"healthmate/internal/web/middleware"
 
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"

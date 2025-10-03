@@ -29,24 +29,28 @@ type gUser struct {
 
 type Service interface {
 	RegisterWithEmail(ctx context.Context, email, password, name string) (*user.User, error)
+	VerifyAccount(ctx context.Context, email, otp string) (*LoginResult, error)
 	LoginWithGoogleIDToken(ctx context.Context, idToken string) (*LoginResult, error)
 	LoginWithEmail(ctx context.Context, email, password string) (*LoginResult, error)
 	SetPasswordForUser(ctx context.Context, id uuid.UUID, newPassword string) error
 	RefreshAccessToken(ctx context.Context, refreshToken string) (string, error)
 	Logout(ctx context.Context, refreshToken string) error
+	ResendVerificationOTP(ctx context.Context, email string) error
 }
 
 type serviceImpl struct {
 	userRepo       user.Repository
 	tokenService   TokenService
+	otpService     OTPService
 	googleClientID string
 }
 
-func NewAuthService(repo user.Repository, tokenService TokenService, googleClientID string) Service {
+func NewAuthService(repo user.Repository, tokenService TokenService, otpService OTPService, googleClientID string) Service {
 	return &serviceImpl{
 		userRepo:       repo,
 		tokenService:   tokenService,
 		googleClientID: googleClientID,
+		otpService:     otpService,
 	}
 }
 
@@ -80,7 +84,88 @@ func (s *serviceImpl) RegisterWithEmail(ctx context.Context, email, password, na
 		return nil, err
 	}
 
+	otp, err := s.otpService.Generate(ctx, newUser.Email)
+	if err != nil {
+		log.Printf("Failed to generate OTP for %s: %v", newUser.Email, err)
+		return nil, common.ErrInternalServer
+	}
+
+	// send OTP via here
+	log.Printf("OTP for %s: %s", newUser.Email, otp)
+
 	return newUser, nil
+}
+
+func (s *serviceImpl) VerifyAccount(ctx context.Context, email, otp string) (*LoginResult, error) {
+	err := s.otpService.Verify(ctx, email, otp)
+	if err != nil {
+		return nil, err
+	}
+
+	existingUser, err := s.userRepo.GetUserByEmail(ctx, email)
+	if err != nil {
+		return nil, user.ErrUserNotFound
+	}
+
+	if existingUser.Status == "verified" {
+		return nil, ErrAccountAlreadyVerified
+	}
+
+	existingUser.Status = "verified"
+	newStatus := "verified"
+	updateParams := user.UpdateUserParams{
+		Status: &newStatus,
+	}
+
+	if err := s.userRepo.UpdateUser(ctx, existingUser.Id, updateParams); err != nil {
+		log.Printf("Failed to update user status for %s: %v", existingUser.Id, err)
+		return nil, common.ErrInternalServer
+	}
+
+	existingUser.Status = newStatus
+
+	go s.otpService.Delete(context.Background(), email)
+
+	accessToken, err := s.tokenService.GenerateAccessToken(existingUser)
+	if err != nil {
+		return nil, common.ErrInternalServer
+	}
+	refreshToken, err := s.tokenService.GenerateRefreshToken(ctx, existingUser)
+	if err != nil {
+		return nil, common.ErrInternalServer
+	}
+
+	return &LoginResult{
+		User:         existingUser,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}, nil
+}
+
+func (s *serviceImpl) ResendVerificationOTP(ctx context.Context, email string) error {
+	existing, err := s.userRepo.GetUserByEmail(ctx, email)
+	if err != nil {
+		if errors.Is(err, user.ErrUserNotFound) {
+			log.Printf("Resend OTP request for non-existent email: %s", email)
+			return nil
+		}
+		return common.ErrInternalServer
+	}
+
+	if existing.Status == "verified" {
+		return ErrAccountAlreadyVerified
+	}
+
+	otp, err := s.otpService.Generate(ctx, email)
+	if err != nil {
+		log.Printf("Failed to generate new OTP for %s: %v", email, err)
+		return common.ErrInternalServer
+	}
+
+	// send OTP via here
+	log.Printf("OTP for %s: %s", email, otp)
+
+	return nil
 }
 
 func (s *serviceImpl) LoginWithEmail(ctx context.Context, email, password string) (*LoginResult, error) {
@@ -91,6 +176,10 @@ func (s *serviceImpl) LoginWithEmail(ctx context.Context, email, password string
 
 	if existing.Password == "" {
 		return nil, user.ErrPasswordNotSet
+	}
+
+	if existing.Status != "verified" {
+		return nil, ErrAccountNotVerified
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(existing.Password), []byte(password))

@@ -25,6 +25,9 @@ func (a *App) SetupRoutes() {
 		authGroup.POST("/google", a.AuthHandler.GoogleLogin)
 		authGroup.POST("/refresh", a.AuthHandler.RefreshToken)
 		authGroup.POST("/register", a.AuthHandler.Register)
+		authGroup.POST("/otp/verify", a.AuthHandler.VerifyAccount)
+		authGroup.POST("/otp/resend", a.AuthHandler.ResendOTP)
+
 		authGroup.POST("/app", a.AuthHandler.AppLogin)
 
 		authGroup.Use(a.AuthHandler.AuthMiddleware())

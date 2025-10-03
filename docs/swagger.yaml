@@ -22,6 +22,15 @@ definitions:
     required:
     - id_token
     type: object
+  auth.LoginResult:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+      user:
+        $ref: '#/definitions/user.User'
+    type: object
   auth.LoginSuccessResponse:
     properties:
       access_token:
@@ -77,6 +86,16 @@ definitions:
       message:
         type: string
     type: object
+  auth.VerifyRequest:
+    properties:
+      email:
+        type: string
+      otp:
+        type: string
+    required:
+    - email
+    - otp
+    type: object
   user.User:
     properties:
       created_at:
@@ -93,6 +112,7 @@ definitions:
       role:
         type: string
       status:
+        description: unverified, verified
         type: string
       updated_at:
         type: string
@@ -255,6 +275,36 @@ paths:
           schema:
             $ref: '#/definitions/auth.ErrorResponse'
       summary: Register New User
+      tags:
+      - Auth
+  /auth/verify:
+    post:
+      consumes:
+      - application/json
+      description: Verifies OTP and logs the user in by returning tokens.
+      parameters:
+      - description: Email and OTP
+        in: body
+        name: verification
+        required: true
+        schema:
+          $ref: '#/definitions/auth.VerifyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.LoginResult'
+        "400":
+          description: Invalid OTP or request
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+        "404":
+          description: OTP not found or expired
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      summary: Verify Account & Login
       tags:
       - Auth
 schemes:

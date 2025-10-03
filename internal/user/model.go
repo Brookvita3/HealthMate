@@ -10,10 +10,11 @@ type User struct {
 	Id    uuid.UUID `json:"id"`
 	Email string    `json:"email"`
 	Name  string    `json:"name"`
+
 	// Allows NULL
 	Picture string `json:"picture,omitempty"`
-	Role    string `json:"role"`
-	Status  string `json:"status"`
+	Role    string `json:"role"`   // "user"
+	Status  string `json:"status"` // "unverified", "verified"
 
 	Provider string `json:"-"`
 	// Allows NULL

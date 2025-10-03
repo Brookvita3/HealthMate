@@ -18,6 +18,7 @@ type App struct {
 
 	AuthService  auth.Service
 	TokenService auth.TokenService
+	OTPService   auth.OTPService
 
 	AuthHandler auth.Handler
 
@@ -45,7 +46,8 @@ func NewApp(cfg *config.Config) *App {
 	userRepo := user.NewRepository(pool)
 
 	JWTTokenService := auth.NewJWTTokenService(cfg.JWTSecret, redisClient)
-	authService := auth.NewAuthService(userRepo, JWTTokenService, cfg.GoogleClientID)
+	RedisOTPService := auth.NewRedisOTPService(redisClient)
+	authService := auth.NewAuthService(userRepo, JWTTokenService, RedisOTPService, cfg.GoogleClientID)
 
 	authHandler := auth.NewHandler(authService, JWTTokenService)
 

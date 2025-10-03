@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -170,9 +171,41 @@ func (r *postgresRepository) ListUsers(ctx context.Context, params ListUsersPara
 }
 
 func (r *postgresRepository) UpdateUser(ctx context.Context, id uuid.UUID, params UpdateUserParams) error {
-	query := `UPDATE users SET name = $1, updated_at = NOW() WHERE id = $2`
+	var setClauses []string
+	var args []any
+	argId := 1
 
-	cmdTag, err := r.pool.Exec(ctx, query, params.Name, id)
+	if params.Name != nil {
+		setClauses = append(setClauses, fmt.Sprintf("name = $%d", argId))
+		args = append(args, *params.Name)
+		argId++
+	}
+	if params.Picture != nil {
+		setClauses = append(setClauses, fmt.Sprintf("picture = $%d", argId))
+		args = append(args, *params.Picture)
+		argId++
+	}
+	if params.Role != nil {
+		setClauses = append(setClauses, fmt.Sprintf("role = $%d", argId))
+		args = append(args, *params.Role)
+		argId++
+	}
+	if params.Status != nil {
+		setClauses = append(setClauses, fmt.Sprintf("status = $%d", argId))
+		args = append(args, *params.Status)
+		argId++
+	}
+
+	if len(setClauses) == 0 {
+		return nil
+	}
+
+	query := fmt.Sprintf(`UPDATE users SET %s, updated_at = NOW() WHERE id = $%d`,
+		strings.Join(setClauses, ", "), argId)
+
+	args = append(args, id)
+
+	cmdTag, err := r.pool.Exec(ctx, query, args...)
 	if err != nil {
 		return err
 	}

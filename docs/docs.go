@@ -251,6 +251,52 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/auth/verify": {
+            "post": {
+                "description": "Verifies OTP and logs the user in by returning tokens.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Verify Account \u0026 Login",
+                "parameters": [
+                    {
+                        "description": "Email and OTP",
+                        "name": "verification",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.VerifyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/auth.LoginResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid OTP or request",
+                        "schema": {
+                            "$ref": "#/definitions/auth.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "OTP not found or expired",
+                        "schema": {
+                            "$ref": "#/definitions/auth.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -285,6 +331,20 @@ const docTemplate = `{
             "properties": {
                 "id_token": {
                     "type": "string"
+                }
+            }
+        },
+        "auth.LoginResult": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                },
+                "refresh_token": {
+                    "type": "string"
+                },
+                "user": {
+                    "$ref": "#/definitions/user.User"
                 }
             }
         },
@@ -372,6 +432,21 @@ const docTemplate = `{
                 }
             }
         },
+        "auth.VerifyRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "otp"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "otp": {
+                    "type": "string"
+                }
+            }
+        },
         "user.User": {
             "type": "object",
             "properties": {
@@ -395,6 +470,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "status": {
+                    "description": "unverified, verified",
                     "type": "string"
                 },
                 "updated_at": {

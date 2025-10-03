@@ -26,7 +26,7 @@ func (s *serviceImpl) GetUserProfile(ctx context.Context, id uuid.UUID) (*User, 
 }
 
 func (s *serviceImpl) UpdateUserProfile(ctx context.Context, id uuid.UUID, params UpdateUserParams) error {
-	if params.Name == "" {
+	if params.Name == nil {
 		return common.ErrInvalidRequest
 	}
 	return s.repo.UpdateUser(ctx, id, params)

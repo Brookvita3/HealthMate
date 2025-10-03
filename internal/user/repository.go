@@ -16,7 +16,10 @@ type ListUsersParams struct {
 
 // UpdateUserParams contains the parameters for updating a user's profile.
 type UpdateUserParams struct {
-	Name string
+	Name    *string
+	Role    *string
+	Status  *string
+	Picture *string
 }
 
 type Repository interface {

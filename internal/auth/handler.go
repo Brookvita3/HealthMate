@@ -34,9 +34,9 @@ type GoogleLoginRequest struct {
 }
 
 type LoginSuccessResponse struct {
-	AccessToken  string    `json:"access_token"`
-	RefreshToken string    `json:"refresh_token"`
-	User         user.User `json:"user"`
+	AccessToken  string     `json:"access_token"`
+	RefreshToken string     `json:"refresh_token"`
+	User         *user.User `json:"user"`
 }
 
 type RefreshTokenRequest struct {
@@ -57,6 +57,11 @@ type RegisterRequest struct {
 	Name     string `json:"name" binding:"required"`
 }
 
+type RegisterResponse struct {
+	Message string     `json:"message"`
+	User    *user.User `json:"user"`
+}
+
 type EmailLoginRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required"`
@@ -64,6 +69,15 @@ type EmailLoginRequest struct {
 
 type SetPasswordRequest struct {
 	Password string `json:"password" binding:"required,min=8"`
+}
+
+type VerifyRequest struct {
+	Email string `json:"email" binding:"required,email"`
+	OTP   string `json:"otp" binding:"required,len=6"`
+}
+
+type ResendOTPRequest struct {
+	Email string `json:"email" binding:"required,email"`
 }
 
 // GoogleLogin handles user login via Google ID token.
@@ -91,7 +105,7 @@ func (h *Handler) GoogleLogin(c *gin.Context) {
 	c.JSON(http.StatusOK, LoginSuccessResponse{
 		AccessToken:  result.AccessToken,
 		RefreshToken: result.RefreshToken,
-		User:         *result.User,
+		User:         result.User,
 	})
 }
 
@@ -169,14 +183,69 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	user, err := h.service.RegisterWithEmail(c.Request.Context(), req.Email, req.Password, req.Name)
+	createdUser, err := h.service.RegisterWithEmail(c.Request.Context(), req.Email, req.Password, req.Name)
 
 	if err != nil {
 		h.handleError(c, err)
 		return
 	}
 
-	c.JSON(http.StatusCreated, user)
+	c.JSON(http.StatusCreated, RegisterResponse{
+		Message: "Registration successful. Please check your email to verify your account.",
+		User:    createdUser,
+	})
+}
+
+// @Summary      Verify Account & Login
+// @Description  Verifies OTP and logs the user in by returning tokens.
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        verification  body      VerifyRequest        true  "Email and OTP"
+// @Success      200           {object}  LoginResult
+// @Failure      400           {object}  ErrorResponse "Invalid OTP or request"
+// @Failure      404           {object}  ErrorResponse "OTP not found or expired"
+// @Router       /auth/otp/verify [post]
+func (h *Handler) VerifyAccount(c *gin.Context) {
+	var req VerifyRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: common.ErrInvalidBody.Error()})
+		return
+	}
+
+	loginResult, err := h.service.VerifyAccount(c.Request.Context(), req.Email, req.OTP)
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, loginResult)
+}
+
+// @Summary      Resend OTP
+// @Description  Generates and sends a new OTP to the user's email if the account is unverified.
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        email_info body      ResendOTPRequest     true  "User's Email"
+// @Success      200        {object}  SuccessMessageResponse "Always returns a success message for security reasons"
+// @Failure      400        {object}  ErrorResponse
+// @Failure      409        {object}  ErrorResponse "Returned if account is already verified"
+// @Router       /auth/otp/resend [post]
+func (h *Handler) ResendOTP(c *gin.Context) {
+	var req ResendOTPRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: common.ErrInvalidBody.Error()})
+		return
+	}
+
+	err := h.service.ResendVerificationOTP(c.Request.Context(), req.Email)
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, SuccessMessageResponse{Message: "If your account exists and hasn`t been verified yet, we`ve sent you a new OTP. Please check your email."})
 }
 
 // AppLogin handles user login via email and password.
@@ -205,7 +274,7 @@ func (h *Handler) AppLogin(c *gin.Context) {
 	c.JSON(http.StatusOK, LoginSuccessResponse{
 		AccessToken:  result.AccessToken,
 		RefreshToken: result.RefreshToken,
-		User:         *result.User,
+		User:         result.User,
 	})
 }
 

@@ -29,7 +29,7 @@ definitions:
       refresh_token:
         type: string
       user:
-        $ref: '#/definitions/user.User'
+        $ref: '#/definitions/domain.User'
     type: object
   auth.LoginSuccessResponse:
     properties:
@@ -38,7 +38,7 @@ definitions:
       refresh_token:
         type: string
       user:
-        $ref: '#/definitions/user.User'
+        $ref: '#/definitions/domain.User'
     type: object
   auth.LogoutRequest:
     properties:
@@ -73,6 +73,13 @@ definitions:
     - name
     - password
     type: object
+  auth.ResendOTPRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
   auth.SetPasswordRequest:
     properties:
       password:
@@ -96,7 +103,7 @@ definitions:
     - email
     - otp
     type: object
-  user.User:
+  domain.User:
     properties:
       created_at:
         type: string
@@ -110,9 +117,10 @@ definitions:
         description: Allows NULL
         type: string
       role:
+        description: '"user"'
         type: string
       status:
-        description: unverified, verified
+        description: '"unverified", "verified"'
         type: string
       updated_at:
         type: string
@@ -194,6 +202,67 @@ paths:
       summary: User Logout
       tags:
       - Auth
+  /auth/otp/resend:
+    post:
+      consumes:
+      - application/json
+      description: Generates and sends a new OTP to the user's email if the account
+        is unverified.
+      parameters:
+      - description: User's Email
+        in: body
+        name: email_info
+        required: true
+        schema:
+          $ref: '#/definitions/auth.ResendOTPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Always returns a success message for security reasons
+          schema:
+            $ref: '#/definitions/auth.SuccessMessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+        "409":
+          description: Returned if account is already verified
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      summary: Resend OTP
+      tags:
+      - Auth
+  /auth/otp/verify:
+    post:
+      consumes:
+      - application/json
+      description: Verifies OTP and logs the user in by returning tokens.
+      parameters:
+      - description: Email and OTP
+        in: body
+        name: verification
+        required: true
+        schema:
+          $ref: '#/definitions/auth.VerifyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.LoginResult'
+        "400":
+          description: Invalid OTP or request
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+        "404":
+          description: OTP not found or expired
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      summary: Verify Account & Login
+      tags:
+      - Auth
   /auth/password:
     post:
       consumes:
@@ -261,7 +330,7 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/user.User'
+            $ref: '#/definitions/domain.User'
         "404":
           description: user not found
           schema:
@@ -275,36 +344,6 @@ paths:
           schema:
             $ref: '#/definitions/auth.ErrorResponse'
       summary: Register New User
-      tags:
-      - Auth
-  /auth/verify:
-    post:
-      consumes:
-      - application/json
-      description: Verifies OTP and logs the user in by returning tokens.
-      parameters:
-      - description: Email and OTP
-        in: body
-        name: verification
-        required: true
-        schema:
-          $ref: '#/definitions/auth.VerifyRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/auth.LoginResult'
-        "400":
-          description: Invalid OTP or request
-          schema:
-            $ref: '#/definitions/auth.ErrorResponse'
-        "404":
-          description: OTP not found or expired
-          schema:
-            $ref: '#/definitions/auth.ErrorResponse'
-      summary: Verify Account & Login
       tags:
       - Auth
 schemes:

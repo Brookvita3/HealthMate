@@ -10,13 +10,14 @@ import (
 	"google.golang.org/api/idtoken"
 
 	"healthmate/internal/common"
+	"healthmate/internal/domain"
 	"healthmate/internal/user"
 )
 
 type LoginResult struct {
-	User         *user.User `json:"user"`
-	AccessToken  string     `json:"access_token"`
-	RefreshToken string     `json:"refresh_token"`
+	User         *domain.User `json:"user"`
+	AccessToken  string       `json:"access_token"`
+	RefreshToken string       `json:"refresh_token"`
 }
 
 type gUser struct {
@@ -28,7 +29,7 @@ type gUser struct {
 }
 
 type Service interface {
-	RegisterWithEmail(ctx context.Context, email, password, name string) (*user.User, error)
+	RegisterWithEmail(ctx context.Context, email, password, name string) (*domain.User, error)
 	VerifyAccount(ctx context.Context, email, otp string) (*LoginResult, error)
 	LoginWithGoogleIDToken(ctx context.Context, idToken string) (*LoginResult, error)
 	LoginWithEmail(ctx context.Context, email, password string) (*LoginResult, error)
@@ -39,13 +40,13 @@ type Service interface {
 }
 
 type serviceImpl struct {
-	userRepo       user.Repository
+	userRepo       user.UserRepository
 	tokenService   TokenService
 	otpService     OTPService
 	googleClientID string
 }
 
-func NewAuthService(repo user.Repository, tokenService TokenService, otpService OTPService, googleClientID string) Service {
+func NewAuthService(repo user.UserRepository, tokenService TokenService, otpService OTPService, googleClientID string) Service {
 	return &serviceImpl{
 		userRepo:       repo,
 		tokenService:   tokenService,
@@ -54,7 +55,7 @@ func NewAuthService(repo user.Repository, tokenService TokenService, otpService 
 	}
 }
 
-func (s *serviceImpl) RegisterWithEmail(ctx context.Context, email, password, name string) (*user.User, error) {
+func (s *serviceImpl) RegisterWithEmail(ctx context.Context, email, password, name string) (*domain.User, error) {
 	existing, err := s.userRepo.GetUserByEmail(ctx, email)
 	if err != nil && !errors.Is(err, user.ErrUserNotFound) {
 		return nil, err
@@ -70,7 +71,7 @@ func (s *serviceImpl) RegisterWithEmail(ctx context.Context, email, password, na
 		return nil, common.ErrInternalServer
 	}
 
-	newUser := &user.User{
+	newUser := &domain.User{
 		Id:       uuid.New(),
 		Email:    email,
 		Name:     name,
@@ -224,11 +225,11 @@ func (s *serviceImpl) LoginWithGoogleIDToken(ctx context.Context, idToken string
 		return nil, err
 	}
 
-	var userToAuth *user.User
+	var userToAuth *domain.User
 	if existing != nil {
 		userToAuth = existing
 	} else {
-		newUser := &user.User{
+		newUser := &domain.User{
 			Id:       uuid.New(),
 			Email:    gUser.Email,
 			Name:     gUser.Name,

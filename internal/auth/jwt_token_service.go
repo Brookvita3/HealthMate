@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"healthmate/internal/cache"
-	"healthmate/internal/user"
+	"healthmate/internal/domain"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -23,7 +23,7 @@ func NewJWTTokenService(secret string, cache cache.Cache) *JWTTokenService {
 	}
 }
 
-func (t *JWTTokenService) GenerateAccessToken(user *user.User) (string, error) {
+func (t *JWTTokenService) GenerateAccessToken(user *domain.User) (string, error) {
 
 	exp_time := 5 * time.Minute
 
@@ -40,7 +40,7 @@ func (t *JWTTokenService) GenerateAccessToken(user *user.User) (string, error) {
 	return token.SignedString([]byte(t.secret))
 }
 
-func (t *JWTTokenService) GenerateRefreshToken(ctx context.Context, user *user.User) (string, error) {
+func (t *JWTTokenService) GenerateRefreshToken(ctx context.Context, user *domain.User) (string, error) {
 
 	jti := uuid.New().String()
 	exp_time := 1 * time.Hour

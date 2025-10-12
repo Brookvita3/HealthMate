@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"healthmate/internal/domain"
+
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -34,13 +36,13 @@ type postgresRepository struct {
 	pool *pgxpool.Pool
 }
 
-func NewRepository(pool *pgxpool.Pool) Repository {
+func NewRepository(pool *pgxpool.Pool) UserRepository {
 	return &postgresRepository{
 		pool: pool,
 	}
 }
 
-func (r *postgresRepository) CreateUser(ctx context.Context, user *User) error {
+func (r *postgresRepository) CreateUser(ctx context.Context, user *domain.User) error {
 	query := `
 		INSERT INTO users (id, email, name, picture, role, status, provider, google_id, password)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
@@ -60,7 +62,7 @@ func (r *postgresRepository) CreateUser(ctx context.Context, user *User) error {
 	return err
 }
 
-func (r *postgresRepository) GetUserByEmail(ctx context.Context, email string) (*User, error) {
+func (r *postgresRepository) GetUserByEmail(ctx context.Context, email string) (*domain.User, error) {
 	query := `
 		SELECT id, email, name, picture, role, status, provider, google_id, password, created_at, updated_at
 		FROM users
@@ -78,7 +80,7 @@ func (r *postgresRepository) GetUserByEmail(ctx context.Context, email string) (
 	return toDomainUser(*pUser), nil
 }
 
-func (r *postgresRepository) GetUserById(ctx context.Context, id uuid.UUID) (*User, error) {
+func (r *postgresRepository) GetUserById(ctx context.Context, id uuid.UUID) (*domain.User, error) {
 	query := `
 		SELECT id, email, name, picture, role, status, provider, google_id, password, created_at, updated_at
 		FROM users
@@ -114,7 +116,7 @@ func (r *postgresRepository) UpdatePassword(ctx context.Context, id uuid.UUID, p
 	return nil
 }
 
-func (r *postgresRepository) ListUsers(ctx context.Context, params ListUsersParams) ([]User, error) {
+func (r *postgresRepository) ListUsers(ctx context.Context, params ListUsersParams) ([]domain.User, error) {
 	query := `SELECT id, email, name, picture, role, status, provider, google_id, password, created_at, updated_at
 			  FROM users`
 
@@ -153,7 +155,7 @@ func (r *postgresRepository) ListUsers(ctx context.Context, params ListUsersPara
 	}
 	defer rows.Close()
 
-	var users []User
+	var users []domain.User
 	for rows.Next() {
 		pUser, err := r.scanUser(rows)
 		if err != nil {
@@ -264,8 +266,8 @@ func (r *postgresRepository) scanUser(row scannable) (*postgresUser, error) {
 }
 
 // toDomainUser is a helper function that converts a postgresUser struct to a domain User struct.
-func toDomainUser(p postgresUser) *User {
-	u := &User{
+func toDomainUser(p postgresUser) *domain.User {
+	u := &domain.User{
 		Id:        p.Id,
 		Email:     p.Email,
 		Name:      p.Name,
@@ -290,7 +292,7 @@ func toDomainUser(p postgresUser) *User {
 }
 
 // fromDomainUser is a helper function that converts a domain User struct to a postgresUser struct.
-func fromDomainUser(u User) *postgresUser {
+func fromDomainUser(u domain.User) *postgresUser {
 	p := &postgresUser{
 		Id:        u.Id,
 		Email:     u.Email,

@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"healthmate/internal/common"
+	"healthmate/internal/domain"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -102,7 +103,7 @@ func (h *Handler) ListUsers(c *gin.Context) {
 	}
 
 	if users == nil {
-		users = []User{}
+		users = []domain.User{}
 	}
 
 	c.JSON(http.StatusOK, users)

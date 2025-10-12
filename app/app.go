@@ -14,7 +14,7 @@ import (
 )
 
 type App struct {
-	UserRepo user.Repository
+	UserRepo user.UserRepository
 
 	AuthService  auth.Service
 	TokenService auth.TokenService

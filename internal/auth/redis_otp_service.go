@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"healthmate/internal/cache"
+	"healthmate/internal/domain"
 	"io"
 	"time"
 
@@ -54,7 +55,7 @@ func (s *RedisOTPService) Generate(ctx context.Context, key string) (string, err
 		return "", fmt.Errorf("failed to hash otp: %w", err)
 	}
 
-	rec := Record{
+	rec := domain.Record{
 		Hash:         string(hashedOTP),
 		AttemptsLeft: otpMaxAttempts,
 		CreatedAt:    time.Now().Unix(),
@@ -73,7 +74,7 @@ func (s *RedisOTPService) Generate(ctx context.Context, key string) (string, err
 	return otp, nil
 }
 
-func (s *RedisOTPService) GetRecord(ctx context.Context, key string) (*Record, error) {
+func (s *RedisOTPService) GetRecord(ctx context.Context, key string) (*domain.Record, error) {
 	redisKey := otpRedisKeyPrefix + key
 	recordJSON, err := s.cache.Get(ctx, redisKey)
 	if err != nil {
@@ -83,7 +84,7 @@ func (s *RedisOTPService) GetRecord(ctx context.Context, key string) (*Record, e
 		return nil, fmt.Errorf("failed to get otp from redis: %w", err)
 	}
 
-	var rec Record
+	var rec domain.Record
 	if err := json.Unmarshal([]byte(recordJSON), &rec); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal otp record: %w", err)
 	}

@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"healthmate/internal/common"
-	"healthmate/internal/user"
+	"healthmate/internal/domain"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -34,9 +34,9 @@ type GoogleLoginRequest struct {
 }
 
 type LoginSuccessResponse struct {
-	AccessToken  string     `json:"access_token"`
-	RefreshToken string     `json:"refresh_token"`
-	User         *user.User `json:"user"`
+	AccessToken  string       `json:"access_token"`
+	RefreshToken string       `json:"refresh_token"`
+	User         *domain.User `json:"user"`
 }
 
 type RefreshTokenRequest struct {
@@ -58,8 +58,8 @@ type RegisterRequest struct {
 }
 
 type RegisterResponse struct {
-	Message string     `json:"message"`
-	User    *user.User `json:"user"`
+	Message string       `json:"message"`
+	User    *domain.User `json:"user"`
 }
 
 type EmailLoginRequest struct {
@@ -170,7 +170,7 @@ func (h *Handler) LogOut(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        user  body      RegisterRequest      true  "User registration info"
-// @Success      201  {object}  user.User
+// @Success      201  {object}  domain.User
 // @Failure      404  {object}  ErrorResponse "user not found"
 // @Failure      409  {object}  ErrorResponse "email is already registered"
 // @Failure      500  {object}  ErrorResponse "an unexpected error occurred"

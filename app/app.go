@@ -4,6 +4,7 @@ import (
 	"context"
 	"healthmate/config"
 	"healthmate/internal/auth"
+	email "healthmate/internal/mail"
 	redisPlatform "healthmate/internal/platform/redis"
 	"healthmate/internal/user"
 	"log"
@@ -47,9 +48,11 @@ func NewApp(cfg *config.Config) *App {
 
 	redisCache := redisPlatform.NewCacheWrapper(redisClient)
 
+	GmailService := email.NewGmailEmailService(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUsername, cfg.SMTPAppPassword, cfg.SMTPSenderName)
+
 	JWTTokenService := auth.NewJWTTokenService(cfg.JWTSecret, redisCache)
 	RedisOTPService := auth.NewRedisOTPService(redisCache)
-	authService := auth.NewAuthService(userRepo, JWTTokenService, RedisOTPService, cfg.GoogleClientID)
+	authService := auth.NewAuthService(userRepo, JWTTokenService, RedisOTPService, GmailService, cfg.GoogleClientID)
 
 	authHandler := auth.NewHandler(authService, JWTTokenService)
 

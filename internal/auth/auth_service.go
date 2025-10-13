@@ -11,6 +11,7 @@ import (
 
 	"healthmate/internal/common"
 	"healthmate/internal/domain"
+	"healthmate/internal/mail"
 	"healthmate/internal/user"
 )
 
@@ -43,14 +44,16 @@ type serviceImpl struct {
 	userRepo       user.UserRepository
 	tokenService   TokenService
 	otpService     OTPService
+	mailService    email.EmailService
 	googleClientID string
 }
 
-func NewAuthService(repo user.UserRepository, tokenService TokenService, otpService OTPService, googleClientID string) Service {
+func NewAuthService(repo user.UserRepository, tokenService TokenService, otpService OTPService, mailService email.EmailService, googleClientID string) Service {
 	return &serviceImpl{
 		userRepo:       repo,
 		tokenService:   tokenService,
 		googleClientID: googleClientID,
+		mailService:    mailService,
 		otpService:     otpService,
 	}
 }
@@ -91,8 +94,10 @@ func (s *serviceImpl) RegisterWithEmail(ctx context.Context, email, password, na
 		return nil, common.ErrInternalServer
 	}
 
-	// send OTP via here
-	log.Printf("OTP for %s: %s", newUser.Email, otp)
+	if err := s.mailService.SendOTP(ctx, newUser.Email, newUser.Name, otp); err != nil {
+		log.Printf("Failed to send OTP for %s: %v", newUser.Email, err)
+		return nil, common.ErrInternalServer
+	}
 
 	return newUser, nil
 }
@@ -136,6 +141,12 @@ func (s *serviceImpl) VerifyAccount(ctx context.Context, email, otp string) (*Lo
 		return nil, common.ErrInternalServer
 	}
 
+	go func() {
+		if err := s.mailService.SendWelcomeEmail(ctx, existingUser.Email, existingUser.Name); err != nil {
+			log.Printf("Failed to send welcome email for %s: %v", existingUser.Email, err)
+		}
+	}()
+
 	return &LoginResult{
 		User:         existingUser,
 		AccessToken:  accessToken,
@@ -163,8 +174,10 @@ func (s *serviceImpl) ResendVerificationOTP(ctx context.Context, email string) e
 		return common.ErrInternalServer
 	}
 
-	// send OTP via here
-	log.Printf("OTP for %s: %s", email, otp)
+	if err := s.mailService.ResendOTP(ctx, existing.Email, existing.Name, otp); err != nil {
+		log.Printf("Failed to send OTP for %s: %v", existing.Email, err)
+		return common.ErrInternalServer
+	}
 
 	return nil
 }

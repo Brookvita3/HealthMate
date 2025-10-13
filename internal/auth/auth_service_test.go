@@ -17,28 +17,51 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func setupTest() (*mocks.Repository, *mocks.OTPService, *mocks.EmailService, *mocks.TokenService, Service) {
-	mockRepo := new(mocks.Repository)
-	mockTokenService := new(mocks.TokenService)
-	mockOTPService := new(mocks.OTPService)
-	mockEmailService := new(mocks.EmailService)
-	authService := NewAuthService(mockRepo, mockTokenService, mockOTPService, mockEmailService, "")
-
-	return mockRepo, mockOTPService, mockEmailService, mockTokenService, authService
+type testEnv struct {
+	UserRepository *mocks.UserRepository
+	OTPService     *mocks.OTPService
+	EmailService   *mocks.EmailService
+	TokenService   *mocks.TokenService
+	GoogleVerifier *mocks.GoogleTokenVerifier
+	AuthService    Service
 }
 
+func setupTest() *testEnv {
+	mockUserRepository := new(mocks.UserRepository)
+	mocktokenService := new(mocks.TokenService)
+	mockOTPService := new(mocks.OTPService)
+	mockEmailService := new(mocks.EmailService)
+	mockGoogleVerifier := new(mocks.GoogleTokenVerifier)
+
+	authService := NewAuthService(
+		mockUserRepository,
+		mocktokenService,
+		mockOTPService,
+		mockEmailService,
+		mockGoogleVerifier,
+	)
+
+	return &testEnv{
+		UserRepository: mockUserRepository,
+		OTPService:     mockOTPService,
+		EmailService:   mockEmailService,
+		TokenService:   mocktokenService,
+		GoogleVerifier: mockGoogleVerifier,
+		AuthService:    authService,
+	}
+}
 func TestRegisterWithEmail(t *testing.T) {
 
 	t.Run("Register success", func(t *testing.T) {
 
-		mockRepo, mockOTPService, mockEmailService, _, authService := setupTest()
+		env := setupTest()
 
-		mockRepo.On("GetUserByEmail", mock.Anything, "test@example.com").Return(nil, user.ErrUserNotFound).Once()
-		mockRepo.On("CreateUser", mock.Anything, mock.AnythingOfType("*domain.User")).Return(nil).Once()
-		mockOTPService.On("Generate", mock.Anything, "test@example.com").Return("123456", nil).Once()
-		mockEmailService.On("SendOTP", mock.Anything, "test@example.com", "Test User", "123456").Return(nil).Once()
+		env.UserRepository.On("GetUserByEmail", mock.Anything, "test@example.com").Return(nil, user.ErrUserNotFound).Once()
+		env.UserRepository.On("CreateUser", mock.Anything, mock.AnythingOfType("*domain.User")).Return(nil).Once()
+		env.OTPService.On("Generate", mock.Anything, "test@example.com").Return("123456", nil).Once()
+		env.EmailService.On("SendOTP", mock.Anything, "test@example.com", "Test User", "123456").Return(nil).Once()
 
-		createdUser, err := authService.RegisterWithEmail(context.Background(), "test@example.com", "password123", "Test User")
+		createdUser, err := env.AuthService.RegisterWithEmail(context.Background(), "test@example.com", "password123", "Test User")
 
 		assert.NoError(t, err)
 		assert.NotNil(t, createdUser)
@@ -46,83 +69,83 @@ func TestRegisterWithEmail(t *testing.T) {
 		assert.Equal(t, "Test User", createdUser.Name)
 		assert.Equal(t, "unverified", createdUser.Status)
 
-		mockRepo.AssertExpectations(t)
-		mockOTPService.AssertExpectations(t)
-		mockEmailService.AssertExpectations(t)
+		env.UserRepository.AssertExpectations(t)
+		env.OTPService.AssertExpectations(t)
+		env.EmailService.AssertExpectations(t)
 	})
 
 	t.Run("Register fail: User already exists", func(t *testing.T) {
 
-		mockRepo, _, _, _, authService := setupTest()
+		env := setupTest()
 
-		mockRepo.On("GetUserByEmail", mock.Anything, "exists@example.com").Return(&domain.User{
+		env.UserRepository.On("GetUserByEmail", mock.Anything, "exists@example.com").Return(&domain.User{
 			Email: "exists@example.com",
 		}, nil).Once()
 
-		createdUser, err := authService.RegisterWithEmail(context.Background(), "exists@example.com", "password123", "Existing User")
+		createdUser, err := env.AuthService.RegisterWithEmail(context.Background(), "exists@example.com", "password123", "Existing User")
 
 		assert.Error(t, err)
 		assert.Nil(t, createdUser)
 		assert.Equal(t, user.ErrEmailAlreadyRegistered, err)
 
-		mockRepo.AssertExpectations(t)
+		env.UserRepository.AssertExpectations(t)
 	})
 
 	t.Run("Register fail: CreateUser returns an error", func(t *testing.T) {
 
-		mockRepo, _, _, _, authService := setupTest()
+		env := setupTest()
 
 		dbError := errors.New("database connection lost")
-		mockRepo.On("GetUserByEmail", mock.Anything, "test@example.com").Return(nil, user.ErrUserNotFound).Once()
-		mockRepo.On("CreateUser", mock.Anything, mock.AnythingOfType("*domain.User")).Return(dbError).Once()
+		env.UserRepository.On("GetUserByEmail", mock.Anything, "test@example.com").Return(nil, user.ErrUserNotFound).Once()
+		env.UserRepository.On("CreateUser", mock.Anything, mock.AnythingOfType("*domain.User")).Return(dbError).Once()
 
-		createdUser, err := authService.RegisterWithEmail(context.Background(), "test@example.com", "password123", "Test User")
+		createdUser, err := env.AuthService.RegisterWithEmail(context.Background(), "test@example.com", "password123", "Test User")
 
 		assert.Error(t, err)
 		assert.Nil(t, createdUser)
 		assert.Equal(t, dbError, err)
 
-		mockRepo.AssertExpectations(t)
+		env.UserRepository.AssertExpectations(t)
 	})
 
 	t.Run("Register fail: OTP generation fails", func(t *testing.T) {
 
-		mockRepo, mockOTPService, _, _, authService := setupTest()
+		env := setupTest()
 
 		otpError := errors.New("redis is down")
-		mockRepo.On("GetUserByEmail", mock.Anything, "test@example.com").Return(nil, user.ErrUserNotFound).Once()
-		mockRepo.On("CreateUser", mock.Anything, mock.AnythingOfType("*domain.User")).Return(nil).Once()
-		mockOTPService.On("Generate", mock.Anything, "test@example.com").Return("", otpError).Once()
+		env.UserRepository.On("GetUserByEmail", mock.Anything, "test@example.com").Return(nil, user.ErrUserNotFound).Once()
+		env.UserRepository.On("CreateUser", mock.Anything, mock.AnythingOfType("*domain.User")).Return(nil).Once()
+		env.OTPService.On("Generate", mock.Anything, "test@example.com").Return("", otpError).Once()
 
-		createdUser, err := authService.RegisterWithEmail(context.Background(), "test@example.com", "password123", "Test User")
+		createdUser, err := env.AuthService.RegisterWithEmail(context.Background(), "test@example.com", "password123", "Test User")
 
 		assert.Error(t, err)
 		assert.Equal(t, common.ErrInternalServer, err)
 		assert.Nil(t, createdUser)
 
-		mockRepo.AssertExpectations(t)
-		mockOTPService.AssertExpectations(t)
+		env.UserRepository.AssertExpectations(t)
+		env.OTPService.AssertExpectations(t)
 	})
 
 	t.Run("Register fail: Send OTP fails", func(t *testing.T) {
 
-		mockRepo, mockOTPService, mockEmailService, _, authService := setupTest()
+		env := setupTest()
 
 		mailError := errors.New("SMTP server down")
-		mockRepo.On("GetUserByEmail", mock.Anything, "test@example.com").Return(nil, user.ErrUserNotFound).Once()
-		mockRepo.On("CreateUser", mock.Anything, mock.AnythingOfType("*domain.User")).Return(nil).Once()
-		mockOTPService.On("Generate", mock.Anything, "test@example.com").Return("123456", nil).Once()
-		mockEmailService.On("SendOTP", mock.Anything, "test@example.com", "Test User", "123456").Return(mailError).Once()
+		env.UserRepository.On("GetUserByEmail", mock.Anything, "test@example.com").Return(nil, user.ErrUserNotFound).Once()
+		env.UserRepository.On("CreateUser", mock.Anything, mock.AnythingOfType("*domain.User")).Return(nil).Once()
+		env.OTPService.On("Generate", mock.Anything, "test@example.com").Return("123456", nil).Once()
+		env.EmailService.On("SendOTP", mock.Anything, "test@example.com", "Test User", "123456").Return(mailError).Once()
 
-		createdUser, err := authService.RegisterWithEmail(context.Background(), "test@example.com", "password123", "Test User")
+		createdUser, err := env.AuthService.RegisterWithEmail(context.Background(), "test@example.com", "password123", "Test User")
 
 		assert.Error(t, err)
 		assert.Equal(t, common.ErrInternalServer, err)
 		assert.Nil(t, createdUser)
 
-		mockRepo.AssertExpectations(t)
-		mockOTPService.AssertExpectations(t)
-		mockEmailService.AssertExpectations(t)
+		env.UserRepository.AssertExpectations(t)
+		env.OTPService.AssertExpectations(t)
+		env.EmailService.AssertExpectations(t)
 	})
 
 }
@@ -131,7 +154,7 @@ func TestLoginWithEmail(t *testing.T) {
 
 	t.Run("Login success", func(t *testing.T) {
 
-		mockRepo, _, _, mockTokenService, authService := setupTest()
+		env := setupTest()
 
 		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
 		mockUser := &domain.User{
@@ -140,11 +163,11 @@ func TestLoginWithEmail(t *testing.T) {
 			Status:   "verified",
 		}
 
-		mockRepo.On("GetUserByEmail", mock.Anything, "test@example.com").Return(mockUser, nil).Once()
-		mockTokenService.On("GenerateAccessToken", mockUser).Return("access_token", nil).Once()
-		mockTokenService.On("GenerateRefreshToken", mock.Anything, mockUser).Return("refresh_token", nil).Once()
+		env.UserRepository.On("GetUserByEmail", mock.Anything, "test@example.com").Return(mockUser, nil).Once()
+		env.TokenService.On("GenerateAccessToken", mockUser).Return("access_token", nil).Once()
+		env.TokenService.On("GenerateRefreshToken", mock.Anything, mockUser).Return("refresh_token", nil).Once()
 
-		result, err := authService.LoginWithEmail(context.Background(), "test@example.com", "password123")
+		result, err := env.AuthService.LoginWithEmail(context.Background(), "test@example.com", "password123")
 
 		assert.NoError(t, err)
 		assert.NotNil(t, result)
@@ -153,13 +176,13 @@ func TestLoginWithEmail(t *testing.T) {
 		assert.NotNil(t, result.User)
 		assert.Equal(t, mockUser.Email, result.User.Email)
 
-		mockRepo.AssertExpectations(t)
-		mockTokenService.AssertExpectations(t)
+		env.UserRepository.AssertExpectations(t)
+		env.TokenService.AssertExpectations(t)
 	})
 
 	t.Run("Login failed: Account not verified", func(t *testing.T) {
 
-		mockRepo, _, _, _, authService := setupTest()
+		env := setupTest()
 
 		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
 		mockUser := &domain.User{
@@ -168,20 +191,20 @@ func TestLoginWithEmail(t *testing.T) {
 			Status:   "unverified",
 		}
 
-		mockRepo.On("GetUserByEmail", mock.Anything, "unverified@example.com").Return(mockUser, nil).Once()
+		env.UserRepository.On("GetUserByEmail", mock.Anything, "unverified@example.com").Return(mockUser, nil).Once()
 
-		loginResult, err := authService.LoginWithEmail(context.Background(), "unverified@example.com", "password123")
+		loginResult, err := env.AuthService.LoginWithEmail(context.Background(), "unverified@example.com", "password123")
 
 		assert.Error(t, err)
 		assert.Equal(t, ErrAccountNotVerified, err)
 		assert.Nil(t, loginResult)
 
-		mockRepo.AssertExpectations(t)
+		env.UserRepository.AssertExpectations(t)
 	})
 
 	t.Run("Login failed: Wrong password", func(t *testing.T) {
 
-		mockRepo, _, _, _, authService := setupTest()
+		env := setupTest()
 
 		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
 		mockUser := &domain.User{
@@ -190,54 +213,54 @@ func TestLoginWithEmail(t *testing.T) {
 			Status:   "verified",
 		}
 
-		mockRepo.On("GetUserByEmail", mock.Anything, "test@example.com").Return(mockUser, nil).Once()
+		env.UserRepository.On("GetUserByEmail", mock.Anything, "test@example.com").Return(mockUser, nil).Once()
 
-		loginResult, err := authService.LoginWithEmail(context.Background(), "test@example.com", "wrong_password")
+		loginResult, err := env.AuthService.LoginWithEmail(context.Background(), "test@example.com", "wrong_password")
 
 		assert.Error(t, err)
 		assert.Equal(t, user.ErrInvalidCredentials, err)
 		assert.Nil(t, loginResult)
 
-		mockRepo.AssertExpectations(t)
+		env.UserRepository.AssertExpectations(t)
 	})
 
 	t.Run("Login failed: User not found", func(t *testing.T) {
 
-		mockRepo, _, _, _, authService := setupTest()
+		env := setupTest()
 
-		mockRepo.On("GetUserByEmail", mock.Anything, "notfound@example.com").Return(nil, user.ErrUserNotFound).Once()
+		env.UserRepository.On("GetUserByEmail", mock.Anything, "notfound@example.com").Return(nil, user.ErrUserNotFound).Once()
 
-		loginResult, err := authService.LoginWithEmail(context.Background(), "notfound@example.com", "password123")
+		loginResult, err := env.AuthService.LoginWithEmail(context.Background(), "notfound@example.com", "password123")
 
 		assert.Error(t, err)
 		assert.Equal(t, user.ErrInvalidCredentials, err)
 		assert.Nil(t, loginResult)
 
-		mockRepo.AssertExpectations(t)
+		env.UserRepository.AssertExpectations(t)
 	})
 
 	t.Run("Login failed: Password not set (e.g., social login)", func(t *testing.T) {
 
-		mockRepo, _, _, _, authService := setupTest()
+		env := setupTest()
 
 		mockUser := &domain.User{
 			Email:  "social@example.com",
 			Status: "verified",
 		}
-		mockRepo.On("GetUserByEmail", mock.Anything, "social@example.com").Return(mockUser, nil).Once()
+		env.UserRepository.On("GetUserByEmail", mock.Anything, "social@example.com").Return(mockUser, nil).Once()
 
-		loginResult, err := authService.LoginWithEmail(context.Background(), "social@example.com", "any_password")
+		loginResult, err := env.AuthService.LoginWithEmail(context.Background(), "social@example.com", "any_password")
 
 		assert.Error(t, err)
 		assert.Equal(t, user.ErrPasswordNotSet, err)
 		assert.Nil(t, loginResult)
 
-		mockRepo.AssertExpectations(t)
+		env.UserRepository.AssertExpectations(t)
 	})
 
 	t.Run("Login failed: Generate access token error", func(t *testing.T) {
 
-		mockRepo, _, _, mockTokenService, authService := setupTest()
+		env := setupTest()
 
 		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
 		mockUser := &domain.User{
@@ -247,17 +270,17 @@ func TestLoginWithEmail(t *testing.T) {
 		}
 		tokenError := errors.New("failed to sign token")
 
-		mockRepo.On("GetUserByEmail", mock.Anything, "test@example.com").Return(mockUser, nil).Once()
-		mockTokenService.On("GenerateAccessToken", mockUser).Return("", tokenError).Once()
+		env.UserRepository.On("GetUserByEmail", mock.Anything, "test@example.com").Return(mockUser, nil).Once()
+		env.TokenService.On("GenerateAccessToken", mockUser).Return("", tokenError).Once()
 
-		result, err := authService.LoginWithEmail(context.Background(), "test@example.com", "password123")
+		result, err := env.AuthService.LoginWithEmail(context.Background(), "test@example.com", "password123")
 
 		assert.Error(t, err)
 		assert.Equal(t, tokenError, err)
 		assert.Nil(t, result)
 
-		mockRepo.AssertExpectations(t)
-		mockTokenService.AssertExpectations(t)
+		env.UserRepository.AssertExpectations(t)
+		env.TokenService.AssertExpectations(t)
 	})
 }
 
@@ -265,7 +288,7 @@ func TestVerifyAccount(t *testing.T) {
 
 	t.Run("Verify success", func(t *testing.T) {
 
-		mockRepo, mockOTPService, mockEmailService, mockTokenService, authService := setupTest()
+		env := setupTest()
 
 		mockUser := &domain.User{
 			Id:     uuid.New(),
@@ -274,20 +297,20 @@ func TestVerifyAccount(t *testing.T) {
 			Status: "unverified",
 		}
 
-		mockOTPService.On("Verify", mock.Anything, "test@example.com", "123456").Return(nil).Once()
-		mockRepo.On("GetUserByEmail", mock.Anything, "test@example.com").Return(mockUser, nil).Once()
+		env.OTPService.On("Verify", mock.Anything, "test@example.com", "123456").Return(nil).Once()
+		env.UserRepository.On("GetUserByEmail", mock.Anything, "test@example.com").Return(mockUser, nil).Once()
 
 		expectedStatus := "verified"
 		expectedParams := user.UpdateUserParams{Status: &expectedStatus}
-		mockRepo.On("UpdateUser", mock.Anything, mockUser.Id, expectedParams).Return(nil).Once()
+		env.UserRepository.On("UpdateUser", mock.Anything, mockUser.Id, expectedParams).Return(nil).Once()
 
-		mockTokenService.On("GenerateAccessToken", mock.AnythingOfType("*domain.User")).Return("access_token", nil).Once()
-		mockTokenService.On("GenerateRefreshToken", mock.Anything, mock.AnythingOfType("*domain.User")).Return("refresh_token", nil).Once()
+		env.TokenService.On("GenerateAccessToken", mock.AnythingOfType("*domain.User")).Return("access_token", nil).Once()
+		env.TokenService.On("GenerateRefreshToken", mock.Anything, mock.AnythingOfType("*domain.User")).Return("refresh_token", nil).Once()
 
-		mockOTPService.On("Delete", mock.Anything, "test@example.com").Return(nil).Once()
-		mockEmailService.On("SendWelcomeEmail", mock.Anything, "test@example.com", "Test User").Return(nil).Once()
+		env.OTPService.On("Delete", mock.Anything, "test@example.com").Return(nil).Once()
+		env.EmailService.On("SendWelcomeEmail", mock.Anything, "test@example.com", "Test User").Return(nil).Once()
 
-		result, err := authService.VerifyAccount(context.Background(), "test@example.com", "123456")
+		result, err := env.AuthService.VerifyAccount(context.Background(), "test@example.com", "123456")
 
 		assert.NoError(t, err)
 		assert.NotNil(t, result)
@@ -297,68 +320,68 @@ func TestVerifyAccount(t *testing.T) {
 
 		time.Sleep(50 * time.Millisecond)
 
-		mockRepo.AssertExpectations(t)
-		mockOTPService.AssertExpectations(t)
-		mockTokenService.AssertExpectations(t)
-		mockEmailService.AssertExpectations(t)
+		env.UserRepository.AssertExpectations(t)
+		env.OTPService.AssertExpectations(t)
+		env.TokenService.AssertExpectations(t)
+		env.EmailService.AssertExpectations(t)
 	})
 
 	t.Run("Verify failed: Invalid OTP", func(t *testing.T) {
 
-		_, mockOTPService, _, _, authService := setupTest()
+		env := setupTest()
 
 		otpError := errors.New("invalid OTP")
-		mockOTPService.On("Verify", mock.Anything, "test@example.com", "wrong_otp").Return(otpError).Once()
+		env.OTPService.On("Verify", mock.Anything, "test@example.com", "wrong_otp").Return(otpError).Once()
 
-		result, err := authService.VerifyAccount(context.Background(), "test@example.com", "wrong_otp")
+		result, err := env.AuthService.VerifyAccount(context.Background(), "test@example.com", "wrong_otp")
 
 		assert.Error(t, err)
 		assert.Equal(t, otpError, err)
 		assert.Nil(t, result)
 
-		mockOTPService.AssertExpectations(t)
+		env.OTPService.AssertExpectations(t)
 	})
 
 	t.Run("Verify failed: Account already verified", func(t *testing.T) {
 
-		mockRepo, mockOTPService, _, _, authService := setupTest()
+		env := setupTest()
 
 		mockUser := &domain.User{
 			Email:  "verified@example.com",
 			Status: "verified",
 		}
-		mockOTPService.On("Verify", mock.Anything, "verified@example.com", "123456").Return(nil).Once()
-		mockRepo.On("GetUserByEmail", mock.Anything, "verified@example.com").Return(mockUser, nil).Once()
+		env.OTPService.On("Verify", mock.Anything, "verified@example.com", "123456").Return(nil).Once()
+		env.UserRepository.On("GetUserByEmail", mock.Anything, "verified@example.com").Return(mockUser, nil).Once()
 
-		result, err := authService.VerifyAccount(context.Background(), "verified@example.com", "123456")
+		result, err := env.AuthService.VerifyAccount(context.Background(), "verified@example.com", "123456")
 
 		assert.Error(t, err)
 		assert.Equal(t, ErrAccountAlreadyVerified, err)
 		assert.Nil(t, result)
 
-		mockOTPService.AssertExpectations(t)
-		mockRepo.AssertExpectations(t)
+		env.OTPService.AssertExpectations(t)
+		env.UserRepository.AssertExpectations(t)
 	})
 
 	t.Run("Verify failed: Update user status fails", func(t *testing.T) {
 
-		mockRepo, mockOTPService, _, _, authService := setupTest()
+		env := setupTest()
 
 		mockUser := &domain.User{Id: uuid.New(), Email: "test@example.com", Status: "unverified"}
 		dbError := errors.New("database error")
 
-		mockOTPService.On("Verify", mock.Anything, "test@example.com", "123456").Return(nil).Once()
-		mockRepo.On("GetUserByEmail", mock.Anything, "test@example.com").Return(mockUser, nil).Once()
-		mockRepo.On("UpdateUser", mock.Anything, mockUser.Id, mock.Anything).Return(dbError).Once()
+		env.OTPService.On("Verify", mock.Anything, "test@example.com", "123456").Return(nil).Once()
+		env.UserRepository.On("GetUserByEmail", mock.Anything, "test@example.com").Return(mockUser, nil).Once()
+		env.UserRepository.On("UpdateUser", mock.Anything, mockUser.Id, mock.Anything).Return(dbError).Once()
 
-		result, err := authService.VerifyAccount(context.Background(), "test@example.com", "123456")
+		result, err := env.AuthService.VerifyAccount(context.Background(), "test@example.com", "123456")
 
 		assert.Error(t, err)
 		assert.Equal(t, common.ErrInternalServer, err)
 		assert.Nil(t, result)
 
-		mockOTPService.AssertExpectations(t)
-		mockRepo.AssertExpectations(t)
+		env.OTPService.AssertExpectations(t)
+		env.UserRepository.AssertExpectations(t)
 	})
 }
 
@@ -366,7 +389,7 @@ func TestResendVerificationOTP(t *testing.T) {
 
 	t.Run("Resend success", func(t *testing.T) {
 
-		mockRepo, mockOTPService, mockEmailService, _, authService := setupTest()
+		env := setupTest()
 
 		mockUser := &domain.User{
 			Email:  "unverified@example.com",
@@ -374,55 +397,55 @@ func TestResendVerificationOTP(t *testing.T) {
 			Status: "unverified",
 		}
 
-		mockRepo.On("GetUserByEmail", mock.Anything, "unverified@example.com").Return(mockUser, nil).Once()
-		mockOTPService.On("Generate", mock.Anything, "unverified@example.com").Return("654321", nil).Once()
-		mockEmailService.On("ResendOTP", mock.Anything, "unverified@example.com", "Test User", "654321").Return(nil).Once()
+		env.UserRepository.On("GetUserByEmail", mock.Anything, "unverified@example.com").Return(mockUser, nil).Once()
+		env.OTPService.On("Generate", mock.Anything, "unverified@example.com").Return("654321", nil).Once()
+		env.EmailService.On("ResendOTP", mock.Anything, "unverified@example.com", "Test User", "654321").Return(nil).Once()
 
-		err := authService.ResendVerificationOTP(context.Background(), "unverified@example.com")
+		err := env.AuthService.ResendVerificationOTP(context.Background(), "unverified@example.com")
 
 		assert.NoError(t, err)
 
-		mockRepo.AssertExpectations(t)
-		mockOTPService.AssertExpectations(t)
-		mockEmailService.AssertExpectations(t)
+		env.UserRepository.AssertExpectations(t)
+		env.OTPService.AssertExpectations(t)
+		env.EmailService.AssertExpectations(t)
 	})
 
 	t.Run("Resend for non-existent user returns no error", func(t *testing.T) {
 
-		mockRepo, mockOTPService, mockEmailService, _, authService := setupTest()
+		env := setupTest()
 
-		mockRepo.On("GetUserByEmail", mock.Anything, "notfound@example.com").Return(nil, user.ErrUserNotFound).Once()
+		env.UserRepository.On("GetUserByEmail", mock.Anything, "notfound@example.com").Return(nil, user.ErrUserNotFound).Once()
 
-		err := authService.ResendVerificationOTP(context.Background(), "notfound@example.com")
+		err := env.AuthService.ResendVerificationOTP(context.Background(), "notfound@example.com")
 
 		assert.NoError(t, err)
 
-		mockRepo.AssertExpectations(t)
-		mockOTPService.AssertNotCalled(t, "Generate", mock.Anything, mock.Anything)
-		mockEmailService.AssertNotCalled(t, "ResendOTP", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+		env.UserRepository.AssertExpectations(t)
+		env.OTPService.AssertNotCalled(t, "Generate", mock.Anything, mock.Anything)
+		env.EmailService.AssertNotCalled(t, "ResendOTP", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 	})
 
 	t.Run("Resend failed: Account is already verified", func(t *testing.T) {
 
-		mockRepo, _, _, _, authService := setupTest()
+		env := setupTest()
 
 		mockUser := &domain.User{
 			Email:  "verified@example.com",
 			Status: "verified", // Tài khoản đã xác thực
 		}
-		mockRepo.On("GetUserByEmail", mock.Anything, "verified@example.com").Return(mockUser, nil).Once()
+		env.UserRepository.On("GetUserByEmail", mock.Anything, "verified@example.com").Return(mockUser, nil).Once()
 
-		err := authService.ResendVerificationOTP(context.Background(), "verified@example.com")
+		err := env.AuthService.ResendVerificationOTP(context.Background(), "verified@example.com")
 
 		assert.Error(t, err)
 		assert.Equal(t, ErrAccountAlreadyVerified, err)
 
-		mockRepo.AssertExpectations(t)
+		env.UserRepository.AssertExpectations(t)
 	})
 
 	t.Run("Resend failed: OTP generation fails", func(t *testing.T) {
 
-		mockRepo, mockOTPService, _, _, authService := setupTest()
+		env := setupTest()
 
 		mockUser := &domain.User{
 			Email:  "unverified@example.com",
@@ -430,21 +453,21 @@ func TestResendVerificationOTP(t *testing.T) {
 		}
 		otpError := errors.New("redis is down")
 
-		mockRepo.On("GetUserByEmail", mock.Anything, "unverified@example.com").Return(mockUser, nil).Once()
-		mockOTPService.On("Generate", mock.Anything, "unverified@example.com").Return("", otpError).Once()
+		env.UserRepository.On("GetUserByEmail", mock.Anything, "unverified@example.com").Return(mockUser, nil).Once()
+		env.OTPService.On("Generate", mock.Anything, "unverified@example.com").Return("", otpError).Once()
 
-		err := authService.ResendVerificationOTP(context.Background(), "unverified@example.com")
+		err := env.AuthService.ResendVerificationOTP(context.Background(), "unverified@example.com")
 
 		assert.Error(t, err)
 		assert.Equal(t, common.ErrInternalServer, err)
 
-		mockRepo.AssertExpectations(t)
-		mockOTPService.AssertExpectations(t)
+		env.UserRepository.AssertExpectations(t)
+		env.OTPService.AssertExpectations(t)
 	})
 
 	t.Run("Resend failed: Sending email fails", func(t *testing.T) {
 
-		mockRepo, mockOTPService, mockEmailService, _, authService := setupTest()
+		env := setupTest()
 
 		mockUser := &domain.User{
 			Email:  "unverified@example.com",
@@ -453,18 +476,18 @@ func TestResendVerificationOTP(t *testing.T) {
 		}
 		mailError := errors.New("SMTP server is down")
 
-		mockRepo.On("GetUserByEmail", mock.Anything, "unverified@example.com").Return(mockUser, nil).Once()
-		mockOTPService.On("Generate", mock.Anything, "unverified@example.com").Return("654321", nil).Once()
-		mockEmailService.On("ResendOTP", mock.Anything, "unverified@example.com", "Test User", "654321").Return(mailError).Once()
+		env.UserRepository.On("GetUserByEmail", mock.Anything, "unverified@example.com").Return(mockUser, nil).Once()
+		env.OTPService.On("Generate", mock.Anything, "unverified@example.com").Return("654321", nil).Once()
+		env.EmailService.On("ResendOTP", mock.Anything, "unverified@example.com", "Test User", "654321").Return(mailError).Once()
 
-		err := authService.ResendVerificationOTP(context.Background(), "unverified@example.com")
+		err := env.AuthService.ResendVerificationOTP(context.Background(), "unverified@example.com")
 
 		assert.Error(t, err)
 		assert.Equal(t, common.ErrInternalServer, err)
 
-		mockRepo.AssertExpectations(t)
-		mockOTPService.AssertExpectations(t)
-		mockEmailService.AssertExpectations(t)
+		env.UserRepository.AssertExpectations(t)
+		env.OTPService.AssertExpectations(t)
+		env.EmailService.AssertExpectations(t)
 	})
 }
 
@@ -472,34 +495,128 @@ func TestSetPasswordForUser(t *testing.T) {
 
 	t.Run("Set password success", func(t *testing.T) {
 
-		mockRepo, _, _, _, authService := setupTest()
+		env := setupTest()
 
 		userID := uuid.New()
 		newPassword := "my-new-strong-password"
 
-		mockRepo.On("UpdatePassword", mock.Anything, userID, mock.AnythingOfType("string")).Return(nil).Once()
+		env.UserRepository.On("UpdatePassword", mock.Anything, userID, mock.AnythingOfType("string")).Return(nil).Once()
 
-		err := authService.SetPasswordForUser(context.Background(), userID, newPassword)
+		err := env.AuthService.SetPasswordForUser(context.Background(), userID, newPassword)
 
 		assert.NoError(t, err)
 
-		mockRepo.AssertExpectations(t)
+		env.UserRepository.AssertExpectations(t)
 	})
 
 	t.Run("Set password failed: Repository error", func(t *testing.T) {
 
-		mockRepo, _, _, _, authService := setupTest()
+		env := setupTest()
 
 		userID := uuid.New()
 		dbError := errors.New("failed to update password in DB")
 
-		mockRepo.On("UpdatePassword", mock.Anything, userID, mock.AnythingOfType("string")).Return(dbError).Once()
+		env.UserRepository.On("UpdatePassword", mock.Anything, userID, mock.AnythingOfType("string")).Return(dbError).Once()
 
-		err := authService.SetPasswordForUser(context.Background(), userID, "any-password")
+		err := env.AuthService.SetPasswordForUser(context.Background(), userID, "any-password")
 
 		assert.Error(t, err)
 		assert.Equal(t, dbError, err)
 
-		mockRepo.AssertExpectations(t)
+		env.UserRepository.AssertExpectations(t)
+	})
+}
+
+func TestLoginWithGoogleIDToken(t *testing.T) {
+
+	googleUser := domain.GoogleUser{
+		Email:   "test.user@google.com",
+		Name:    "Test Google User",
+		Sub:     "google-id-123",
+		Picture: "http://example.com/pic.jpg",
+	}
+
+	t.Run("Login success: Existing user", func(t *testing.T) {
+
+		env := setupTest()
+		existingUser := &domain.User{
+			Id:       uuid.New(),
+			Email:    googleUser.Email,
+			Name:     "Old Name",
+			Provider: "Google",
+		}
+
+		env.GoogleVerifier.On("VerifyGoogleIDToken", mock.Anything, "valid-google-token").Return(&googleUser, nil).Once()
+		env.UserRepository.On("GetUserByEmail", mock.Anything, googleUser.Email).Return(existingUser, nil).Once()
+		env.TokenService.On("GenerateAccessToken", existingUser).Return("access_token", nil).Once()
+		env.TokenService.On("GenerateRefreshToken", mock.Anything, existingUser).Return("refresh_token", nil).Once()
+
+		result, err := env.AuthService.LoginWithGoogleIDToken(context.Background(), "valid-google-token")
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, existingUser.Id, result.User.Id)
+		assert.Equal(t, "access_token", result.AccessToken)
+
+		env.GoogleVerifier.AssertExpectations(t)
+		env.UserRepository.AssertExpectations(t)
+		env.TokenService.AssertExpectations(t)
+	})
+
+	t.Run("Login success: New user registration", func(t *testing.T) {
+
+		env := setupTest()
+
+		env.GoogleVerifier.On("VerifyGoogleIDToken", mock.Anything, "valid-google-token").Return(&googleUser, nil).Once()
+		env.UserRepository.On("GetUserByEmail", mock.Anything, googleUser.Email).Return(nil, user.ErrUserNotFound).Once()
+		env.UserRepository.On("CreateUser", mock.Anything, mock.AnythingOfType("*domain.User")).Return(nil).Once()
+		env.TokenService.On("GenerateAccessToken", mock.AnythingOfType("*domain.User")).Return("access_token", nil).Once()
+		env.TokenService.On("GenerateRefreshToken", mock.Anything, mock.AnythingOfType("*domain.User")).Return("refresh_token", nil).Once()
+
+		result, err := env.AuthService.LoginWithGoogleIDToken(context.Background(), "valid-google-token")
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, googleUser.Email, result.User.Email)
+		assert.Equal(t, "Google", result.User.Provider)
+
+		env.GoogleVerifier.AssertExpectations(t)
+		env.UserRepository.AssertExpectations(t)
+		env.TokenService.AssertExpectations(t)
+	})
+
+	t.Run("Login failed: Invalid Google ID token", func(t *testing.T) {
+
+		env := setupTest()
+
+		verifyError := errors.New("invalid token signature")
+		env.GoogleVerifier.On("VerifyGoogleIDToken", mock.Anything, "invalid-token").Return(nil, verifyError).Once()
+
+		result, err := env.AuthService.LoginWithGoogleIDToken(context.Background(), "invalid-token")
+
+		assert.Error(t, err)
+		assert.Equal(t, verifyError, err)
+		assert.Nil(t, result)
+
+		env.GoogleVerifier.AssertExpectations(t)
+	})
+
+	t.Run("Login failed: Create new user fails", func(t *testing.T) {
+
+		env := setupTest()
+
+		dbError := errors.New("database connection failed")
+		env.GoogleVerifier.On("VerifyGoogleIDToken", mock.Anything, "valid-google-token").Return(&googleUser, nil).Once()
+		env.UserRepository.On("GetUserByEmail", mock.Anything, googleUser.Email).Return(nil, user.ErrUserNotFound).Once()
+		env.UserRepository.On("CreateUser", mock.Anything, mock.AnythingOfType("*domain.User")).Return(dbError).Once()
+
+		result, err := env.AuthService.LoginWithGoogleIDToken(context.Background(), "valid-google-token")
+
+		assert.Error(t, err)
+		assert.Equal(t, dbError, err)
+		assert.Nil(t, result)
+
+		env.GoogleVerifier.AssertExpectations(t)
+		env.UserRepository.AssertExpectations(t)
 	})
 }

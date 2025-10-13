@@ -7,11 +7,10 @@ import (
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
-	"google.golang.org/api/idtoken"
 
 	"healthmate/internal/common"
 	"healthmate/internal/domain"
-	"healthmate/internal/mail"
+	email "healthmate/internal/mail"
 	"healthmate/internal/user"
 )
 
@@ -19,14 +18,6 @@ type LoginResult struct {
 	User         *domain.User `json:"user"`
 	AccessToken  string       `json:"access_token"`
 	RefreshToken string       `json:"refresh_token"`
-}
-
-type gUser struct {
-	Email         string `json:"email"`
-	EmailVerified bool   `json:"email_verified"`
-	Name          string `json:"name"`
-	Picture       string `json:"picture"`
-	Sub           string `json:"sub"`
 }
 
 type Service interface {
@@ -41,20 +32,20 @@ type Service interface {
 }
 
 type serviceImpl struct {
-	userRepo       user.UserRepository
-	tokenService   TokenService
-	otpService     OTPService
-	mailService    email.EmailService
-	googleClientID string
+	userRepo            user.UserRepository
+	tokenService        TokenService
+	otpService          OTPService
+	mailService         email.EmailService
+	googleTokenVerifier GoogleTokenVerifier
 }
 
-func NewAuthService(repo user.UserRepository, tokenService TokenService, otpService OTPService, mailService email.EmailService, googleClientID string) Service {
+func NewAuthService(repo user.UserRepository, tokenService TokenService, otpService OTPService, mailService email.EmailService, googleTokenVerifier GoogleTokenVerifier) Service {
 	return &serviceImpl{
-		userRepo:       repo,
-		tokenService:   tokenService,
-		googleClientID: googleClientID,
-		mailService:    mailService,
-		otpService:     otpService,
+		userRepo:            repo,
+		tokenService:        tokenService,
+		googleTokenVerifier: googleTokenVerifier,
+		mailService:         mailService,
+		otpService:          otpService,
 	}
 }
 
@@ -228,7 +219,7 @@ func (s *serviceImpl) SetPasswordForUser(ctx context.Context, id uuid.UUID, newP
 }
 
 func (s *serviceImpl) LoginWithGoogleIDToken(ctx context.Context, idToken string) (*LoginResult, error) {
-	gUser, err := s.verifyGoogleIDToken(ctx, idToken)
+	gUser, err := s.googleTokenVerifier.VerifyGoogleIDToken(ctx, idToken)
 	if err != nil {
 		return nil, err
 	}
@@ -301,21 +292,4 @@ func (s *serviceImpl) Logout(ctx context.Context, refreshToken string) error {
 		return err
 	}
 	return nil
-}
-
-func (s *serviceImpl) verifyGoogleIDToken(ctx context.Context, idToken string) (*gUser, error) {
-	payload, err := idtoken.Validate(ctx, idToken, s.googleClientID)
-	if err != nil {
-		log.Println("error when verifying ID token:", err)
-		return nil, common.ErrInvalidRequest
-	}
-
-	gUser := &gUser{
-		Email:         payload.Claims["email"].(string),
-		EmailVerified: payload.Claims["email_verified"].(bool),
-		Name:          payload.Claims["name"].(string),
-		Picture:       payload.Claims["picture"].(string),
-		Sub:           payload.Claims["sub"].(string),
-	}
-	return gUser, nil
 }

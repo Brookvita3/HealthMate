@@ -52,7 +52,8 @@ func NewApp(cfg *config.Config) *App {
 
 	JWTTokenService := auth.NewJWTTokenService(cfg.JWTSecret, redisCache)
 	RedisOTPService := auth.NewRedisOTPService(redisCache)
-	authService := auth.NewAuthService(userRepo, JWTTokenService, RedisOTPService, GmailService, cfg.GoogleClientID)
+	GoogleTokenVerifierImpl := auth.NewGoogleTokenVerifierImpl(cfg.GoogleClientID)
+	authService := auth.NewAuthService(userRepo, JWTTokenService, RedisOTPService, GmailService, GoogleTokenVerifierImpl)
 
 	authHandler := auth.NewHandler(authService, JWTTokenService)
 

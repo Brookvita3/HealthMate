@@ -1,10 +1,10 @@
 package app
 
 import (
-	"context"
 	"healthmate/config"
 	"healthmate/internal/auth"
 	email "healthmate/internal/mail"
+	postgrePlatform "healthmate/internal/platform/postgres"
 	redisPlatform "healthmate/internal/platform/redis"
 	"healthmate/internal/user"
 	"log"
@@ -33,11 +33,11 @@ func NewApp(cfg *config.Config) *App {
 	redisClient, err := redisPlatform.NewRedisClientFromURL(cfg.RedisURL)
 	log.Printf("Redis URL: %s", config.LoadConfig().RedisURL)
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Fatal("Unable to create connection pool: ", err.Error())
 	}
 	log.Println("Successfully connected to Redis.")
 
-	pool, err := pgxpool.New(context.Background(), config.LoadConfig().PostgreURL)
+	pool, err := postgrePlatform.NewPostgreSQLConnFromURL(cfg.PostgreURL)
 	log.Printf("Postgres URL: %s", config.LoadConfig().PostgreURL)
 	if err != nil {
 		log.Fatal("Unable to create connection pool: ", err.Error())

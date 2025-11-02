@@ -1,12 +1,12 @@
 package auth
 
 import (
+	"auth-service/internal/cache"
+	"auth-service/internal/domain"
 	"context"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"healthmate/internal/cache"
-	"healthmate/internal/domain"
 	"io"
 	"time"
 

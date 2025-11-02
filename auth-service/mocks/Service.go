@@ -3,12 +3,12 @@
 package mocks
 
 import (
+	domain "auth-service/internal/domain"
 	context "context"
-	domain "healthmate/internal/domain"
 
 	mock "github.com/stretchr/testify/mock"
 
-	user "healthmate/internal/user"
+	user "auth-service/internal/user"
 
 	uuid "github.com/google/uuid"
 )

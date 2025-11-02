@@ -8,8 +8,8 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 
-	"healthmate/app"
-	"healthmate/config"
+	"auth-service/app"
+	"auth-service/config"
 )
 
 // @title HealthMate API

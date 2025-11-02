@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"healthmate/internal/common"
+	"auth-service/internal/common"
 
 	"github.com/gin-gonic/gin"
 )

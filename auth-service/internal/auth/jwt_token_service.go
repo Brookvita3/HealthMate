@@ -1,10 +1,10 @@
 package auth
 
 import (
+	"auth-service/internal/cache"
+	"auth-service/internal/domain"
 	"context"
 	"errors"
-	"healthmate/internal/cache"
-	"healthmate/internal/domain"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"

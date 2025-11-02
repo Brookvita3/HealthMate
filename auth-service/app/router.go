@@ -1,8 +1,8 @@
 package app
 
 import (
-	_ "healthmate/docs"
-	"healthmate/internal/web/middleware"
+	_ "auth-service/docs"
+	"auth-service/internal/web/middleware"
 
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"

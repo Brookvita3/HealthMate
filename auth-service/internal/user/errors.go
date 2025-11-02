@@ -1,7 +1,7 @@
 package user
 
 import (
-	"healthmate/internal/common"
+	"auth-service/internal/common"
 )
 
 var (

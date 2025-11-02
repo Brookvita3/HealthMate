@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"healthmate/internal/common"
-	"healthmate/internal/domain"
+	"auth-service/internal/common"
+	"auth-service/internal/domain"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"

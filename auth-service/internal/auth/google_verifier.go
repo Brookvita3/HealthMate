@@ -1,9 +1,9 @@
 package auth
 
 import (
+	"auth-service/internal/common"
+	"auth-service/internal/domain"
 	"context"
-	"healthmate/internal/common"
-	"healthmate/internal/domain"
 	"log"
 
 	"cloud.google.com/go/auth/credentials/idtoken"

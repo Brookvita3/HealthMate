@@ -3,8 +3,8 @@ package user
 import (
 	"context"
 
+	"auth-service/internal/domain"
 	"github.com/google/uuid"
-	"healthmate/internal/domain"
 )
 
 // ListUsersParams contains the parameters for filtering and paginating the user list.

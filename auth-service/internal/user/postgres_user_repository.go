@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"healthmate/internal/domain"
+	"auth-service/internal/domain"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"

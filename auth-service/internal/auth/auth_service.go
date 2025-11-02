@@ -8,10 +8,10 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 
-	"healthmate/internal/common"
-	"healthmate/internal/domain"
-	email "healthmate/internal/mail"
-	"healthmate/internal/user"
+	"auth-service/internal/common"
+	"auth-service/internal/domain"
+	email "auth-service/internal/mail"
+	"auth-service/internal/user"
 )
 
 type LoginResult struct {

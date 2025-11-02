@@ -1,9 +1,9 @@
 package user
 
 import (
+	"auth-service/internal/common"
+	"auth-service/internal/domain"
 	"context"
-	"healthmate/internal/common"
-	"healthmate/internal/domain"
 
 	"github.com/google/uuid"
 )

@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"healthmate/internal/common"
+	"auth-service/internal/common"
 )
 
 var (

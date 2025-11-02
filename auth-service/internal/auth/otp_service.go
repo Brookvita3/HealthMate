@@ -1,8 +1,8 @@
 package auth
 
 import (
+	"auth-service/internal/domain"
 	"context"
-	"healthmate/internal/domain"
 )
 
 type OTPService interface {

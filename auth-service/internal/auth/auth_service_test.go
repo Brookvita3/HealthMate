@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"healthmate/internal/common"
-	"healthmate/internal/domain"
-	"healthmate/internal/user"
-	"healthmate/mocks"
+	"auth-service/internal/common"
+	"auth-service/internal/domain"
+	"auth-service/internal/user"
+	"auth-service/mocks"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"

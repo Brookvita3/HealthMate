@@ -1,12 +1,12 @@
 package app
 
 import (
-	"healthmate/config"
-	"healthmate/internal/auth"
-	email "healthmate/internal/mail"
-	postgrePlatform "healthmate/internal/platform/postgres"
-	redisPlatform "healthmate/internal/platform/redis"
-	"healthmate/internal/user"
+	"auth-service/config"
+	"auth-service/internal/auth"
+	email "auth-service/internal/mail"
+	postgrePlatform "auth-service/internal/platform/postgres"
+	redisPlatform "auth-service/internal/platform/redis"
+	"auth-service/internal/user"
 	"log"
 
 	"github.com/gin-gonic/gin"

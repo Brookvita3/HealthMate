@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"healthmate/internal/cache"
+	"auth-service/internal/cache"
 
 	"github.com/redis/go-redis/v9"
 )

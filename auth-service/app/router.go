@@ -10,9 +10,9 @@ import (
 	"github.com/swaggo/gin-swagger"
 )
 
-func (a *App) SetupRoutes() {
+func (a *App) SetupRoutes(prefix string) {
 
-	apiV1 := a.Router.Group("/api/v1")
+	api := a.Router.Group(prefix)
 
 	a.Router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	a.Router.GET("/metrics", gin.WrapH(promhttp.Handler()))
@@ -20,7 +20,7 @@ func (a *App) SetupRoutes() {
 	a.Router.Use(middleware.PrometheusMiddleware())
 
 	// ===== Auth routes =====
-	authGroup := apiV1.Group("/auth")
+	authGroup := api.Group("/auth")
 	{
 		authGroup.POST("/google", a.AuthHandler.GoogleLogin)
 		authGroup.POST("/refresh", a.AuthHandler.RefreshToken)

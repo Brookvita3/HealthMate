@@ -21,6 +21,7 @@ type Config struct {
 	SMTPUsername    string
 	SMTPAppPassword string
 	SMTPSenderName  string
+	APIPrefix       string
 }
 
 func LoadConfig() Config {
@@ -46,6 +47,7 @@ func LoadConfig() Config {
 		SMTPUsername:    os.Getenv("SMTP_USERNAME"),
 		SMTPAppPassword: os.Getenv("SMTP_APP_PASSWORD"),
 		SMTPSenderName:  os.Getenv("SMTP_SENDER_NAME"),
+		APIPrefix:       os.Getenv("API_PREFIX"),
 	}
 
 	return config

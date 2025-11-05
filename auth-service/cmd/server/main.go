@@ -33,7 +33,7 @@ func main() {
 
 	defer application.Shutdown()
 
-	application.SetupRoutes()
+	application.SetupRoutes(cfg.APIPrefix)
 
 	application.Start(":" + cfg.Port)
 }

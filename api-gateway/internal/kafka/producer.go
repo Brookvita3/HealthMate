@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"context"
+	"time"
 
 	"github.com/segmentio/kafka-go"
 )
@@ -14,8 +15,11 @@ type Producer interface {
 func NewKafkaProducer(brokers []string) *KafkaProducer {
 	return &KafkaProducer{
 		writer: &kafka.Writer{
-			Addr:     kafka.TCP(brokers...),
-			Balancer: &kafka.LeastBytes{},
+			Addr:         kafka.TCP(brokers...),
+			Balancer:     &kafka.LeastBytes{},
+			Async:        true,
+			BatchSize:    10,
+			BatchTimeout: 10 * time.Millisecond,
 		},
 	}
 }

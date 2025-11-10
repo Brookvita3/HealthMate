@@ -13,7 +13,7 @@ type Config struct {
 	RedisURL        string
 	RedisUsername   string
 	RedisPassword   string
-	Port            string
+	HTTPPort        string
 	GoogleClientID  string
 	PostgreURL      string
 	SMTPHost        string
@@ -22,6 +22,7 @@ type Config struct {
 	SMTPAppPassword string
 	SMTPSenderName  string
 	APIPrefix       string
+	GRPCPort        string
 }
 
 func LoadConfig() Config {
@@ -39,7 +40,7 @@ func LoadConfig() Config {
 		RedisURL:        os.Getenv("REDIS_URL"),
 		RedisUsername:   os.Getenv("REDIS_USERNAME"),
 		RedisPassword:   os.Getenv("REDIS_PASSWORD"),
-		Port:            os.Getenv("PORT"),
+		HTTPPort:        os.Getenv("HTTP_PORT"),
 		GoogleClientID:  os.Getenv("GOOGLE_CLIENT_ID"),
 		PostgreURL:      os.Getenv("POSTGRES_URL"),
 		SMTPHost:        os.Getenv("SMTP_HOST"),
@@ -48,6 +49,7 @@ func LoadConfig() Config {
 		SMTPAppPassword: os.Getenv("SMTP_APP_PASSWORD"),
 		SMTPSenderName:  os.Getenv("SMTP_SENDER_NAME"),
 		APIPrefix:       os.Getenv("API_PREFIX"),
+		GRPCPort:        os.Getenv("GRPC_PORT"),
 	}
 
 	return config

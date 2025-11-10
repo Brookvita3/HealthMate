@@ -29,13 +29,27 @@ func main() {
 
 	runDBMigration(cfg.PostgreURL)
 
-	application := app.NewApp(&cfg)
+	myApp := app.NewApp(&cfg)
 
-	defer application.Shutdown()
+	go func() {
+		if err := myApp.HTTPServer.Start(":" + cfg.HTTPPort); err != nil {
+			log.Fatalf("HTTP server failed: %v", err)
+		}
+	}()
 
-	application.SetupRoutes(cfg.APIPrefix)
+	go func() {
+		if err := myApp.GRPCServer.Start(); err != nil {
+			log.Fatalf("gRPC server failed: %v", err)
+		}
+	}()
 
-	application.Start(":" + cfg.Port)
+	quit := make(chan struct{})
+	<-quit
+	log.Println("Shutting down servers...")
+	if err := myApp.HTTPServer.Stop(); err != nil {
+		log.Printf("Error stopping HTTP server: %v", err)
+	}
+	myApp.GRPCServer.Stop()
 }
 
 func runDBMigration(databaseUrl string) {

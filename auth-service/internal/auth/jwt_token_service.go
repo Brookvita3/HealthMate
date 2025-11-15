@@ -61,7 +61,7 @@ func (t *JWTTokenService) GenerateRefreshToken(ctx context.Context, user *domain
 		return "", err
 	}
 
-	if err := t.cache.Set(ctx, "refresh:"+jti, user.Id, exp_time); err != nil {
+	if err := t.cache.Set(ctx, "refresh:"+jti, user.Id.String(), exp_time); err != nil {
 		return "", err
 	}
 

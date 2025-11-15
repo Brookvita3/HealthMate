@@ -15,7 +15,6 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -168,10 +167,8 @@ func (s *GRPCServer) Start() error {
 	return s.server.Serve(lis)
 }
 
-func (s *HTTPServer) Stop() error {
+func (s *HTTPServer) Stop(ctx context.Context) error {
 	log.Println("Stopping HTTP server...")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 	return s.server.Shutdown(ctx)
 }
 

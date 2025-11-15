@@ -1,8 +1,13 @@
 package main
 
 import (
+	"context"
 	"log"
+	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
+	"time"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -43,10 +48,14 @@ func main() {
 		}
 	}()
 
-	quit := make(chan struct{})
-	<-quit
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+	<-stop
+
 	log.Println("Shutting down servers...")
-	if err := myApp.HTTPServer.Stop(); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := myApp.HTTPServer.Stop(ctx); err != nil {
 		log.Printf("Error stopping HTTP server: %v", err)
 	}
 	myApp.GRPCServer.Stop()

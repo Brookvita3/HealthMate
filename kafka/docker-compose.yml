@@ -25,6 +25,19 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
 
+  kafka-init:
+    image: confluentinc/cp-kafka:7.2.15
+    depends_on:
+      - kafka
+    entrypoint: ["/bin/bash", "-c"]
+    command: >
+      "
+      echo Waiting for Kafka...;
+      sleep 5;
+      kafka-topics --bootstrap-server kafka:9094 --create --topic health_metrics --partitions 1 --replication-factor 1;
+      echo 'Topic healthmetric created';
+      "
+
   kafka-ui:
     container_name: kafka-ui
     image: provectuslabs/kafka-ui:v0.7.2

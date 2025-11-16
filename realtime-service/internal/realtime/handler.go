@@ -7,7 +7,6 @@ import (
 	"realtime-service/internal/permission"
 	authpb "realtime-service/proto/pb"
 
-	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -53,18 +52,11 @@ func (h *Handler) upgradeToWebSocket(w http.ResponseWriter, r *http.Request, vie
 		return
 	}
 
-	client := &Client{
-		id:          uuid.NewString(),
-		hub:         h.hub,
-		conn:        conn,
-		send:        make(chan []byte, 256),
-		viewerId:    viewerID,
-		permissions: make(map[string]map[string]bool),
-	}
+	client := NewClient(h.hub, conn, viewerID)
 
 	h.hub.register <- client
 
 	ctx := context.Background()
 	go client.writePump(ctx)
-	go client.readPump()
+	go client.readPump(ctx)
 }

@@ -3,9 +3,12 @@ package realtime
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"time"
 
+	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -18,9 +21,14 @@ const (
 
 // ClientMessage is the struct for client message
 type ClientMessage struct {
-	Action       string `json:"action"` // "subscribe", "unsubscribe"
-	TargetUserID string `json:"target_user_id"`
-	MetricType   string `json:"metric_type"` // "heart_rate", "steps_count", "all"
+	Action string          `json:"action"  validate:"required"` // "subscribe", "unsubscribe"
+	Items  []SubscribeItem `json:"items" validate:"required,min=1"`
+}
+
+// SubscribeItem is the struct for subscribe item
+type SubscribeItem struct {
+	TargetUserID string `json:"target_user_id"  validate:"required"`
+	MetricType   string `json:"metric_type"  validate:"required"` // "heart_rate", "steps_count", "calories_burned"
 }
 
 // ServerMessage is the struct for server message
@@ -42,8 +50,19 @@ type Client struct {
 	permissions map[string]map[string]bool // user-A-id -> {"heart_rate": true, "steps_count": true}
 }
 
+func NewClient(hub *Hub, conn *websocket.Conn, viewerID string) *Client {
+	return &Client{
+		id:          uuid.NewString(),
+		hub:         hub,
+		conn:        conn,
+		send:        make(chan []byte, 256),
+		viewerId:    viewerID,
+		permissions: make(map[string]map[string]bool),
+	}
+}
+
 // readPump read message from client
-func (c *Client) readPump() {
+func (c *Client) readPump(ctx context.Context) {
 	defer func() {
 		c.hub.unregister <- c
 		c.conn.Close()
@@ -60,7 +79,7 @@ func (c *Client) readPump() {
 			}
 			break
 		}
-		c.handleClientMessage(message)
+		c.handleClientMessage(ctx, message)
 	}
 }
 
@@ -93,52 +112,79 @@ func (c *Client) writePump(ctx context.Context) {
 }
 
 // handleClientMessage handle message from client ( "subscribe", "unsubscribe" )
-func (c *Client) handleClientMessage(message []byte) {
+func (c *Client) handleClientMessage(ctx context.Context, message []byte) {
 	var msg ClientMessage
 	if err := json.Unmarshal(message, &msg); err != nil {
 		log.Printf("Error unmarshal message from client %s: %v", c.id, err)
+		c.sendError("Unmarshal error")
+		return
+	}
+
+	validate := validator.New()
+	if err := validate.Struct(msg); err != nil {
+		log.Printf("Error validate client message: %v", err)
+		c.sendError("Validate client message error")
 		return
 	}
 
 	switch msg.Action {
 	case "subscribe":
-		// 3. Check permision
-		//hasPerm, err := c.hub.permRepo.CheckAccess(context.Background(), c.viewerID, msg.TargetUserID, msg.MetricType)
-		hasPerm := true
-		// if err != nil {
-		// 	log.Printf("Error check permision from client %s: %v", c.id, err)
-		// 	c.sendError("Error check permision from client")
-		// 	return
-		// }
+		for _, item := range msg.Items {
+			hasPerm, err := c.hub.permRepo.CheckAccess(
+				ctx,
+				c.viewerId,
+				item.TargetUserID,
+				item.MetricType,
+			)
 
-		if !hasPerm {
-			log.Printf("Client %s (User %s) no permission to view %s of User %s", c.id, c.viewerId, msg.MetricType, msg.TargetUserID)
-			c.sendError("No permission to view metric")
-			return
-		}
+			if err != nil {
+				c.sendError("Permission check error")
+				continue
+			}
 
-		// 4. Save permission
-		if _, ok := c.permissions[msg.TargetUserID]; !ok {
-			log.Printf("Client %s (User %s) has permission to view %s of User %s", c.id, c.viewerId, msg.MetricType, msg.TargetUserID)
-			c.permissions[msg.TargetUserID] = make(map[string]bool)
-		}
-		c.permissions[msg.TargetUserID][msg.MetricType] = true
+			if !hasPerm {
+				c.sendError(fmt.Sprintf("No permission for %s/%s", item.TargetUserID, item.MetricType))
+				continue
+			}
 
-		c.hub.subscribe <- SubscriptionEvent{
-			Client:       c,
-			TargetUserID: msg.TargetUserID,
-			MetricType:   msg.MetricType,
+			// Save permission
+			if _, ok := c.permissions[item.TargetUserID]; !ok {
+				c.permissions[item.TargetUserID] = make(map[string]bool)
+			}
+			c.permissions[item.TargetUserID][item.MetricType] = true
+
+			c.hub.subscribe <- SubscriptionEvent{
+				Client:       c,
+				TargetUserID: item.TargetUserID,
+				MetricType:   item.MetricType,
+			}
 		}
 
 		c.sendSuccess("Subscribe success")
 		return
 
 		// TODO: "unsubscribe"
+	case "unsubscribe":
+		for _, item := range msg.Items {
+			c.hub.unsubscribe <- SubscriptionEvent{
+				Client:       c,
+				TargetUserID: item.TargetUserID,
+				MetricType:   item.MetricType,
+			}
+		}
+		c.sendSuccess("Unsubscribe success")
+		return
 	}
 }
 
 // CanView check if client can view metric by cache
 func (c *Client) CanView(targetUserID string, metricType string) bool {
+	if _, ok := c.permissions[targetUserID]; !ok {
+		return false
+	}
+	if _, ok := c.permissions[targetUserID][metricType]; !ok {
+		return false
+	}
 	return true
 }
 

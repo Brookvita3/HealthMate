@@ -1,13 +1,11 @@
 package main
 
 import (
-	"context"
 	"log"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"syscall"
-	"time"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -36,29 +34,20 @@ func main() {
 
 	myApp := app.NewApp(&cfg)
 
+	stopChan := make(chan os.Signal, 1)
+	signal.Notify(stopChan, syscall.SIGINT, syscall.SIGTERM)
+
 	go func() {
-		if err := myApp.HTTPServer.Start(":" + cfg.HTTPPort); err != nil {
-			log.Fatalf("HTTP server failed: %v", err)
+		if err := myApp.Start(); err != nil {
+			log.Printf("Application exited with error: %v", err)
 		}
 	}()
 
-	go func() {
-		if err := myApp.GRPCServer.Start(); err != nil {
-			log.Fatalf("gRPC server failed: %v", err)
-		}
-	}()
+	<-stopChan
 
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
-	<-stop
-
-	log.Println("Shutting down servers...")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := myApp.HTTPServer.Stop(ctx); err != nil {
-		log.Printf("Error stopping HTTP server: %v", err)
-	}
-	myApp.GRPCServer.Stop()
+	log.Println("OS interrupt signal received. Initiating shutdown...")
+	myApp.Shutdown()
+	log.Println("Application has been shut down.")
 }
 
 func runDBMigration(databaseUrl string) {

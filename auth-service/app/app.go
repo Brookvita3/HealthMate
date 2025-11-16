@@ -15,6 +15,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -153,9 +154,13 @@ func NewDependencies(cfg *config.Config) *Dependencies {
 	}
 }
 
-func (s *HTTPServer) Start(addr string) error {
-	log.Printf("HTTP server listening on %s", addr)
-	return s.Router.Run(addr)
+func (s *HTTPServer) Start() error {
+	log.Printf("HTTP server listening on %s", s.server.Addr)
+	return s.server.ListenAndServe()
+}
+
+func (s *HTTPServer) Stop(ctx context.Context) error {
+	return s.server.Shutdown(ctx)
 }
 
 func (s *GRPCServer) Start() error {
@@ -167,12 +172,37 @@ func (s *GRPCServer) Start() error {
 	return s.server.Serve(lis)
 }
 
-func (s *HTTPServer) Stop(ctx context.Context) error {
-	log.Println("Stopping HTTP server...")
-	return s.server.Shutdown(ctx)
+func (s *GRPCServer) Stop() {
+	s.server.GracefulStop()
 }
 
-func (s *GRPCServer) Stop() {
-	log.Println("Stopping gRPC server...")
-	s.server.GracefulStop()
+func (a *App) Shutdown() {
+	log.Println("Executing graceful shutdown...")
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutdownCancel()
+
+	if err := a.HTTPServer.Stop(shutdownCtx); err != nil {
+		log.Printf("HTTP server shutdown error: %v", err)
+	}
+
+	a.GRPCServer.Stop()
+	log.Println("gRPC server gracefully stopped.")
+
+	a.Deps.DB.Close()
+	log.Println("PostgreSQL connection pool closed.")
+
+	a.Deps.Redis.Close()
+	log.Println("Redis connection pool closed.")
+
+	log.Println("Shutdown complete.")
+}
+
+func (a *App) Start() error {
+	errChan := make(chan error, 2)
+
+	go func() { errChan <- a.HTTPServer.Start() }()
+	go func() { errChan <- a.GRPCServer.Start() }()
+
+	return <-errChan
 }

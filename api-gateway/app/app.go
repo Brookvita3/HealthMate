@@ -5,17 +5,14 @@ import (
 
 	"api-gateway/config"
 	"api-gateway/internal/kafka"
-	authpb "api-gateway/proto/pb"
 
 	"github.com/gin-gonic/gin"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 type App struct {
 	Config        *config.Config
 	KafkaProducer kafka.Producer
-	AuthClient    authpb.AuthServiceClient
+	JWTSecret     string
 	Router        *gin.Engine
 }
 
@@ -24,17 +21,11 @@ func NewApp(cfg *config.Config) *App {
 
 	KafkaProducer := kafka.NewKafkaProducer([]string{cfg.KafkaBrokerURL})
 
-	grpcConn, err := grpc.NewClient(cfg.AuthGRPCURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		log.Fatalf("failed to connect auth service: %v", err)
-	}
-	authClient := authpb.NewAuthServiceClient(grpcConn)
-
 	return &App{
 		Router:        router,
 		Config:        cfg,
 		KafkaProducer: KafkaProducer,
-		AuthClient:    authClient,
+		JWTSecret:     cfg.JWTSecret,
 	}
 }
 

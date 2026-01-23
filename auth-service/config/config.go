@@ -22,7 +22,6 @@ type Config struct {
 	SMTPAppPassword string
 	SMTPSenderName  string
 	APIPrefix       string
-	GRPCPort        string
 }
 
 func LoadConfig() Config {
@@ -49,7 +48,6 @@ func LoadConfig() Config {
 		SMTPAppPassword: os.Getenv("SMTP_APP_PASSWORD"),
 		SMTPSenderName:  os.Getenv("SMTP_SENDER_NAME"),
 		APIPrefix:       os.Getenv("API_PREFIX"),
-		GRPCPort:        os.Getenv("GRPC_PORT"),
 	}
 
 	return config

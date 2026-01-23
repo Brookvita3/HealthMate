@@ -1,16 +1,18 @@
 package middleware
 
 import (
-	authpb "api-gateway/proto/pb"
-	"context"
-	"log"
+	"errors"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 )
 
-func AuthMiddleware(authClient authpb.AuthServiceClient) gin.HandlerFunc {
+// JWTAuthMiddleware validates JWT tokens locally without calling Auth Service
+func JWTAuthMiddleware(secret string) gin.HandlerFunc {
+	secretBytes := []byte(secret)
+
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
@@ -24,18 +26,49 @@ func AuthMiddleware(authClient authpb.AuthServiceClient) gin.HandlerFunc {
 			return
 		}
 
-		token := parts[1]
-
-		res, err := authClient.ValidateToken(context.Background(), &authpb.ValidateTokenRequest{Token: token})
-		log.Println(err)
-		if err != nil || !res.Valid {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+		claims, err := validateToken(parts[1], secretBytes)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 			return
 		}
 
-		c.Set("sub", res.UserId)
-		c.Set("email", res.Email)
+		// Extract and set user context
+		if sub, ok := claims["sub"].(string); ok {
+			c.Set("sub", sub)
+		}
+		if email, ok := claims["email"].(string); ok {
+			c.Set("email", email)
+		}
+		if role, ok := claims["role"].(string); ok {
+			c.Set("role", role)
+		}
 
 		c.Next()
 	}
+}
+
+func validateToken(tokenString string, secret []byte) (jwt.MapClaims, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("invalid signing method")
+		}
+		return secret, nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
+		return nil, errors.New("invalid token")
+	}
+
+	// Validate token type is "access"
+	tokenType, ok := claims["type"].(string)
+	if !ok || tokenType != "access" {
+		return nil, errors.New("invalid token type")
+	}
+
+	return claims, nil
 }

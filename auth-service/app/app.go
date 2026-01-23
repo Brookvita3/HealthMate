@@ -3,17 +3,13 @@ package app
 import (
 	"auth-service/config"
 	"auth-service/internal/auth"
-	grpcserver "auth-service/internal/grpc"
 	email "auth-service/internal/mail"
 	postgrePlatform "auth-service/internal/platform/postgres"
 	redisPlatform "auth-service/internal/platform/redis"
 	"auth-service/internal/user"
 	"auth-service/internal/web/middleware"
-	authpb "auth-service/proto/pb"
 	"context"
-	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"time"
 
@@ -23,13 +19,11 @@ import (
 	redis "github.com/redis/go-redis/v9"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"google.golang.org/grpc"
 )
 
 type App struct {
 	Deps       *Dependencies
 	HTTPServer *HTTPServer
-	GRPCServer *GRPCServer
 }
 
 type Dependencies struct {
@@ -49,33 +43,14 @@ type HTTPServer struct {
 	server *http.Server
 }
 
-type GRPCServer struct {
-	server *grpc.Server
-	addr   string
-}
-
-func NewGRPCServer(deps *Dependencies) *GRPCServer {
-	s := grpc.NewServer()
-
-	authpb.RegisterAuthServiceServer(s, &grpcserver.AuthGRPCServer{
-		JwtService: deps.JWTTokenService,
-	})
-	return &GRPCServer{
-		server: s,
-		addr:   ":" + deps.Config.GRPCPort,
-	}
-}
-
 func NewApp(cfg *config.Config) *App {
 	deps := NewDependencies(cfg)
 
 	httpServer := NewHTTPServer(deps)
-	grpcServer := NewGRPCServer(deps)
 
 	return &App{
 		Deps:       deps,
 		HTTPServer: httpServer,
-		GRPCServer: grpcServer,
 	}
 }
 
@@ -163,19 +138,6 @@ func (s *HTTPServer) Stop(ctx context.Context) error {
 	return s.server.Shutdown(ctx)
 }
 
-func (s *GRPCServer) Start() error {
-	lis, err := net.Listen("tcp", s.addr)
-	if err != nil {
-		return fmt.Errorf("failed to listen: %w", err)
-	}
-	log.Printf("gRPC server listening on %s", s.addr)
-	return s.server.Serve(lis)
-}
-
-func (s *GRPCServer) Stop() {
-	s.server.GracefulStop()
-}
-
 func (a *App) Shutdown() {
 	log.Println("Executing graceful shutdown...")
 
@@ -185,9 +147,6 @@ func (a *App) Shutdown() {
 	if err := a.HTTPServer.Stop(shutdownCtx); err != nil {
 		log.Printf("HTTP server shutdown error: %v", err)
 	}
-
-	a.GRPCServer.Stop()
-	log.Println("gRPC server gracefully stopped.")
 
 	a.Deps.DB.Close()
 	log.Println("PostgreSQL connection pool closed.")
@@ -202,7 +161,6 @@ func (a *App) Start() error {
 	errChan := make(chan error, 2)
 
 	go func() { errChan <- a.HTTPServer.Start() }()
-	go func() { errChan <- a.GRPCServer.Start() }()
 
 	return <-errChan
 }

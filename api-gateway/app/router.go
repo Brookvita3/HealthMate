@@ -8,11 +8,12 @@ import (
 
 func (a *App) SetupRoutes(cfg config.Config) {
 
+	a.Router.Use(middleware.CORSMiddleware())
 	a.Router.Any("/auth/*proxyPath",
 		handlers.ReverseProxy(cfg.AuthHTTPURL+cfg.APIPrefix+"/auth"))
 
 	protected := a.Router.Group("")
-	protected.Use(middleware.AuthMiddleware(a.AuthClient))
+	protected.Use(middleware.JWTAuthMiddleware(a.JWTSecret))
 	{
 		protected.Any("/user/data",
 			handlers.KafkaSendHandler(a.KafkaProducer, cfg.KafkaTopic))

@@ -5,6 +5,7 @@ on:
     branches: [ "main" ]
     paths:
       - "api-gateway/**"
+      - ".github/workflows/api-gateway.yml"
   pull_request:
     branches: [ "main" ]
     paths:

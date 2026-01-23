@@ -18,4 +18,6 @@ func (a *App) SetupRoutes(cfg config.Config) {
 		protected.Any("/user/data",
 			handlers.KafkaSendHandler(a.KafkaProducer, cfg.KafkaTopic))
 	}
+
+	a.Router.GET("/gateway/health", handlers.PingHandler)
 }

@@ -3,8 +3,12 @@ name: CI/CD api-gateway on EC2
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - "api-gateway/**"
   pull_request:
     branches: [ "main" ]
+    paths:
+      - "api-gateway/**"
 
 jobs:
   ci:
@@ -31,6 +35,8 @@ jobs:
 
   cd:
     name: CD - Deploy to EC2
+    needs: ci
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-22.04
 
     steps:

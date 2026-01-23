@@ -61,7 +61,7 @@ jobs:
             brookvita3/api-gateway:${{ github.sha }}
 
       - name: SSH to EC2 & deploy
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}

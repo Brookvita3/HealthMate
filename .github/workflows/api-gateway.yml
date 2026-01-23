@@ -10,6 +10,9 @@ jobs:
   ci:
     name: CI - Test Golang
     runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: api-gateway
 
     steps:
       - name: Checkout

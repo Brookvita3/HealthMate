@@ -1,11 +1,33 @@
-name: CD Docker Pull on EC2
+name: CI/CD api-gateway on EC2
 
 on:
   push:
     branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
-  deploy:
+  ci:
+    name: CI - Test Golang
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run tests
+        run: go test ./...
+
+  cd:
+    name: CD - Deploy to EC2
     runs-on: ubuntu-22.04
 
     steps:

@@ -4,20 +4,20 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"realtime-service/internal/auth"
 	"realtime-service/internal/permission"
-	authpb "realtime-service/proto/pb"
 
 	"github.com/gorilla/websocket"
 )
 
 type Handler struct {
-	authClient authpb.AuthServiceClient
-	permRepo   permission.Repository
-	hub        *Hub
+	tokenValidator auth.TokenValidator
+	permRepo       permission.Repository
+	hub            *Hub
 }
 
-func NewHandler(authClient authpb.AuthServiceClient, permRepo permission.Repository, hub *Hub) *Handler {
-	return &Handler{authClient: authClient, permRepo: permRepo, hub: hub}
+func NewHandler(tokenValidator auth.TokenValidator, permRepo permission.Repository, hub *Hub) *Handler {
+	return &Handler{tokenValidator: tokenValidator, permRepo: permRepo, hub: hub}
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -27,13 +27,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := h.authClient.ValidateToken(context.Background(), &authpb.ValidateTokenRequest{Token: token})
-	if err != nil || !resp.Valid {
+	claims, err := h.tokenValidator.ValidateToken(token)
+	if err != nil {
 		http.Error(w, "invalid Authorization header", http.StatusUnauthorized)
 		return
 	}
 
-	h.upgradeToWebSocket(w, r, resp.UserId)
+	h.upgradeToWebSocket(w, r, claims.UserID)
 }
 
 func (h *Handler) upgradeToWebSocket(w http.ResponseWriter, r *http.Request, viewerID string) {

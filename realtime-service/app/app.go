@@ -8,23 +8,21 @@ import (
 	"realtime-service/config"
 	"time"
 
+	"realtime-service/internal/auth"
 	"realtime-service/internal/kafka"
 	"realtime-service/internal/metric"
 	"realtime-service/internal/permission"
 	postgresPlatform "realtime-service/internal/platform/postgres"
 	"realtime-service/internal/realtime"
-	authpb "realtime-service/proto/pb"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 type Dependencies struct {
-	Config     *config.Config
-	PgPool     *pgxpool.Pool
-	PermRepo   permission.Repository
-	AuthClient authpb.AuthServiceClient
+	Config         *config.Config
+	PgPool         *pgxpool.Pool
+	PermRepo       permission.Repository
+	TokenValidator auth.TokenValidator
 }
 
 type App struct {
@@ -68,22 +66,18 @@ func NewDependencies(cfg *config.Config) *Dependencies {
 	log.Println("Successfully connected to Postgres.")
 	permRepo := permission.NewRepository(pool)
 
-	grpcConn, err := grpc.NewClient(cfg.AuthGRPCURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		log.Fatalf("failed to connect auth service: %v", err)
-	}
-	authClient := authpb.NewAuthServiceClient(grpcConn)
+	tokenValidator := auth.NewJWTValidator(cfg.JWTSecret)
 
 	return &Dependencies{
-		PgPool:     pool,
-		PermRepo:   permRepo,
-		AuthClient: authClient,
-		Config:     cfg,
+		PgPool:         pool,
+		PermRepo:       permRepo,
+		TokenValidator: tokenValidator,
+		Config:         cfg,
 	}
 }
 
 func NewHttpServer(deps *Dependencies, hub *realtime.Hub) *http.Server {
-	wsHandler := realtime.NewHandler(deps.AuthClient, deps.PermRepo, hub)
+	wsHandler := realtime.NewHandler(deps.TokenValidator, deps.PermRepo, hub)
 	httpServer := &http.Server{
 		Addr:    ":" + deps.Config.HTTPPort,
 		Handler: wsHandler,

@@ -8,7 +8,7 @@ import (
 )
 
 type Config struct {
-	AuthGRPCURL    string
+	JWTSecret      string
 	HTTPPort       string
 	KafkaBrokerURL string
 	KafkaTopic     string
@@ -24,7 +24,7 @@ func LoadConfig() Config {
 	}
 
 	config := Config{
-		AuthGRPCURL:  os.Getenv("AUTH_GRPC_URL"),
+		JWTSecret:    os.Getenv("JWT_SECRET"),
 		HTTPPort:     os.Getenv("HTTP_PORT"),
 		KafkaTopic:   os.Getenv("KAFKA_TOPIC"),
 		KafkaGroupID: os.Getenv("KAFKA_GROUP_ID"),

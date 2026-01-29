@@ -230,6 +230,19 @@ func (r *postgresRepository) UpdateStatus(ctx context.Context, id uuid.UUID, sta
 	return nil
 }
 
+func (r *postgresRepository) Exists(ctx context.Context, id uuid.UUID) (bool, error) {
+	query := `SELECT EXISTS (SELECT 1 FROM users WHERE id = $1)`
+
+	row := r.pool.QueryRow(ctx, query, id)
+
+	var exists bool
+	err := row.Scan(&exists)
+	if err != nil {
+		return false, ErrUserNotFound
+	}
+	return exists, nil
+}
+
 // =============================================================================
 // HELPER METHODS
 // =============================================================================

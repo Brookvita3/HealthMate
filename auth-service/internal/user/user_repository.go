@@ -50,4 +50,8 @@ type UserRepository interface {
 	// UpdateStatus changes the status of a user.
 	// It returns ErrUserNotFound if no user is found.
 	UpdateStatus(ctx context.Context, id uuid.UUID, status string) error
+
+	// Exists checks if a user exists by ID
+	// It returns ErrUserNotFound if no user is found
+	Exists(ctx context.Context, id uuid.UUID) (bool, error)
 }

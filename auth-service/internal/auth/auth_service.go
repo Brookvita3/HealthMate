@@ -39,9 +39,9 @@ type serviceImpl struct {
 	googleTokenVerifier GoogleTokenVerifier
 }
 
-func NewAuthService(repo user.UserRepository, tokenService TokenService, otpService OTPService, mailService email.EmailService, googleTokenVerifier GoogleTokenVerifier) Service {
+func NewAuthService(userRepo user.UserRepository, tokenService TokenService, otpService OTPService, mailService email.EmailService, googleTokenVerifier GoogleTokenVerifier) Service {
 	return &serviceImpl{
-		userRepo:            repo,
+		userRepo:            userRepo,
 		tokenService:        tokenService,
 		googleTokenVerifier: googleTokenVerifier,
 		mailService:         mailService,

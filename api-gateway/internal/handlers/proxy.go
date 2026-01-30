@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func ReverseProxy(target string) gin.HandlerFunc {
+func ReverseProxy(target string, basePath string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		url, err := url.Parse(target)
 		if err != nil {
@@ -19,7 +19,12 @@ func ReverseProxy(target string) gin.HandlerFunc {
 		proxy := httputil.NewSingleHostReverseProxy(url)
 
 		// Rewrite path
-		c.Request.URL.Path = c.Param("proxyPath")
+		proxyPath := c.Param("proxyPath")
+		if proxyPath == "/" {
+			proxyPath = ""
+		}
+
+		c.Request.URL.Path = basePath + proxyPath
 		c.Request.Host = url.Host
 		proxy.ServeHTTP(c.Writer, c.Request)
 	}

@@ -3,7 +3,10 @@ package app
 import (
 	"auth-service/config"
 	"auth-service/internal/auth"
+	"auth-service/internal/group"
 	email "auth-service/internal/mail"
+	"auth-service/internal/member"
+	"auth-service/internal/permission"
 	postgrePlatform "auth-service/internal/platform/postgres"
 	redisPlatform "auth-service/internal/platform/redis"
 	"auth-service/internal/user"
@@ -32,10 +35,13 @@ type Dependencies struct {
 	Config          *config.Config
 	JWTTokenService *auth.JWTTokenService
 
-	TokenService auth.TokenService
-	UserRepo     user.UserRepository
-	OTPService   auth.OTPService
-	AuthService  auth.Service
+	TokenService      auth.TokenService
+	UserRepo          user.UserRepository
+	OTPService        auth.OTPService
+	AuthService       auth.Service
+	GroupService      group.Service
+	MemberService     member.Service
+	PermissionService permission.Service
 }
 
 type HTTPServer struct {
@@ -81,6 +87,22 @@ func NewHTTPServer(deps *Dependencies) *HTTPServer {
 		authGroup.POST("/password", authHandler.SetPassword)
 	}
 
+	// ===== Group routes =====
+	groupHandler := group.NewHandler(deps.GroupService, deps.MemberService, deps.PermissionService)
+	groupGroup := api.Group("/groups")
+	groupGroup.Use(authHandler.AuthMiddleware())
+	{
+		groupGroup.POST("", groupHandler.CreateGroup)
+		groupGroup.GET("", groupHandler.ListMyGroups)
+		groupGroup.POST("/:id/members", groupHandler.InviteMember)
+		groupGroup.GET("/:id/members", groupHandler.GetMembers)
+		groupGroup.DELETE("/:id/members/:member_id", groupHandler.RemoveMember)
+		groupGroup.POST("/:id/accept", groupHandler.AcceptInvitation)
+		groupGroup.POST("/:id/reject", groupHandler.RejectInvitation)
+		groupGroup.POST("/:id/permissions", groupHandler.SetPermission)
+		groupGroup.GET("/:id/permissions", groupHandler.GetPermissions)
+	}
+
 	srv := &http.Server{
 		Addr:    ":" + deps.Config.HTTPPort,
 		Handler: router,
@@ -104,7 +126,7 @@ func NewDependencies(cfg *config.Config) *Dependencies {
 		log.Fatalf("Failed to connect Redis: %v", err)
 	}
 
-	repo := user.NewRepository(db)
+	userRepo := user.NewRepository(db)
 	cache := redisPlatform.NewCacheWrapper(redisClient)
 	jwtService := auth.NewJWTTokenService(cfg.JWTSecret, cache)
 	otpService := auth.NewRedisOTPService(cache)
@@ -115,17 +137,20 @@ func NewDependencies(cfg *config.Config) *Dependencies {
 	)
 	googleVerifier := auth.NewGoogleTokenVerifierImpl(cfg.GoogleClientID)
 
-	authService := auth.NewAuthService(repo, jwtService, otpService, emailService, googleVerifier)
+	authService := auth.NewAuthService(userRepo, jwtService, otpService, emailService, googleVerifier)
 
 	return &Dependencies{
-		DB:              db,
-		Redis:           redisClient,
-		Config:          cfg,
-		UserRepo:        repo,
-		JWTTokenService: jwtService,
-		TokenService:    tokenService,
-		OTPService:      otpService,
-		AuthService:     authService,
+		DB:                db,
+		Redis:             redisClient,
+		Config:            cfg,
+		UserRepo:          userRepo,
+		JWTTokenService:   jwtService,
+		TokenService:      tokenService,
+		OTPService:        otpService,
+		AuthService:       authService,
+		GroupService:      group.NewService(group.NewPostgresRepository(db), userRepo),
+		MemberService:     member.NewService(member.NewPostgresRepository(db)),
+		PermissionService: permission.NewService(permission.NewPostgresRepository(db)),
 	}
 }
 

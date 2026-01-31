@@ -5,13 +5,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"strings"
-	"time"
 )
 
 // postgresGroup is a helper struct for scanning database rows
@@ -36,6 +37,13 @@ func NewPostgresRepository(pool *pgxpool.Pool) GroupRepository {
 
 // Create implements GroupRepository.Create
 func (r *postgresRepository) Create(ctx context.Context, params CreateGroupParams) (*domain.Group, error) {
+
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
 	query := `
 		INSERT INTO groups (id, name, description, owner_id, created_at, updated_at)
 		VALUES (gen_random_uuid(), $1, $2, $3, NOW(), NOW())
@@ -51,14 +59,14 @@ func (r *postgresRepository) Create(ctx context.Context, params CreateGroupParam
 		pGroup.Description = pgtype.Text{String: *params.Description, Valid: true}
 	}
 
-	row := r.pool.QueryRow(ctx, query,
+	row := tx.QueryRow(ctx, query,
 		pGroup.Name,
 		pGroup.Description,
 		pGroup.OwnerID,
 	)
 
 	var group domain.Group
-	err := row.Scan(
+	err = row.Scan(
 		&group.ID,
 		&group.Name,
 		&pGroup.Description,
@@ -74,6 +82,19 @@ func (r *postgresRepository) Create(ctx context.Context, params CreateGroupParam
 				return nil, ErrGroupAlreadyExists
 			}
 		}
+		return nil, err
+	}
+
+	memberQuery := `
+		INSERT INTO group_members (group_id, user_id, invited_by, role, status, joined_at, created_at, updated_at)
+		VALUES ($1, $2, $2, 'owner', 'accepted', NOW(), NOW(), NOW())`
+
+	_, err = tx.Exec(ctx, memberQuery, group.ID, group.OwnerID)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
 

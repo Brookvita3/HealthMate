@@ -37,6 +37,7 @@ type App struct {
 type RealtimeEngine struct {
 	Hub      *realtime.Hub
 	Consumer *kafka.Consumer
+	Producer *kafka.Producer
 	metricCh chan *metric.HealthMetric
 	ctx      context.Context
 }
@@ -86,7 +87,8 @@ func NewHttpServer(deps *Dependencies, hub *realtime.Hub) *http.Server {
 }
 
 func NewRealtimeEngine(ctx context.Context, deps *Dependencies) *RealtimeEngine {
-	hub := realtime.NewHub(deps.PermRepo)
+	producer := kafka.NewProducer(deps.Config.KafkaAddr, deps.Config.KafkaTopic)
+	hub := realtime.NewHub(deps.PermRepo, producer)
 
 	metricCh := make(chan *metric.HealthMetric, 100)
 
@@ -95,6 +97,7 @@ func NewRealtimeEngine(ctx context.Context, deps *Dependencies) *RealtimeEngine 
 	return &RealtimeEngine{
 		Hub:      hub,
 		Consumer: consumer,
+		Producer: producer,
 		metricCh: metricCh,
 		ctx:      ctx,
 	}
@@ -162,6 +165,11 @@ func (a *App) Shutdown() {
 
 	a.Deps.PgPool.Close()
 	log.Println("PostgreSQL connection pool closed.")
+
+	if a.RealtimeEngine.Producer != nil {
+		a.RealtimeEngine.Producer.Close()
+		log.Println("Kafka producer closed.")
+	}
 
 	log.Println("Shutdown complete.")
 }

@@ -3,6 +3,7 @@ package realtime
 import (
 	"context"
 	"encoding/json"
+	"realtime-service/internal/kafka"
 	"realtime-service/internal/metric"
 	"realtime-service/internal/permission"
 )
@@ -19,6 +20,7 @@ type Hub struct {
 	broadcast   chan *metric.HealthMetric
 
 	permRepo permission.Repository
+	producer *kafka.Producer
 }
 
 type SubscriptionEvent struct {
@@ -27,7 +29,7 @@ type SubscriptionEvent struct {
 	MetricType   string
 }
 
-func NewHub(permRepo permission.Repository) *Hub {
+func NewHub(permRepo permission.Repository, producer *kafka.Producer) *Hub {
 	return &Hub{
 		clients:       make(map[*Client]bool),
 		subscriptions: make(map[string]map[*Client]bool),
@@ -41,6 +43,7 @@ func NewHub(permRepo permission.Repository) *Hub {
 		broadcast: make(chan *metric.HealthMetric),
 
 		permRepo: permRepo,
+		producer: producer,
 	}
 }
 
@@ -112,4 +115,9 @@ func (h *Hub) removeClientSubscriptions(client *Client) {
 // BroadcastMetric sends a metric to all clients who are subscribed
 func (h *Hub) BroadcastMetric(m *metric.HealthMetric) {
 	h.broadcast <- m
+}
+
+// GetProducer returns the kafka producer
+func (h *Hub) GetProducer() *kafka.Producer {
+	return h.producer
 }

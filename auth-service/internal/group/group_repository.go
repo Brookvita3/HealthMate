@@ -53,6 +53,9 @@ type GroupRepository interface {
 	// Exists checks if a group exists by ID
 	Exists(ctx context.Context, id uuid.UUID) (bool, error)
 
+	// FindByName retrieves a group by its name
+	FindByName(ctx context.Context, name string) (*domain.Group, error)
+
 	// TransferOwnership transfers group ownership to another user
 	// Returns ErrGroupNotFound if no group is found
 	TransferOwnership(ctx context.Context, groupID, newOwnerID uuid.UUID) error

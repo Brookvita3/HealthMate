@@ -4,6 +4,7 @@ import (
 	"auth-service/internal/domain"
 	"auth-service/internal/user"
 	"context"
+	"errors"
 
 	"github.com/google/uuid"
 )
@@ -65,6 +66,13 @@ func (s *serviceImpl) CreateGroup(ctx context.Context, ownerID uuid.UUID, name s
 		return nil, ErrNotGroupOwner
 	}
 
+	// Check if group name already exists
+	if _, err := s.groupRepo.FindByName(ctx, name); err == nil {
+		return nil, ErrGroupAlreadyExists
+	} else if !errors.Is(err, ErrGroupNotFound) {
+		return nil, err
+	}
+
 	// Create group
 	params := CreateGroupParams{
 		Name:        name,
@@ -94,6 +102,16 @@ func (s *serviceImpl) UpdateGroup(ctx context.Context, groupID uuid.UUID, name, 
 	// Validate name if provided
 	if name != nil {
 		if err := s.validateGroupName(*name); err != nil {
+			return err
+		}
+
+		// Check if new name already exists for another group
+		existing, err := s.groupRepo.FindByName(ctx, *name)
+		if err == nil {
+			if existing.ID != groupID {
+				return ErrGroupAlreadyExists
+			}
+		} else if !errors.Is(err, ErrGroupNotFound) {
 			return err
 		}
 	}

@@ -26,27 +26,37 @@ type Service interface {
 }
 
 type serviceImpl struct {
-	repo MemberRepository
+	memberRepo MemberRepository
 }
 
 func NewService(repo MemberRepository) Service {
-	return &serviceImpl{repo: repo}
+	return &serviceImpl{memberRepo: repo}
 }
 
 // InviteMember implements Service.InviteMember.
 // It checks if the user is already a member before adding them.
 func (s *serviceImpl) InviteMember(ctx context.Context, groupID, userID, invitedBy uuid.UUID) error {
-	existing, err := s.repo.GetMember(ctx, groupID, userID)
-	if err == nil && existing != nil {
+	// Check if group exists
+	exists, err := s.memberRepo.GroupExists(ctx, groupID)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return ErrInvalidGroup
+	}
+
+	existingMem, err := s.memberRepo.GetMember(ctx, groupID, userID)
+	if err == nil && existingMem != nil {
 		return ErrMemberAlreadyExists
 	}
-	return s.repo.AddMember(ctx, groupID, userID, invitedBy, "member")
+
+	return s.memberRepo.AddMember(ctx, groupID, userID, invitedBy, "member")
 }
 
 // AcceptInvitation implements Service.AcceptInvitation.
 // It changes the member status to 'accepted' and sets the joined time.
 func (s *serviceImpl) AcceptInvitation(ctx context.Context, groupID, userID uuid.UUID) error {
-	member, err := s.repo.GetMember(ctx, groupID, userID)
+	member, err := s.memberRepo.GetMember(ctx, groupID, userID)
 	if err != nil {
 		return err
 	}
@@ -56,30 +66,30 @@ func (s *serviceImpl) AcceptInvitation(ctx context.Context, groupID, userID uuid
 	if member.Status != "pending" {
 		return ErrInvalidStatus
 	}
-	return s.repo.UpdateMemberStatus(ctx, groupID, userID, "accepted")
+	return s.memberRepo.UpdateMemberStatus(ctx, groupID, userID, "accepted")
 }
 
 // RejectInvitation implements Service.RejectInvitation.
 // It changes the member status to 'rejected'.
 func (s *serviceImpl) RejectInvitation(ctx context.Context, groupID, userID uuid.UUID) error {
-	member, err := s.repo.GetMember(ctx, groupID, userID)
+	member, err := s.memberRepo.GetMember(ctx, groupID, userID)
 	if err != nil {
 		return err
 	}
 	if member.Status != "pending" {
 		return ErrInvitationPending
 	}
-	return s.repo.UpdateMemberStatus(ctx, groupID, userID, "rejected")
+	return s.memberRepo.UpdateMemberStatus(ctx, groupID, userID, "rejected")
 }
 
 // RemoveMember implements Service.RemoveMember.
 // It handles member removal or voluntary exit from a group.
 func (s *serviceImpl) RemoveMember(ctx context.Context, groupID, userID, requesterID uuid.UUID) error {
-	return s.repo.RemoveMember(ctx, groupID, userID)
+	return s.memberRepo.RemoveMember(ctx, groupID, userID)
 }
 
 // GetMembers implements Service.GetMembers.
 // Lists all members in the group including their roles and statuses.
 func (s *serviceImpl) GetMembers(ctx context.Context, groupID uuid.UUID) ([]domain.GroupMember, error) {
-	return s.repo.ListGroupMembers(ctx, groupID)
+	return s.memberRepo.ListGroupMembers(ctx, groupID)
 }

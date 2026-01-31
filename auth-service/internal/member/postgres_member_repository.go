@@ -95,3 +95,10 @@ func (r *postgresRepository) ListGroupMembers(ctx context.Context, groupID uuid.
 	}
 	return members, nil
 }
+
+func (r *postgresRepository) GroupExists(ctx context.Context, groupID uuid.UUID) (bool, error) {
+	query := `SELECT EXISTS(SELECT 1 FROM groups WHERE id = $1)`
+	var exists bool
+	err := r.pool.QueryRow(ctx, query, groupID).Scan(&exists)
+	return exists, err
+}

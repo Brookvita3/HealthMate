@@ -25,4 +25,7 @@ type MemberRepository interface {
 
 	// ListGroupMembers retrieves all members belonging to a specific group.
 	ListGroupMembers(ctx context.Context, groupID uuid.UUID) ([]domain.GroupMember, error)
+
+	// GroupExists checks if a group exists.
+	GroupExists(ctx context.Context, groupID uuid.UUID) (bool, error)
 }

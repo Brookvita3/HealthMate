@@ -19,4 +19,7 @@ var (
 
 	// ErrInvalidStatus is returned when the status is invalid.
 	ErrInvalidStatus = &common.BusinessError{Code: 400, Message: "invalid status"}
+
+	// ErrInvalidGroup is returned when the request is invalid.
+	ErrInvalidGroup = &common.BusinessError{Code: 404, Message: "invalid group"}
 )

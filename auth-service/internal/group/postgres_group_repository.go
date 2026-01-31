@@ -111,7 +111,7 @@ func (r *postgresRepository) FindByID(ctx context.Context, id uuid.UUID) (*domai
 	query := `
 		SELECT id, name, description, owner_id, created_at, updated_at
 		FROM groups
-		WHERE id = $1 AND deleted_at IS NULL`
+		WHERE id = $1`
 
 	row := r.pool.QueryRow(ctx, query, id)
 
@@ -152,13 +152,19 @@ func (r *postgresRepository) Update(ctx context.Context, id uuid.UUID, params Up
 	setClauses = append(setClauses, "updated_at = NOW()")
 
 	// Add WHERE clause
-	setClauses = append(setClauses, fmt.Sprintf("WHERE id = $%d AND deleted_at IS NULL", argID))
+	setClauses = append(setClauses, fmt.Sprintf("WHERE id = $%d", argID))
 	args = append(args, id)
 
 	query := fmt.Sprintf("UPDATE groups SET %s", strings.Join(setClauses, ", "))
 
 	cmdTag, err := r.pool.Exec(ctx, query, args...)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "23505" {
+				return ErrGroupAlreadyExists
+			}
+		}
 		return err
 	}
 
@@ -171,11 +177,7 @@ func (r *postgresRepository) Update(ctx context.Context, id uuid.UUID, params Up
 
 // Delete implements GroupRepository.Delete
 func (r *postgresRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	// Soft delete implementation
-	query := `
-		UPDATE groups 
-		SET deleted_at = NOW(), updated_at = NOW()
-		WHERE id = $1 AND deleted_at IS NULL`
+	query := `DELETE FROM groups WHERE id = $1`
 
 	cmdTag, err := r.pool.Exec(ctx, query, id)
 	if err != nil {
@@ -194,7 +196,7 @@ func (r *postgresRepository) FindByOwner(ctx context.Context, ownerID uuid.UUID,
 	query := `
 		SELECT id, name, description, owner_id, created_at, updated_at
 		FROM groups
-		WHERE owner_id = $1 AND deleted_at IS NULL
+		WHERE owner_id = $1
 		ORDER BY created_at DESC
 		LIMIT $2 OFFSET $3`
 
@@ -225,7 +227,7 @@ func (r *postgresRepository) List(ctx context.Context, params ListGroupsParams) 
 	query := `
 		SELECT id, name, description, owner_id, created_at, updated_at
 		FROM groups
-		WHERE deleted_at IS NULL`
+		WHERE 1=1`
 
 	var conditions []string
 	var args []interface{}
@@ -282,7 +284,7 @@ func (r *postgresRepository) Exists(ctx context.Context, id uuid.UUID) (bool, er
 	query := `
 		SELECT EXISTS(
 			SELECT 1 FROM groups 
-			WHERE id = $1 AND deleted_at IS NULL
+			WHERE id = $1
 		)`
 
 	var exists bool
@@ -294,12 +296,32 @@ func (r *postgresRepository) Exists(ctx context.Context, id uuid.UUID) (bool, er
 	return exists, nil
 }
 
+// FindByName implements GroupRepository.FindByName
+func (r *postgresRepository) FindByName(ctx context.Context, name string) (*domain.Group, error) {
+	query := `
+		SELECT id, name, description, owner_id, created_at, updated_at
+		FROM groups
+		WHERE name = $1`
+
+	row := r.pool.QueryRow(ctx, query, name)
+
+	pGroup, err := r.scanGroup(row)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrGroupNotFound
+		}
+		return nil, err
+	}
+
+	return r.toDomainGroup(*pGroup), nil
+}
+
 // TransferOwnership implements GroupRepository.TransferOwnership
 func (r *postgresRepository) TransferOwnership(ctx context.Context, groupID, newOwnerID uuid.UUID) error {
 	query := `
 		UPDATE groups 
 		SET owner_id = $1, updated_at = NOW()
-		WHERE id = $2 AND deleted_at IS NULL`
+		WHERE id = $2`
 
 	cmdTag, err := r.pool.Exec(ctx, query, newOwnerID, groupID)
 	if err != nil {

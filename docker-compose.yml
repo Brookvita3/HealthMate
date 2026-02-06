@@ -93,6 +93,9 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - "2181:2181"
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_log:/var/lib/zookeeper/log
     networks:
       - backend
 
@@ -104,6 +107,8 @@ services:
     ports:
       - "9092:9092"
       - "9094:9094"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
@@ -186,4 +191,10 @@ volumes:
   timescaledbdata:
     driver: local
   redisdata:
+    driver: local
+  zookeeper_data:
+    driver: local
+  zookeeper_log:
+    driver: local
+  kafka_data:
     driver: local

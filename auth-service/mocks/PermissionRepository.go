@@ -16,6 +16,34 @@ type PermissionRepository struct {
 	mock.Mock
 }
 
+// IsMember provides a mock function with given fields: ctx, groupID, userID
+func (_m *PermissionRepository) IsMember(ctx context.Context, groupID uuid.UUID, userID uuid.UUID) (bool, error) {
+	ret := _m.Called(ctx, groupID, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for IsMember")
+	}
+
+	var r0 bool
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) (bool, error)); ok {
+		return rf(ctx, groupID, userID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) bool); ok {
+		r0 = rf(ctx, groupID, userID)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, uuid.UUID) error); ok {
+		r1 = rf(ctx, groupID, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ListUserPermissionsInGroup provides a mock function with given fields: ctx, groupID, userID
 func (_m *PermissionRepository) ListUserPermissionsInGroup(ctx context.Context, groupID uuid.UUID, userID uuid.UUID) ([]domain.Permission, error) {
 	ret := _m.Called(ctx, groupID, userID)
@@ -44,6 +72,24 @@ func (_m *PermissionRepository) ListUserPermissionsInGroup(ctx context.Context, 
 	}
 
 	return r0, r1
+}
+
+// RevokeAllPermissions provides a mock function with given fields: ctx, groupID, userID
+func (_m *PermissionRepository) RevokeAllPermissions(ctx context.Context, groupID uuid.UUID, userID uuid.UUID) error {
+	ret := _m.Called(ctx, groupID, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RevokeAllPermissions")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) error); ok {
+		r0 = rf(ctx, groupID, userID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // RevokePermission provides a mock function with given fields: ctx, groupID, userID, metricType

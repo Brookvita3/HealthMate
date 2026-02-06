@@ -64,6 +64,62 @@ func (_m *MemberRepository) GetMember(ctx context.Context, groupID uuid.UUID, us
 	return r0, r1
 }
 
+// GroupExists provides a mock function with given fields: ctx, groupID
+func (_m *MemberRepository) GroupExists(ctx context.Context, groupID uuid.UUID) (bool, error) {
+	ret := _m.Called(ctx, groupID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GroupExists")
+	}
+
+	var r0 bool
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) (bool, error)); ok {
+		return rf(ctx, groupID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) bool); ok {
+		r0 = rf(ctx, groupID)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = rf(ctx, groupID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// IsOwner provides a mock function with given fields: ctx, groupID, userID
+func (_m *MemberRepository) IsOwner(ctx context.Context, groupID uuid.UUID, userID uuid.UUID) (bool, error) {
+	ret := _m.Called(ctx, groupID, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for IsOwner")
+	}
+
+	var r0 bool
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) (bool, error)); ok {
+		return rf(ctx, groupID, userID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) bool); ok {
+		r0 = rf(ctx, groupID, userID)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, uuid.UUID) error); ok {
+		r1 = rf(ctx, groupID, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ListGroupMembers provides a mock function with given fields: ctx, groupID
 func (_m *MemberRepository) ListGroupMembers(ctx context.Context, groupID uuid.UUID) ([]domain.GroupMember, error) {
 	ret := _m.Called(ctx, groupID)

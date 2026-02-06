@@ -4,11 +4,10 @@ package mocks
 
 import (
 	domain "auth-service/internal/domain"
+	group "auth-service/internal/group"
 	context "context"
 
 	mock "github.com/stretchr/testify/mock"
-
-	user "auth-service/internal/user"
 
 	uuid "github.com/google/uuid"
 )
@@ -18,29 +17,29 @@ type Service struct {
 	mock.Mock
 }
 
-// GetUserProfile provides a mock function with given fields: ctx, id
-func (_m *Service) GetUserProfile(ctx context.Context, id uuid.UUID) (*domain.User, error) {
-	ret := _m.Called(ctx, id)
+// CreateGroup provides a mock function with given fields: ctx, ownerID, name, description
+func (_m *Service) CreateGroup(ctx context.Context, ownerID uuid.UUID, name string, description *string) (*domain.Group, error) {
+	ret := _m.Called(ctx, ownerID, name, description)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetUserProfile")
+		panic("no return value specified for CreateGroup")
 	}
 
-	var r0 *domain.User
+	var r0 *domain.Group
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) (*domain.User, error)); ok {
-		return rf(ctx, id)
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, string, *string) (*domain.Group, error)); ok {
+		return rf(ctx, ownerID, name, description)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) *domain.User); ok {
-		r0 = rf(ctx, id)
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, string, *string) *domain.Group); ok {
+		r0 = rf(ctx, ownerID, name, description)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*domain.User)
+			r0 = ret.Get(0).(*domain.Group)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
-		r1 = rf(ctx, id)
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, string, *string) error); ok {
+		r1 = rf(ctx, ownerID, name, description)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -48,28 +47,104 @@ func (_m *Service) GetUserProfile(ctx context.Context, id uuid.UUID) (*domain.Us
 	return r0, r1
 }
 
-// ListUsers provides a mock function with given fields: ctx, params
-func (_m *Service) ListUsers(ctx context.Context, params user.ListUsersParams) ([]domain.User, error) {
-	ret := _m.Called(ctx, params)
+// DeleteGroup provides a mock function with given fields: ctx, groupID, requesterID
+func (_m *Service) DeleteGroup(ctx context.Context, groupID uuid.UUID, requesterID uuid.UUID) error {
+	ret := _m.Called(ctx, groupID, requesterID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for ListUsers")
+		panic("no return value specified for DeleteGroup")
 	}
 
-	var r0 []domain.User
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, user.ListUsersParams) ([]domain.User, error)); ok {
-		return rf(ctx, params)
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) error); ok {
+		r0 = rf(ctx, groupID, requesterID)
+	} else {
+		r0 = ret.Error(0)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, user.ListUsersParams) []domain.User); ok {
-		r0 = rf(ctx, params)
+
+	return r0
+}
+
+// GetGroup provides a mock function with given fields: ctx, groupID
+func (_m *Service) GetGroup(ctx context.Context, groupID uuid.UUID) (*domain.Group, error) {
+	ret := _m.Called(ctx, groupID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetGroup")
+	}
+
+	var r0 *domain.Group
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) (*domain.Group, error)); ok {
+		return rf(ctx, groupID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) *domain.Group); ok {
+		r0 = rf(ctx, groupID)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]domain.User)
+			r0 = ret.Get(0).(*domain.Group)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, user.ListUsersParams) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = rf(ctx, groupID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// IsGroupOwner provides a mock function with given fields: ctx, groupID, userID
+func (_m *Service) IsGroupOwner(ctx context.Context, groupID uuid.UUID, userID uuid.UUID) (bool, error) {
+	ret := _m.Called(ctx, groupID, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for IsGroupOwner")
+	}
+
+	var r0 bool
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) (bool, error)); ok {
+		return rf(ctx, groupID, userID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) bool); ok {
+		r0 = rf(ctx, groupID, userID)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, uuid.UUID) error); ok {
+		r1 = rf(ctx, groupID, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListGroups provides a mock function with given fields: ctx, params
+func (_m *Service) ListGroups(ctx context.Context, params group.ListGroupsParams) ([]domain.Group, error) {
+	ret := _m.Called(ctx, params)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListGroups")
+	}
+
+	var r0 []domain.Group
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, group.ListGroupsParams) ([]domain.Group, error)); ok {
+		return rf(ctx, params)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, group.ListGroupsParams) []domain.Group); ok {
+		r0 = rf(ctx, params)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]domain.Group)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, group.ListGroupsParams) error); ok {
 		r1 = rf(ctx, params)
 	} else {
 		r1 = ret.Error(1)
@@ -78,17 +153,65 @@ func (_m *Service) ListUsers(ctx context.Context, params user.ListUsersParams) (
 	return r0, r1
 }
 
-// UpdateUserProfile provides a mock function with given fields: ctx, id, params
-func (_m *Service) UpdateUserProfile(ctx context.Context, id uuid.UUID, params user.UpdateUserParams) error {
-	ret := _m.Called(ctx, id, params)
+// ListUserGroups provides a mock function with given fields: ctx, userID, limit, offset
+func (_m *Service) ListUserGroups(ctx context.Context, userID uuid.UUID, limit int, offset int) ([]domain.Group, error) {
+	ret := _m.Called(ctx, userID, limit, offset)
 
 	if len(ret) == 0 {
-		panic("no return value specified for UpdateUserProfile")
+		panic("no return value specified for ListUserGroups")
+	}
+
+	var r0 []domain.Group
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, int, int) ([]domain.Group, error)); ok {
+		return rf(ctx, userID, limit, offset)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, int, int) []domain.Group); ok {
+		r0 = rf(ctx, userID, limit, offset)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]domain.Group)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, int, int) error); ok {
+		r1 = rf(ctx, userID, limit, offset)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// TransferOwnership provides a mock function with given fields: ctx, groupID, currentOwnerID, newOwnerID
+func (_m *Service) TransferOwnership(ctx context.Context, groupID uuid.UUID, currentOwnerID uuid.UUID, newOwnerID uuid.UUID) error {
+	ret := _m.Called(ctx, groupID, currentOwnerID, newOwnerID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TransferOwnership")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, user.UpdateUserParams) error); ok {
-		r0 = rf(ctx, id, params)
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) error); ok {
+		r0 = rf(ctx, groupID, currentOwnerID, newOwnerID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// UpdateGroup provides a mock function with given fields: ctx, groupID, name, description, requesterID
+func (_m *Service) UpdateGroup(ctx context.Context, groupID uuid.UUID, name *string, description *string, requesterID uuid.UUID) error {
+	ret := _m.Called(ctx, groupID, name, description, requesterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateGroup")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, *string, *string, uuid.UUID) error); ok {
+		r0 = rf(ctx, groupID, name, description, requesterID)
 	} else {
 		r0 = ret.Error(0)
 	}

@@ -10,6 +10,7 @@ import (
 	postgrePlatform "auth-service/internal/platform/postgres"
 	redisPlatform "auth-service/internal/platform/redis"
 	"auth-service/internal/user"
+	"auth-service/internal/validation"
 	"auth-service/internal/web/middleware"
 	"context"
 	"log"
@@ -37,11 +38,14 @@ type Dependencies struct {
 
 	TokenService      auth.TokenService
 	UserRepo          user.UserRepository
+	GroupRepo         group.GroupRepository
+	MemberRepo        member.MemberRepository
 	OTPService        auth.OTPService
 	AuthService       auth.Service
 	GroupService      group.Service
 	MemberService     member.Service
 	PermissionService permission.Service
+	Validator         *validation.Validator
 }
 
 type HTTPServer struct {
@@ -87,23 +91,36 @@ func NewHTTPServer(deps *Dependencies) *HTTPServer {
 		authGroup.POST("/password", authHandler.SetPassword)
 	}
 
+	// ===== Group Middleware =====
+	groupMiddleware := middleware.NewGroupMiddleware(deps.Validator)
+
 	// ===== Group routes =====
 	groupHandler := group.NewHandler(deps.GroupService, deps.MemberService, deps.PermissionService)
 	groupGroup := api.Group("/groups")
 	groupGroup.Use(authHandler.AuthMiddleware())
 	{
+		// Routes that don't need group validation (no :id param)
 		groupGroup.POST("", groupHandler.CreateGroup)
 		groupGroup.GET("", groupHandler.ListMyGroups)
-		groupGroup.POST("/:id/members", groupHandler.InviteMember)
-		groupGroup.GET("/:id/members", groupHandler.GetMembers)
-		groupGroup.DELETE("/:id/members/:member_id", groupHandler.RemoveMember)
-		groupGroup.POST("/:id/leave", groupHandler.LeaveGroup)
-		groupGroup.POST("/:id/accept", groupHandler.AcceptInvitation)
-		groupGroup.POST("/:id/reject", groupHandler.RejectInvitation)
-		groupGroup.POST("/:id/transfer-ownership", groupHandler.TransferOwnership)
-		groupGroup.POST("/:id/permissions", groupHandler.SetPermission)
-		groupGroup.PUT("/:id/permissions", groupHandler.UpdatePermissions)
-		groupGroup.GET("/:id/permissions", groupHandler.GetPermissions)
+
+		// Routes that need group validation (have :id param)
+		// Create a subgroup with group validation middleware
+		groupWithID := groupGroup.Group("/:id")
+		groupWithID.Use(groupMiddleware.ValidateGroupExists())
+		{
+			groupWithID.POST("/members", groupHandler.InviteMember)
+			groupWithID.GET("/members", groupHandler.GetMembers)
+			groupWithID.POST("/leave", groupHandler.LeaveGroup)
+			groupWithID.POST("/accept", groupHandler.AcceptInvitation)
+			groupWithID.POST("/reject", groupHandler.RejectInvitation)
+			groupWithID.POST("/transfer-ownership", groupHandler.TransferOwnership)
+			groupWithID.POST("/permissions", groupHandler.SetPermission)
+			groupWithID.PUT("/permissions", groupHandler.UpdatePermissions)
+			groupWithID.GET("/permissions", groupHandler.GetPermissions)
+
+			// Routes that need member validation
+			groupWithID.DELETE("/members/:member_id", groupMiddleware.ValidateMemberExists(), groupHandler.RemoveMember)
+		}
 	}
 
 	srv := &http.Server{
@@ -130,6 +147,10 @@ func NewDependencies(cfg *config.Config) *Dependencies {
 	}
 
 	userRepo := user.NewRepository(db)
+	groupRepo := group.NewPostgresRepository(db)
+	memberRepo := member.NewPostgresRepository(db)
+	permissionRepo := permission.NewPostgresRepository(db)
+
 	cache := redisPlatform.NewCacheWrapper(redisClient)
 	jwtService := auth.NewJWTTokenService(cfg.JWTSecret, cache)
 	otpService := auth.NewRedisOTPService(cache)
@@ -142,18 +163,25 @@ func NewDependencies(cfg *config.Config) *Dependencies {
 
 	authService := auth.NewAuthService(userRepo, jwtService, otpService, emailService, googleVerifier)
 
+	// Create Validator with repository adapters
+	memberChecker := validation.NewMemberCheckerAdapter(memberRepo)
+	validator := validation.NewValidator(groupRepo, userRepo, memberChecker)
+
 	return &Dependencies{
 		DB:                db,
 		Redis:             redisClient,
 		Config:            cfg,
 		UserRepo:          userRepo,
+		GroupRepo:         groupRepo,
+		MemberRepo:        memberRepo,
 		JWTTokenService:   jwtService,
 		TokenService:      tokenService,
 		OTPService:        otpService,
 		AuthService:       authService,
-		GroupService:      group.NewService(group.NewPostgresRepository(db), userRepo),
-		MemberService:     member.NewService(member.NewPostgresRepository(db)),
-		PermissionService: permission.NewService(permission.NewPostgresRepository(db)),
+		GroupService:      group.NewService(groupRepo, userRepo),
+		MemberService:     member.NewService(memberRepo),
+		PermissionService: permission.NewService(permissionRepo),
+		Validator:         validator,
 	}
 }
 

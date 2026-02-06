@@ -27,5 +27,5 @@ var (
 	ErrOwnerCannotLeave = &common.BusinessError{Code: 400, Message: "owner must transfer leadership before leaving"}
 
 	// ErrNotGroupOwner is returned when a non-owner attempts an owner-only action.
-	ErrNotGroupOwner = &common.BusinessError{Code: 403, Message: "only the group owner can perform this action"}
+	ErrNotGroupOwner = &common.BusinessError{Code: 403, Message: "user is not the group owner"}
 )

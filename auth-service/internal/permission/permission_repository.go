@@ -17,4 +17,10 @@ type PermissionRepository interface {
 
 	// ListUserPermissionsInGroup retrieves all enabled sharing permissions for a user within a group.
 	ListUserPermissionsInGroup(ctx context.Context, groupID, userID uuid.UUID) ([]domain.Permission, error)
+
+	// RevokeAllPermissions revokes all sharing permissions for a user within a group.
+	RevokeAllPermissions(ctx context.Context, groupID, userID uuid.UUID) error
+
+	// IsMember checks if a user is a member of a specific group.
+	IsMember(ctx context.Context, groupID, userID uuid.UUID) (bool, error)
 }

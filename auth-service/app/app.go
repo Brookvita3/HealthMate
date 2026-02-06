@@ -97,9 +97,12 @@ func NewHTTPServer(deps *Dependencies) *HTTPServer {
 		groupGroup.POST("/:id/members", groupHandler.InviteMember)
 		groupGroup.GET("/:id/members", groupHandler.GetMembers)
 		groupGroup.DELETE("/:id/members/:member_id", groupHandler.RemoveMember)
+		groupGroup.POST("/:id/leave", groupHandler.LeaveGroup)
 		groupGroup.POST("/:id/accept", groupHandler.AcceptInvitation)
 		groupGroup.POST("/:id/reject", groupHandler.RejectInvitation)
+		groupGroup.POST("/:id/transfer-ownership", groupHandler.TransferOwnership)
 		groupGroup.POST("/:id/permissions", groupHandler.SetPermission)
+		groupGroup.PUT("/:id/permissions", groupHandler.UpdatePermissions)
 		groupGroup.GET("/:id/permissions", groupHandler.GetPermissions)
 	}
 

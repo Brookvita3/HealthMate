@@ -122,7 +122,7 @@ func (h *Handler) RejectInvitation(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Invitation rejected"})
 }
 
-// RemoveMember handles removing a member from a group.
+// RemoveMember handles removing a member from a group (Kick).
 func (h *Handler) RemoveMember(c *gin.Context) {
 	userId, _ := c.Get(string(common.UserIdKey))
 	requesterID := uuid.MustParse(userId.(string))
@@ -145,6 +145,25 @@ func (h *Handler) RemoveMember(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Member removed"})
+}
+
+// LeaveGroup handles the current user leaving a group.
+func (h *Handler) LeaveGroup(c *gin.Context) {
+	userId, _ := c.Get(string(common.UserIdKey))
+	myID := uuid.MustParse(userId.(string))
+	groupID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": common.ErrInvalidUUIDFormat.Error()})
+		return
+	}
+
+	err = h.memberService.LeaveGroup(c.Request.Context(), groupID, myID)
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Left group successfully"})
 }
 
 // GetPermissions handles retrieving shared permissions for the current user in a group.
@@ -216,6 +235,33 @@ func (h *Handler) SetPermission(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Permission updated"})
 }
 
+// UpdatePermissions handles updating all sharing permissions for the current user in a group.
+func (h *Handler) UpdatePermissions(c *gin.Context) {
+	userId, _ := c.Get(string(common.UserIdKey))
+	myID := uuid.MustParse(userId.(string))
+	groupID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": common.ErrInvalidUUIDFormat.Error()})
+		return
+	}
+
+	var req struct {
+		MetricTypes []string `json:"metric_types" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": common.ErrInvalidRequest.Error()})
+		return
+	}
+
+	err = h.permService.UpdateSharing(c.Request.Context(), groupID, myID, req.MetricTypes)
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Permissions updated"})
+}
+
 // ListMyGroups returns all groups where the authenticated user is the owner.
 func (h *Handler) ListMyGroups(c *gin.Context) {
 	userId, _ := c.Get(string(common.UserIdKey))
@@ -228,6 +274,39 @@ func (h *Handler) ListMyGroups(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, groups)
+}
+
+// TransferOwnership handles transferring group ownership to another user.
+func (h *Handler) TransferOwnership(c *gin.Context) {
+	userId, _ := c.Get(string(common.UserIdKey))
+	currentOwnerID := uuid.MustParse(userId.(string))
+	groupID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": common.ErrInvalidUUIDFormat.Error()})
+		return
+	}
+
+	var req struct {
+		NewOwnerID string `json:"new_owner_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": common.ErrInvalidRequest.Error()})
+		return
+	}
+
+	newOwnerID, err := uuid.Parse(req.NewOwnerID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": common.ErrInvalidUUIDFormat.Error()})
+		return
+	}
+
+	err = h.groupService.TransferOwnership(c.Request.Context(), groupID, currentOwnerID, newOwnerID)
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Ownership transferred successfully"})
 }
 
 // handleError is a helper to return consistent error responses based on BusinessError.

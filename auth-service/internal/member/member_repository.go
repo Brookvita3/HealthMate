@@ -28,4 +28,7 @@ type MemberRepository interface {
 
 	// GroupExists checks if a group exists.
 	GroupExists(ctx context.Context, groupID uuid.UUID) (bool, error)
+
+	// IsOwner checks if a user is the owner of a specific group.
+	IsOwner(ctx context.Context, groupID, userID uuid.UUID) (bool, error)
 }

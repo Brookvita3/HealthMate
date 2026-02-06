@@ -22,4 +22,10 @@ var (
 
 	// ErrInvalidGroup is returned when the request is invalid.
 	ErrInvalidGroup = &common.BusinessError{Code: 404, Message: "invalid group"}
+
+	// ErrOwnerCannotLeave is returned when the owner attempts to leave the group.
+	ErrOwnerCannotLeave = &common.BusinessError{Code: 400, Message: "owner must transfer leadership before leaving"}
+
+	// ErrNotGroupOwner is returned when a non-owner attempts an owner-only action.
+	ErrNotGroupOwner = &common.BusinessError{Code: 403, Message: "only the group owner can perform this action"}
 )

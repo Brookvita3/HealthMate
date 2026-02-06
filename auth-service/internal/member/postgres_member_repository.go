@@ -47,7 +47,11 @@ func (r *postgresRepository) UpdateMemberStatus(ctx context.Context, groupID, us
 
 func (r *postgresRepository) RemoveMember(ctx context.Context, groupID, userID uuid.UUID) error {
 	query := `DELETE FROM group_members WHERE group_id = $1 AND user_id = $2`
-	_, err := r.pool.Exec(ctx, query, groupID, userID)
+	cmdTag, err := r.pool.Exec(ctx, query, groupID, userID)
+	if cmdTag.RowsAffected() == 0 {
+		return ErrMemberNotFound
+	}
+
 	return err
 }
 
@@ -100,5 +104,12 @@ func (r *postgresRepository) GroupExists(ctx context.Context, groupID uuid.UUID)
 	query := `SELECT EXISTS(SELECT 1 FROM groups WHERE id = $1)`
 	var exists bool
 	err := r.pool.QueryRow(ctx, query, groupID).Scan(&exists)
+	return exists, err
+}
+
+func (r *postgresRepository) IsOwner(ctx context.Context, groupID, userID uuid.UUID) (bool, error) {
+	query := `SELECT EXISTS(SELECT 1 FROM groups WHERE id = $1 AND owner_id = $2)`
+	var exists bool
+	err := r.pool.QueryRow(ctx, query, groupID, userID).Scan(&exists)
 	return exists, err
 }

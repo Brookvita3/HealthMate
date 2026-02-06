@@ -49,3 +49,14 @@ func (r *postgresRepository) ListUserPermissionsInGroup(ctx context.Context, gro
 	}
 	return perms, nil
 }
+func (r *postgresRepository) RevokeAllPermissions(ctx context.Context, groupID, userID uuid.UUID) error {
+	query := `DELETE FROM sharing_permissions WHERE group_id = $1 AND user_id = $2`
+	_, err := r.pool.Exec(ctx, query, groupID, userID)
+	return err
+}
+func (r *postgresRepository) IsMember(ctx context.Context, groupID, userID uuid.UUID) (bool, error) {
+	query := `SELECT EXISTS(SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2 AND status = 'accepted')`
+	var exists bool
+	err := r.pool.QueryRow(ctx, query, groupID, userID).Scan(&exists)
+	return exists, err
+}

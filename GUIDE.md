@@ -111,11 +111,12 @@ The system uses a WebSocket-based ingestion and broadcast mechanism:
    *Note: Permissions will be verified against the `sharing_permissions` table.*
 
 3. **Data Ingestion (Source Role)**: Send health metrics as JSON directly through the same connection:
-   - Payload: `{"user_id": "YOUR_ID", "metric_type": "heart_rate", "value": 72}`
-   - *Note: `user_id` must match your JWT identity.*
+   - Payload: `{"user_id": "YOUR_ID", "metric_type": "heart_rate", "value": 72, "timestamp": "2026-02-09T17:00:00Z"}`
+   - *Note: `user_id` must match your JWT identity. If `timestamp` is omitted, the server will use the current time.*
 
 4. **Internal Routing & Broadcast**:
-   - `realtime-service` publishes received metrics to **Kafka** (topic: `health_metrics`) and broadcasts the data to all authorized followers who have performed the **Subscription** step above.
+   - `realtime-service` publishes received metrics to **Kafka** (topic: `health_metrics`) and broadcasts the data to all authorized followers.
+   - **Broadcast Format**: Same as ingestion payload.
    - `storage-service` consumes from Kafka to persist data.
 
 ## 5. Directory Structure

@@ -2,7 +2,7 @@ basePath: /
 host: localhost:5001
 info:
   contact: {}
-  description: This is the Realtime service for HealthMate application.
+  description: This is the API for Realtime Service of HealthMate application.
   title: HealthMate Realtime API
   version: "1.0"
 paths:

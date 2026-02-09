@@ -65,7 +65,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/",
 	Schemes:          []string{"http", "https"},
 	Title:            "HealthMate Realtime API",
-	Description:      "This is the Realtime service for HealthMate application.",
+	Description:      "This is the API for Realtime Service of HealthMate application.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

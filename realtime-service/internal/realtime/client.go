@@ -222,6 +222,11 @@ func (c *Client) handleMetricPush(message []byte) {
 		return
 	}
 
+	// If timestamp is not provided, use current time
+	if m.Timestamp.IsZero() {
+		m.Timestamp = time.Now()
+	}
+
 	// Publish metric to Kafka
 	// The consumer will then pick it up and broadcast it via the Hub
 	if err := c.hub.GetProducer().PublishMetric(context.Background(), &m); err != nil {

@@ -457,6 +457,24 @@ func (handler *Handler) UpdatePermissions(c *gin.Context) {
 	c.JSON(http.StatusOK, webHelpers.OKResponse{Message: "Permissions updated"})
 }
 
+// ListMetricTypes returns all available metric types.
+// @Summary List metric types
+// @Description Get all available health metric types that can be shared
+// @Tags groups
+// @Produce json
+// @Success 200 {array} domain.MetricType
+// @Security BearerAuth
+// @Router /groups/metric-types [get]
+func (handler *Handler) ListMetricTypes(c *gin.Context) {
+	types, err := handler.permService.ListMetricTypes(c.Request.Context())
+	if err != nil {
+		handler.handleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, types)
+}
+
 // ListMyGroups returns all groups the user belongs to.
 // @Summary List my groups
 // @Description Get all groups (owned or joined) for the current user

@@ -60,3 +60,29 @@ func (r *postgresRepository) IsMember(ctx context.Context, groupID, userID uuid.
 	err := r.pool.QueryRow(ctx, query, groupID, userID).Scan(&exists)
 	return exists, err
 }
+
+func (r *postgresRepository) IsValidMetricType(ctx context.Context, metricType string) (bool, error) {
+	query := `SELECT EXISTS(SELECT 1 FROM metric_types WHERE name = $1)`
+	var exists bool
+	err := r.pool.QueryRow(ctx, query, metricType).Scan(&exists)
+	return exists, err
+}
+
+func (r *postgresRepository) ListMetricTypes(ctx context.Context) ([]domain.MetricType, error) {
+	query := `SELECT id, name, description, created_at FROM metric_types`
+	rows, err := r.pool.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var types []domain.MetricType
+	for rows.Next() {
+		var t domain.MetricType
+		if err := rows.Scan(&t.ID, &t.Name, &t.Description, &t.CreatedAt); err != nil {
+			return nil, err
+		}
+		types = append(types, t)
+	}
+	return types, nil
+}

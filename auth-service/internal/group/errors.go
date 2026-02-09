@@ -16,4 +16,7 @@ var (
 
 	// ErrGroupAlreadyExists is returned when trying to create a duplicate group.
 	ErrGroupAlreadyExists = &common.BusinessError{Code: 409, Message: "group already exists"}
+
+	// ErrNotMember is returned when the user is not a member of the group.
+	ErrNotMember = &common.BusinessError{Code: 403, Message: "user is not a member of this group"}
 )

@@ -20,6 +20,9 @@ type Service interface {
 
 	// UpdateSharing updates multiple sharing permissions for a user in a group.
 	UpdateSharing(ctx context.Context, groupID, userID uuid.UUID, metricTypes []string) error
+
+	// ListMetricTypes retrieves all available metric types in the system.
+	ListMetricTypes(ctx context.Context) ([]domain.MetricType, error)
 }
 
 type serviceImpl struct {
@@ -33,7 +36,11 @@ func NewService(repo PermissionRepository) Service {
 // EnableSharing implements Service.EnableSharing.
 // Validates the metric type before saving the permission.
 func (s *serviceImpl) EnableSharing(ctx context.Context, groupID, userID uuid.UUID, metricType string) error {
-	if !s.isValidMetricType(metricType) {
+	isValid, err := s.repo.IsValidMetricType(ctx, metricType)
+	if err != nil {
+		return err
+	}
+	if !isValid {
 		return ErrInvalidMetricType
 	}
 
@@ -52,7 +59,11 @@ func (s *serviceImpl) EnableSharing(ctx context.Context, groupID, userID uuid.UU
 // DisableSharing implements Service.DisableSharing.
 // Revokes the sharing permission for a specific metric.
 func (s *serviceImpl) DisableSharing(ctx context.Context, groupID, userID uuid.UUID, metricType string) error {
-	if !s.isValidMetricType(metricType) {
+	isValid, err := s.repo.IsValidMetricType(ctx, metricType)
+	if err != nil {
+		return err
+	}
+	if !isValid {
 		return ErrInvalidMetricType
 	}
 	return s.repo.RevokePermission(ctx, groupID, userID, metricType)
@@ -69,7 +80,11 @@ func (s *serviceImpl) GetPermissions(ctx context.Context, groupID, userID uuid.U
 func (s *serviceImpl) UpdateSharing(ctx context.Context, groupID, userID uuid.UUID, metricTypes []string) error {
 	// Validate all metric types first
 	for _, m := range metricTypes {
-		if !s.isValidMetricType(m) {
+		isValid, err := s.repo.IsValidMetricType(ctx, m)
+		if err != nil {
+			return err
+		}
+		if !isValid {
 			return ErrInvalidMetricType
 		}
 	}
@@ -99,12 +114,7 @@ func (s *serviceImpl) UpdateSharing(ctx context.Context, groupID, userID uuid.UU
 	return nil
 }
 
-// isValidMetricType is a helper to check if the metric type is supported by the system.
-func (s *serviceImpl) isValidMetricType(m string) bool {
-	validTypes := map[string]bool{
-		"heart_rate":      true,
-		"steps_count":     true,
-		"calories_burned": true,
-	}
-	return validTypes[m]
+// ListMetricTypes implementation.
+func (s *serviceImpl) ListMetricTypes(ctx context.Context) ([]domain.MetricType, error) {
+	return s.repo.ListMetricTypes(ctx)
 }

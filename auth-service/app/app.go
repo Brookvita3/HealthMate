@@ -102,6 +102,7 @@ func NewHTTPServer(deps *Dependencies) *HTTPServer {
 		// Routes that don't need group validation (no :id param)
 		groupGroup.POST("", groupHandler.CreateGroup)
 		groupGroup.GET("", groupHandler.ListMyGroups)
+		groupGroup.GET("/metric-types", groupHandler.ListMetricTypes)
 
 		// Routes that need group validation (have :id param)
 		// Create a subgroup with group validation middleware

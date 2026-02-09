@@ -23,4 +23,10 @@ type PermissionRepository interface {
 
 	// IsMember checks if a user is a member of a specific group.
 	IsMember(ctx context.Context, groupID, userID uuid.UUID) (bool, error)
+
+	// IsValidMetricType checks if a metric type is defined in the database.
+	IsValidMetricType(ctx context.Context, metricType string) (bool, error)
+
+	// ListMetricTypes retrieves all available metric types in the system.
+	ListMetricTypes(ctx context.Context) ([]domain.MetricType, error)
 }

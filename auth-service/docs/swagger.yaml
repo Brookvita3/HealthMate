@@ -34,6 +34,17 @@ definitions:
       user_id:
         type: string
     type: object
+  auth-service_internal_domain.MetricType:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
   auth-service_internal_domain.Permission:
     properties:
       group_id:
@@ -875,6 +886,23 @@ paths:
       security:
       - BearerAuth: []
       summary: Update all permissions
+      tags:
+      - groups
+  /groups/metric-types:
+    get:
+      description: Get all available health metric types that can be shared
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/auth-service_internal_domain.MetricType'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List metric types
       tags:
       - groups
   /users:

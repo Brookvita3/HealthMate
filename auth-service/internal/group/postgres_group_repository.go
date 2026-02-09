@@ -350,21 +350,45 @@ func (r *postgresRepository) FindByName(ctx context.Context, name string) (*doma
 
 // TransferOwnership implements GroupRepository.TransferOwnership
 func (r *postgresRepository) TransferOwnership(ctx context.Context, groupID, newOwnerID uuid.UUID) error {
-	query := `
-		UPDATE groups 
-		SET owner_id = $1, updated_at = NOW()
-		WHERE id = $2`
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
 
-	cmdTag, err := r.pool.Exec(ctx, query, newOwnerID, groupID)
+	// 1. Get current owner and lock the row
+	var oldOwnerID uuid.UUID
+	err = tx.QueryRow(ctx, "SELECT owner_id FROM groups WHERE id = $1 FOR UPDATE", groupID).Scan(&oldOwnerID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrGroupNotFound
+		}
+		return err
+	}
+
+	// 2. Update groups table
+	_, err = tx.Exec(ctx, "UPDATE groups SET owner_id = $1, updated_at = NOW() WHERE id = $2", newOwnerID, groupID)
+	if err != nil {
+		return err
+	}
+
+	// 3. Update old owner's role in group_members to 'member'
+	_, err = tx.Exec(ctx, "UPDATE group_members SET role = 'member', updated_at = NOW() WHERE group_id = $1 AND user_id = $2", groupID, oldOwnerID)
+	if err != nil {
+		return err
+	}
+
+	// 4. Update new owner's role in group_members to 'owner'
+	cmdTag, err := tx.Exec(ctx, "UPDATE group_members SET role = 'owner', updated_at = NOW() WHERE group_id = $1 AND user_id = $2 AND status = 'accepted'", groupID, newOwnerID)
 	if err != nil {
 		return err
 	}
 
 	if cmdTag.RowsAffected() == 0 {
-		return ErrGroupNotFound
+		return ErrNotMember
 	}
 
-	return nil
+	return tx.Commit(ctx)
 }
 
 // =============================================================================

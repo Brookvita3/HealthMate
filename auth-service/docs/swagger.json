@@ -5,7 +5,7 @@
     ],
     "swagger": "2.0",
     "info": {
-        "description": "This is the API for the HealthMate application.",
+        "description": "This is the API for Auth Service of HealthMate application.",
         "title": "HealthMate API",
         "contact": {},
         "version": "1.0"
@@ -346,7 +346,7 @@
             "get": {
                 "security": [
                     {
-                        "Bearer": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Get all groups (owned or joined) for the current user",
@@ -378,7 +378,7 @@
             "post": {
                 "security": [
                     {
-                        "Bearer": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Create a new group with the current user as owner",
@@ -423,7 +423,7 @@
             "put": {
                 "security": [
                     {
-                        "Bearer": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Update name and description of a group",
@@ -485,7 +485,7 @@
             "delete": {
                 "security": [
                     {
-                        "Bearer": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Remove a group (Owner only)",
@@ -531,7 +531,7 @@
             "get": {
                 "security": [
                     {
-                        "Bearer": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "List all members of a group",
@@ -572,7 +572,7 @@
             "post": {
                 "security": [
                     {
-                        "Bearer": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Send an invitation to a user by email",
@@ -630,7 +630,7 @@
             "put": {
                 "security": [
                     {
-                        "Bearer": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Accept or reject a group invitation",
@@ -686,7 +686,7 @@
             "delete": {
                 "security": [
                     {
-                        "Bearer": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Leave a group you are a member of",
@@ -732,7 +732,7 @@
             "delete": {
                 "security": [
                     {
-                        "Bearer": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Kick a member from the group (Owner only)",
@@ -785,7 +785,7 @@
             "put": {
                 "security": [
                     {
-                        "Bearer": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Transfer group ownership to a new user",
@@ -849,7 +849,7 @@
             "get": {
                 "security": [
                     {
-                        "Bearer": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Get current user's sharing permissions in a group",
@@ -890,7 +890,7 @@
             "put": {
                 "security": [
                     {
-                        "Bearer": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Update all sharing permissions for the current user",
@@ -946,7 +946,7 @@
             "post": {
                 "security": [
                     {
-                        "Bearer": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Enable or disable sharing for a specific metric type",
@@ -1004,7 +1004,7 @@
             "get": {
                 "security": [
                     {
-                        "Bearer": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Retrieve a list of users with optional search and pagination",
@@ -1058,7 +1058,7 @@
             "get": {
                 "security": [
                     {
-                        "Bearer": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Get profile details of the currently authenticated user",
@@ -1093,7 +1093,7 @@
             "put": {
                 "security": [
                     {
-                        "Bearer": []
+                        "BearerAuth": []
                     }
                 ],
                 "description": "Update profile details (name, picture) of the current user",

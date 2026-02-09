@@ -31,7 +31,7 @@ func NewHandler(s Service) *Handler {
 // @Produce json
 // @Success 200 {object} domain.User
 // @Failure 401,404 {object} webHelpers.ErrorResponse
-// @Security Bearer
+// @Security BearerAuth
 // @Router /users/profile [get]
 func (handler *Handler) GetProfile(c *gin.Context) {
 	userId, exists := c.Get(string(common.UserIdKey))
@@ -64,7 +64,7 @@ func (handler *Handler) GetProfile(c *gin.Context) {
 // @Param request body UpdateUserParams true "Profile updates"
 // @Success 200 {string} string "OK"
 // @Failure 400,401 {object} webHelpers.ErrorResponse
-// @Security Bearer
+// @Security BearerAuth
 // @Router /users/profile [put]
 func (handler *Handler) UpdateProfile(c *gin.Context) {
 	userId, exists := c.Get(string(common.UserIdKey))
@@ -102,7 +102,7 @@ func (handler *Handler) UpdateProfile(c *gin.Context) {
 // @Param offset query int false "Offset (default 0)"
 // @Success 200 {array} domain.User
 // @Failure 500 {object} webHelpers.ErrorResponse
-// @Security Bearer
+// @Security BearerAuth
 // @Router /users [get]
 func (handler *Handler) ListUsers(c *gin.Context) {
 	limit, err := strconv.Atoi(c.DefaultQuery("limit", strconv.Itoa(defaultLimit)))

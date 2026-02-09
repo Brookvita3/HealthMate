@@ -67,7 +67,7 @@ func NewHandler(gs Service, ms member.Service, ps permission.Service) *Handler {
 // @Param request body CreateGroupRequest true "Group creation details"
 // @Success 201 {object} domain.Group
 // @Failure 400 {object} webHelpers.ErrorResponse
-// @Security Bearer
+// @Security BearerAuth
 // @Router /groups [post]
 func (handler *Handler) CreateGroup(c *gin.Context) {
 	ownerID, ok := webHelpers.GetAuthUserID(c)
@@ -100,7 +100,7 @@ func (handler *Handler) CreateGroup(c *gin.Context) {
 // @Param request body UpdateGroupRequest true "Update details"
 // @Success 200 {object} webHelpers.OKResponse
 // @Failure 400,403,404 {object} webHelpers.ErrorResponse
-// @Security Bearer
+// @Security BearerAuth
 // @Router /groups/{id} [put]
 func (handler *Handler) UpdateGroup(c *gin.Context) {
 	requesterID, ok := webHelpers.GetAuthUserID(c)
@@ -135,7 +135,7 @@ func (handler *Handler) UpdateGroup(c *gin.Context) {
 // @Param id path string true "Group ID"
 // @Success 200 {object} webHelpers.OKResponse
 // @Failure 403,404 {object} webHelpers.ErrorResponse
-// @Security Bearer
+// @Security BearerAuth
 // @Router /groups/{id} [delete]
 func (handler *Handler) DeleteGroup(c *gin.Context) {
 	requesterID, ok := webHelpers.GetAuthUserID(c)
@@ -166,7 +166,7 @@ func (handler *Handler) DeleteGroup(c *gin.Context) {
 // @Param request body InviteMemberRequest true "Invite details"
 // @Success 200 {object} webHelpers.OKResponse
 // @Failure 400,404 {object} webHelpers.ErrorResponse
-// @Security Bearer
+// @Security BearerAuth
 // @Router /groups/{id}/members [post]
 func (handler *Handler) InviteMember(c *gin.Context) {
 	inviterID, ok := webHelpers.GetAuthUserID(c)
@@ -208,7 +208,7 @@ func (handler *Handler) InviteMember(c *gin.Context) {
 // @Param request body UpdateMemberStatusRequest true "Status update"
 // @Success 200 {object} webHelpers.OKResponse
 // @Failure 400,404 {object} webHelpers.ErrorResponse
-// @Security Bearer
+// @Security BearerAuth
 // @Router /groups/{id}/members/me [put]
 func (handler *Handler) UpdateMyMemberStatus(c *gin.Context) {
 	myID, ok := webHelpers.GetAuthUserID(c)
@@ -244,7 +244,7 @@ func (handler *Handler) UpdateMyMemberStatus(c *gin.Context) {
 // @Param member_id path string true "Member User ID"
 // @Success 200 {object} webHelpers.OKResponse
 // @Failure 403,404 {object} webHelpers.ErrorResponse
-// @Security Bearer
+// @Security BearerAuth
 // @Router /groups/{id}/members/{member_id} [delete]
 func (handler *Handler) RemoveMember(c *gin.Context) {
 	requesterID, ok := webHelpers.GetAuthUserID(c)
@@ -285,7 +285,7 @@ func (handler *Handler) RemoveMember(c *gin.Context) {
 // @Param id path string true "Group ID"
 // @Success 200 {object} webHelpers.OKResponse
 // @Failure 400,404 {object} webHelpers.ErrorResponse
-// @Security Bearer
+// @Security BearerAuth
 // @Router /groups/{id}/members/me [delete]
 func (handler *Handler) LeaveGroup(c *gin.Context) {
 	myID, ok := webHelpers.GetAuthUserID(c)
@@ -317,7 +317,7 @@ func (handler *Handler) LeaveGroup(c *gin.Context) {
 // @Param id path string true "Group ID"
 // @Success 200 {array} domain.Permission
 // @Failure 404 {object} webHelpers.ErrorResponse
-// @Security Bearer
+// @Security BearerAuth
 // @Router /groups/{id}/permissions [get]
 func (handler *Handler) GetPermissions(c *gin.Context) {
 	myID, ok := webHelpers.GetAuthUserID(c)
@@ -350,7 +350,7 @@ func (handler *Handler) GetPermissions(c *gin.Context) {
 // @Param id path string true "Group ID"
 // @Success 200 {array} domain.GroupMember
 // @Failure 404 {object} webHelpers.ErrorResponse
-// @Security Bearer
+// @Security BearerAuth
 // @Router /groups/{id}/members [get]
 func (handler *Handler) GetMembers(c *gin.Context) {
 	groupID, ok := webHelpers.GetValidatedGroupID(c)
@@ -380,7 +380,7 @@ func (handler *Handler) GetMembers(c *gin.Context) {
 // @Param request body SetPermissionRequest true "Permission details"
 // @Success 200 {object} webHelpers.OKResponse
 // @Failure 400,404 {object} webHelpers.ErrorResponse
-// @Security Bearer
+// @Security BearerAuth
 // @Router /groups/{id}/permissions [post]
 func (handler *Handler) SetPermission(c *gin.Context) {
 	myID, ok := webHelpers.GetAuthUserID(c)
@@ -427,7 +427,7 @@ func (handler *Handler) SetPermission(c *gin.Context) {
 // @Param request body UpdatePermissionsRequest true "List of metric types"
 // @Success 200 {object} webHelpers.OKResponse
 // @Failure 400,404 {object} webHelpers.ErrorResponse
-// @Security Bearer
+// @Security BearerAuth
 // @Router /groups/{id}/permissions [put]
 func (handler *Handler) UpdatePermissions(c *gin.Context) {
 	myID, ok := webHelpers.GetAuthUserID(c)
@@ -464,7 +464,7 @@ func (handler *Handler) UpdatePermissions(c *gin.Context) {
 // @Produce json
 // @Success 200 {array} domain.Group
 // @Failure 401 {object} webHelpers.ErrorResponse
-// @Security Bearer
+// @Security BearerAuth
 // @Router /groups [get]
 func (handler *Handler) ListMyGroups(c *gin.Context) {
 	myID, ok := webHelpers.GetAuthUserID(c)
@@ -491,7 +491,7 @@ func (handler *Handler) ListMyGroups(c *gin.Context) {
 // @Param request body TransferOwnershipRequest true "New owner details"
 // @Success 200 {object} webHelpers.OKResponse
 // @Failure 400,403,404 {object} webHelpers.ErrorResponse
-// @Security Bearer
+// @Security BearerAuth
 // @Router /groups/{id}/owner [put]
 func (handler *Handler) TransferOwnership(c *gin.Context) {
 	currentOwnerID, ok := webHelpers.GetAuthUserID(c)

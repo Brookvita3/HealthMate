@@ -16,6 +16,9 @@ import (
 	"realtime-service/internal/realtime"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	httpSwagger "github.com/swaggo/http-swagger"
+
+	_ "realtime-service/docs"
 )
 
 type Dependencies struct {
@@ -79,9 +82,14 @@ func NewDependencies(cfg *config.Config) *Dependencies {
 
 func NewHttpServer(deps *Dependencies, hub *realtime.Hub) *http.Server {
 	wsHandler := realtime.NewHandler(deps.TokenValidator, deps.PermRepo, hub)
+
+	mux := http.NewServeMux()
+	mux.Handle("/ws", wsHandler)
+	mux.Handle("/swagger/", httpSwagger.Handler())
+
 	httpServer := &http.Server{
 		Addr:    ":" + deps.Config.HTTPPort,
-		Handler: wsHandler,
+		Handler: mux,
 	}
 	return httpServer
 }

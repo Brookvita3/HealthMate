@@ -1,109 +1,49 @@
 basePath: /api/v1
 definitions:
-  auth.EmailLoginRequest:
+  auth-service_internal_domain.Group:
     properties:
-      email:
+      created_at:
         type: string
-      password:
+      description:
         type: string
-    required:
-    - email
-    - password
-    type: object
-  auth.ErrorResponse:
-    properties:
-      error:
-        type: string
-    type: object
-  auth.GoogleLoginRequest:
-    properties:
-      id_token:
-        type: string
-    required:
-    - id_token
-    type: object
-  auth.LoginResult:
-    properties:
-      access_token:
-        type: string
-      refresh_token:
-        type: string
-      user:
-        $ref: '#/definitions/domain.User'
-    type: object
-  auth.LoginSuccessResponse:
-    properties:
-      access_token:
-        type: string
-      refresh_token:
-        type: string
-      user:
-        $ref: '#/definitions/domain.User'
-    type: object
-  auth.LogoutRequest:
-    properties:
-      refresh_token:
-        type: string
-    required:
-    - refresh_token
-    type: object
-  auth.RefreshTokenRequest:
-    properties:
-      refresh_token:
-        type: string
-    required:
-    - refresh_token
-    type: object
-  auth.RefreshTokenResponse:
-    properties:
-      access_token:
-        type: string
-    type: object
-  auth.RegisterRequest:
-    properties:
-      email:
+      id:
         type: string
       name:
         type: string
-      password:
-        minLength: 8
+      owner_id:
         type: string
-    required:
-    - email
-    - name
-    - password
+      updated_at:
+        type: string
     type: object
-  auth.ResendOTPRequest:
+  auth-service_internal_domain.GroupMember:
     properties:
-      email:
+      created_at:
         type: string
-    required:
-    - email
+      group_id:
+        type: string
+      invited_by:
+        type: string
+      joined_at:
+        type: string
+      role:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
     type: object
-  auth.SetPasswordRequest:
+  auth-service_internal_domain.Permission:
     properties:
-      password:
-        minLength: 8
+      group_id:
         type: string
-    required:
-    - password
-    type: object
-  auth.SuccessMessageResponse:
-    properties:
-      message:
+      metric_type:
+        type: string
+      user_id:
         type: string
     type: object
-  auth.VerifyRequest:
-    properties:
-      email:
-        type: string
-      otp:
-        type: string
-    required:
-    - email
-    - otp
-    type: object
-  domain.User:
+  auth-service_internal_domain.User:
     properties:
       created_at:
         type: string
@@ -125,7 +65,179 @@ definitions:
       updated_at:
         type: string
     type: object
-host: localhost:8080
+  auth-service_internal_web_helpers.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  auth-service_internal_web_helpers.OKResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  internal_auth.EmailLoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  internal_auth.GoogleLoginRequest:
+    properties:
+      id_token:
+        type: string
+    required:
+    - id_token
+    type: object
+  internal_auth.LoginResult:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+      user:
+        $ref: '#/definitions/auth-service_internal_domain.User'
+    type: object
+  internal_auth.LoginSuccessResponse:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+      user:
+        $ref: '#/definitions/auth-service_internal_domain.User'
+    type: object
+  internal_auth.LogoutRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  internal_auth.RefreshTokenRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  internal_auth.RefreshTokenResponse:
+    properties:
+      access_token:
+        type: string
+    type: object
+  internal_auth.RegisterRequest:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        minLength: 8
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  internal_auth.ResendOTPRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
+  internal_auth.SetPasswordRequest:
+    properties:
+      password:
+        minLength: 8
+        type: string
+    required:
+    - password
+    type: object
+  internal_auth.VerifyRequest:
+    properties:
+      email:
+        type: string
+      otp:
+        type: string
+    required:
+    - email
+    - otp
+    type: object
+  internal_group.CreateGroupRequest:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  internal_group.InviteMemberRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
+  internal_group.SetPermissionRequest:
+    properties:
+      enabled:
+        type: boolean
+      metric_type:
+        type: string
+    required:
+    - metric_type
+    type: object
+  internal_group.TransferOwnershipRequest:
+    properties:
+      new_owner_id:
+        type: string
+    required:
+    - new_owner_id
+    type: object
+  internal_group.UpdateGroupRequest:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    type: object
+  internal_group.UpdateMemberStatusRequest:
+    properties:
+      status:
+        enum:
+        - accepted
+        - rejected
+        type: string
+    required:
+    - status
+    type: object
+  internal_group.UpdatePermissionsRequest:
+    properties:
+      metric_types:
+        items:
+          type: string
+        type: array
+    required:
+    - metric_types
+    type: object
+  internal_user.UpdateUserParams:
+    properties:
+      name:
+        type: string
+      picture:
+        type: string
+      role:
+        type: string
+      status:
+        type: string
+    type: object
+host: localhost:5000
 info:
   contact: {}
   description: This is the API for the HealthMate application.
@@ -144,14 +256,14 @@ paths:
         name: credentials
         required: true
         schema:
-          $ref: '#/definitions/auth.EmailLoginRequest'
+          $ref: '#/definitions/internal_auth.EmailLoginRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/auth.LoginSuccessResponse'
+            $ref: '#/definitions/internal_auth.LoginSuccessResponse'
       summary: Email/Password Login
       tags:
       - Auth
@@ -167,14 +279,14 @@ paths:
         name: token
         required: true
         schema:
-          $ref: '#/definitions/auth.GoogleLoginRequest'
+          $ref: '#/definitions/internal_auth.GoogleLoginRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/auth.LoginSuccessResponse'
+            $ref: '#/definitions/internal_auth.LoginSuccessResponse'
       summary: Google Login
       tags:
       - Auth
@@ -189,14 +301,14 @@ paths:
         name: token
         required: true
         schema:
-          $ref: '#/definitions/auth.LogoutRequest'
+          $ref: '#/definitions/internal_auth.LogoutRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/auth.SuccessMessageResponse'
+            $ref: '#/definitions/auth-service_internal_web_helpers.OKResponse'
       security:
       - BearerAuth: []
       summary: User Logout
@@ -214,22 +326,22 @@ paths:
         name: email_info
         required: true
         schema:
-          $ref: '#/definitions/auth.ResendOTPRequest'
+          $ref: '#/definitions/internal_auth.ResendOTPRequest'
       produces:
       - application/json
       responses:
         "200":
           description: Always returns a success message for security reasons
           schema:
-            $ref: '#/definitions/auth.SuccessMessageResponse'
+            $ref: '#/definitions/auth-service_internal_web_helpers.OKResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/auth.ErrorResponse'
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
         "409":
           description: Returned if account is already verified
           schema:
-            $ref: '#/definitions/auth.ErrorResponse'
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
       summary: Resend OTP
       tags:
       - Auth
@@ -244,22 +356,22 @@ paths:
         name: verification
         required: true
         schema:
-          $ref: '#/definitions/auth.VerifyRequest'
+          $ref: '#/definitions/internal_auth.VerifyRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/auth.LoginResult'
+            $ref: '#/definitions/internal_auth.LoginResult'
         "400":
           description: Invalid OTP or request
           schema:
-            $ref: '#/definitions/auth.ErrorResponse'
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
         "404":
           description: OTP not found or expired
           schema:
-            $ref: '#/definitions/auth.ErrorResponse'
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
       summary: Verify Account & Login
       tags:
       - Auth
@@ -275,14 +387,14 @@ paths:
         name: password
         required: true
         schema:
-          $ref: '#/definitions/auth.SetPasswordRequest'
+          $ref: '#/definitions/internal_auth.SetPasswordRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/auth.SuccessMessageResponse'
+            $ref: '#/definitions/auth-service_internal_web_helpers.OKResponse'
       security:
       - BearerAuth: []
       summary: Set User Password
@@ -299,14 +411,14 @@ paths:
         name: token
         required: true
         schema:
-          $ref: '#/definitions/auth.RefreshTokenRequest'
+          $ref: '#/definitions/internal_auth.RefreshTokenRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/auth.RefreshTokenResponse'
+            $ref: '#/definitions/internal_auth.RefreshTokenResponse'
       security:
       - BearerAuth: []
       summary: Refresh Access Token
@@ -323,29 +435,536 @@ paths:
         name: user
         required: true
         schema:
-          $ref: '#/definitions/auth.RegisterRequest'
+          $ref: '#/definitions/internal_auth.RegisterRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/domain.User'
+            $ref: '#/definitions/auth-service_internal_domain.User'
         "404":
           description: user not found
           schema:
-            $ref: '#/definitions/auth.ErrorResponse'
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
         "409":
           description: email is already registered
           schema:
-            $ref: '#/definitions/auth.ErrorResponse'
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
         "500":
           description: an unexpected error occurred
           schema:
-            $ref: '#/definitions/auth.ErrorResponse'
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
       summary: Register New User
       tags:
       - Auth
+  /groups:
+    get:
+      description: Get all groups (owned or joined) for the current user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/auth-service_internal_domain.Group'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: List my groups
+      tags:
+      - groups
+    post:
+      consumes:
+      - application/json
+      description: Create a new group with the current user as owner
+      parameters:
+      - description: Group creation details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_group.CreateGroupRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/auth-service_internal_domain.Group'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Create a new group
+      tags:
+      - groups
+  /groups/{id}:
+    delete:
+      description: Remove a group (Owner only)
+      parameters:
+      - description: Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.OKResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Delete a group
+      tags:
+      - groups
+    put:
+      consumes:
+      - application/json
+      description: Update name and description of a group
+      parameters:
+      - description: Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_group.UpdateGroupRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.OKResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Update group info
+      tags:
+      - groups
+  /groups/{id}/members:
+    get:
+      description: List all members of a group
+      parameters:
+      - description: Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/auth-service_internal_domain.GroupMember'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get group members
+      tags:
+      - groups
+    post:
+      consumes:
+      - application/json
+      description: Send an invitation to a user by email
+      parameters:
+      - description: Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Invite details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_group.InviteMemberRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.OKResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Invite a member
+      tags:
+      - groups
+  /groups/{id}/members/{member_id}:
+    delete:
+      description: Kick a member from the group (Owner only)
+      parameters:
+      - description: Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Member User ID
+        in: path
+        name: member_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.OKResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Remove a member
+      tags:
+      - groups
+  /groups/{id}/members/me:
+    delete:
+      description: Leave a group you are a member of
+      parameters:
+      - description: Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.OKResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Leave a group
+      tags:
+      - groups
+    put:
+      consumes:
+      - application/json
+      description: Accept or reject a group invitation
+      parameters:
+      - description: Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Status update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_group.UpdateMemberStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.OKResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Update membership status
+      tags:
+      - groups
+  /groups/{id}/owner:
+    put:
+      consumes:
+      - application/json
+      description: Transfer group ownership to a new user
+      parameters:
+      - description: Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New owner details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_group.TransferOwnershipRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.OKResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Transfer ownership
+      tags:
+      - groups
+  /groups/{id}/permissions:
+    get:
+      description: Get current user's sharing permissions in a group
+      parameters:
+      - description: Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/auth-service_internal_domain.Permission'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get my permissions
+      tags:
+      - groups
+    post:
+      consumes:
+      - application/json
+      description: Enable or disable sharing for a specific metric type
+      parameters:
+      - description: Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Permission details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_group.SetPermissionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.OKResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Set sharing permission
+      tags:
+      - groups
+    put:
+      consumes:
+      - application/json
+      description: Update all sharing permissions for the current user
+      parameters:
+      - description: Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: List of metric types
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_group.UpdatePermissionsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.OKResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Update all permissions
+      tags:
+      - groups
+  /users:
+    get:
+      description: Retrieve a list of users with optional search and pagination
+      parameters:
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      - description: Limit (default 20)
+        in: query
+        name: limit
+        type: integer
+      - description: Offset (default 0)
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/auth-service_internal_domain.User'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: List/Search users
+      tags:
+      - users
+  /users/profile:
+    get:
+      description: Get profile details of the currently authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth-service_internal_domain.User'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get user profile
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Update profile details (name, picture) of the current user
+      parameters:
+      - description: Profile updates
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_user.UpdateUserParams'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Update user profile
+      tags:
+      - users
 schemes:
 - http
 - https

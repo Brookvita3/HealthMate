@@ -1,11 +1,11 @@
 package user
 
 import (
-	"net/http"
-	"strconv"
-
 	"auth-service/internal/common"
 	"auth-service/internal/domain"
+	webHelpers "auth-service/internal/web/helpers"
+	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -24,59 +24,87 @@ func NewHandler(s Service) *Handler {
 	return &Handler{service: s}
 }
 
-func (h *Handler) GetProfile(c *gin.Context) {
+// GetProfile returns the current user's profile.
+// @Summary Get user profile
+// @Description Get profile details of the currently authenticated user
+// @Tags users
+// @Produce json
+// @Success 200 {object} domain.User
+// @Failure 401,404 {object} webHelpers.ErrorResponse
+// @Security Bearer
+// @Router /users/profile [get]
+func (handler *Handler) GetProfile(c *gin.Context) {
 	userId, exists := c.Get(string(common.UserIdKey))
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": common.ErrMissingContextParam.Error()})
+		handler.handleError(c, common.ErrMissingContextParam)
 		return
 	}
 
 	id, err := uuid.Parse(userId.(string))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": common.ErrInvalidUUIDFormat.Error()})
+		handler.handleError(c, common.ErrInvalidUUIDFormat)
 		return
 	}
 
-	profile, err := h.service.GetUserProfile(c.Request.Context(), id)
+	profile, err := handler.service.GetUserProfile(c.Request.Context(), id)
 	if err != nil {
-		if err == ErrUserNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": common.ErrInternalServer.Error()})
+		handler.handleError(c, err)
 		return
 	}
 
 	c.JSON(http.StatusOK, profile)
 }
 
-func (h *Handler) UpdateProfile(c *gin.Context) {
+// UpdateProfile updates the current user's profile.
+// @Summary Update user profile
+// @Description Update profile details (name, picture) of the current user
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param request body UpdateUserParams true "Profile updates"
+// @Success 200 {string} string "OK"
+// @Failure 400,401 {object} webHelpers.ErrorResponse
+// @Security Bearer
+// @Router /users/profile [put]
+func (handler *Handler) UpdateProfile(c *gin.Context) {
 	userId, exists := c.Get(string(common.UserIdKey))
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": common.ErrMissingContextParam.Error()})
+		handler.handleError(c, common.ErrMissingContextParam)
 		return
 	}
 	id, err := uuid.Parse(userId.(string))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": common.ErrInvalidUUIDFormat.Error()})
+		handler.handleError(c, common.ErrInvalidUUIDFormat)
 		return
 	}
 
 	var req UpdateUserParams
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": common.ErrInvalidRequest.Error()})
+		handler.handleError(c, common.ErrInvalidRequest)
 		return
 	}
 
-	if err := h.service.UpdateUserProfile(c.Request.Context(), id, req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := handler.service.UpdateUserProfile(c.Request.Context(), id, req); err != nil {
+		handler.handleError(c, err)
 		return
 	}
 
 	c.Status(http.StatusOK)
 }
 
-func (h *Handler) ListUsers(c *gin.Context) {
+// ListUsers searches for users by name or email.
+// @Summary List/Search users
+// @Description Retrieve a list of users with optional search and pagination
+// @Tags users
+// @Produce json
+// @Param search query string false "Search query"
+// @Param limit query int false "Limit (default 20)"
+// @Param offset query int false "Offset (default 0)"
+// @Success 200 {array} domain.User
+// @Failure 500 {object} webHelpers.ErrorResponse
+// @Security Bearer
+// @Router /users [get]
+func (handler *Handler) ListUsers(c *gin.Context) {
 	limit, err := strconv.Atoi(c.DefaultQuery("limit", strconv.Itoa(defaultLimit)))
 	if err != nil || limit < 0 {
 		limit = defaultLimit
@@ -96,9 +124,9 @@ func (h *Handler) ListUsers(c *gin.Context) {
 		Status: "active",
 	}
 
-	users, err := h.service.ListUsers(c.Request.Context(), params)
+	users, err := handler.service.ListUsers(c.Request.Context(), params)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		handler.handleError(c, err)
 		return
 	}
 
@@ -107,4 +135,9 @@ func (h *Handler) ListUsers(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, users)
+}
+
+// handleError is a helper function to return an error response to the client.
+func (handler *Handler) handleError(c *gin.Context, err error) {
+	webHelpers.HandleError(c, err)
 }

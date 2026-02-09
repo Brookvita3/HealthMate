@@ -79,31 +79,16 @@ docker-compose up -d --build <service-name>
 
 Requests should be sent through the **Nginx Gateway** (Port 8080).
 
-### 4.1. Authentication (Prefix: `/auth`)
-Base URL: `http://localhost:8080/auth`
+### 4.1. API Documentation (Swagger)
+Each service provides its own Swagger documentation. When running through the Gateway, you can access them as follows:
 
-| Method | Endpoint | Description | Required Fields |
-| :--- | :--- | :--- | :--- |
-| POST | `/register` | Register a new account | email, password, name |
-| POST | `/otp/verify` | Verify account via OTP | email, otp |
-| POST | `/otp/resend` | Resend verification OTP | email |
-| POST | `/app` | Traditional email/password login | email, password |
-| POST | `/google` | Google OAuth login | credential |
-| POST | `/refresh` | Refresh expired Access Token | refresh_token |
-| POST | `/logout` | Invalidate current session | JWT (Auth Header) |
+- **Auth & Group Service:**
+  - Local: `http://localhost:5000/swagger/index.html`
+- **Realtime Service:**
+  - Local: `http://localhost:5001/swagger/index.html`
+  - Real-time WebSocket: `ws://localhost:5001/ws?token=<JWT>`
 
-### 4.2. Groups & Permissions (Prefix: `/groups`)
-Base URL: `http://localhost:8080/groups` (Requires `Authorization: Bearer <JWT>`)
-
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| POST | `/` | Create a new group |
-| GET | `/` | List all groups you belong to |
-| POST | `/:id/members` | Invite a member by their User ID |
-| GET | `/:id/members` | Get list of group members |
-| POST | `/:id/accept` | Accept a pending group invitation |
-| POST | `/:id/reject` | Reject a pending group invitation |
-| POST | `/:id/permissions` | Set health metric sharing permissions |
+The Swagger documentation replaces the manual API tables and remains always up-to-date with the code.
 
 ### 4.3. Real-time Data Flow
 The system uses a WebSocket-based ingestion and broadcast mechanism:

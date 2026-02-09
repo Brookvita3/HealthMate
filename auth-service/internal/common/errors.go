@@ -1,7 +1,5 @@
 package common
 
-import "errors"
-
 // BusinessError is a custom error type for business logic errors.
 type BusinessError struct {
 	Code    int
@@ -14,18 +12,18 @@ func (e *BusinessError) Error() string {
 
 // Other errors
 var (
-	// ErrInvalidUUIDFormat is returned when a string value cannot be parsed into a valid UUID. This usually indicates a malformed URL parameter or request body.
-	ErrInvalidUUIDFormat = errors.New("invalid UUID format")
+	// ErrInvalidUUIDFormat is returned when a string value cannot be parsed into a valid UUID.
+	ErrInvalidUUIDFormat = &BusinessError{Code: 400, Message: "invalid UUID format"}
 
 	// ErrInvalidRequest is returned when the incoming request is invalid.
-	ErrInvalidRequest = errors.New("invalid request")
+	ErrInvalidRequest = &BusinessError{Code: 400, Message: "invalid request"}
 
 	// ErrInternalServer is returned when an unexpected internal server error occurs.
-	ErrInternalServer = errors.New("internal server error")
+	ErrInternalServer = &BusinessError{Code: 500, Message: "internal server error"}
 
-	// ErrMissingContextParam is returned when a required parameter in the context (userId, email, role) is missing.
-	ErrMissingContextParam = errors.New("missing required parameter in context")
+	// ErrMissingContextParam is returned when a required parameter in the context is missing.
+	ErrMissingContextParam = &BusinessError{Code: 401, Message: "missing required parameter in context"}
 
 	// ErrInvalidBody is returned when the request body is invalid or cannot be parsed.
-	ErrInvalidBody = errors.New("invalid body")
+	ErrInvalidBody = &BusinessError{Code: 400, Message: "invalid body"}
 )

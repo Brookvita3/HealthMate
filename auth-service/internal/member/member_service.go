@@ -3,6 +3,7 @@ package member
 import (
 	common "auth-service/internal/common"
 	"auth-service/internal/domain"
+	"auth-service/internal/user"
 	"context"
 
 	"github.com/google/uuid"
@@ -13,11 +14,17 @@ type Service interface {
 	// InviteMember sends an invitation to a user to join a group.
 	InviteMember(ctx context.Context, groupID, userID, invitedBy uuid.UUID) error
 
+	// InviteByEmail sends an invitation to a user by their email.
+	InviteByEmail(ctx context.Context, groupID uuid.UUID, email string, invitedBy uuid.UUID) error
+
 	// AcceptInvitation allows a user to accept a group invitation.
 	AcceptInvitation(ctx context.Context, groupID, userID uuid.UUID) error
 
 	// RejectInvitation allows a user to reject a group invitation.
 	RejectInvitation(ctx context.Context, groupID, userID uuid.UUID) error
+
+	// UpdateMemberStatus updates the status of a membership.
+	UpdateMemberStatus(ctx context.Context, groupID, userID uuid.UUID, status string) error
 
 	// RemoveMember removes a user from a group (Kick functionality).
 	RemoveMember(ctx context.Context, groupID, userID, requesterID uuid.UUID) error
@@ -32,10 +39,14 @@ type Service interface {
 
 type serviceImpl struct {
 	memberRepo MemberRepository
+	userRepo   user.UserRepository
 }
 
-func NewService(repo MemberRepository) Service {
-	return &serviceImpl{memberRepo: repo}
+func NewService(repo MemberRepository, userRepo user.UserRepository) Service {
+	return &serviceImpl{
+		memberRepo: repo,
+		userRepo:   userRepo,
+	}
 }
 
 // InviteMember implements Service.InviteMember.
@@ -58,33 +69,46 @@ func (s *serviceImpl) InviteMember(ctx context.Context, groupID, userID, invited
 	return s.memberRepo.AddMember(ctx, groupID, userID, invitedBy, "member")
 }
 
+// InviteByEmail implements Service.InviteByEmail.
+func (s *serviceImpl) InviteByEmail(ctx context.Context, groupID uuid.UUID, email string, invitedBy uuid.UUID) error {
+	// Find user by email
+	user, err := s.userRepo.GetUserByEmail(ctx, email)
+	if err != nil {
+		return err // Should return ErrUserNotFound if not found
+	}
+
+	return s.InviteMember(ctx, groupID, user.Id, invitedBy)
+}
+
 // AcceptInvitation implements Service.AcceptInvitation.
 // It changes the member status to 'accepted' and sets the joined time.
 func (s *serviceImpl) AcceptInvitation(ctx context.Context, groupID, userID uuid.UUID) error {
-	member, err := s.memberRepo.GetMember(ctx, groupID, userID)
-	if err != nil {
-		return err
-	}
-	if member.Status == "accepted" {
-		return nil
-	}
-	if member.Status != "pending" {
-		return ErrInvalidStatus
-	}
-	return s.memberRepo.UpdateMemberStatus(ctx, groupID, userID, "accepted")
+	return s.UpdateMemberStatus(ctx, groupID, userID, "accepted")
 }
 
 // RejectInvitation implements Service.RejectInvitation.
 // It changes the member status to 'rejected'.
 func (s *serviceImpl) RejectInvitation(ctx context.Context, groupID, userID uuid.UUID) error {
+	return s.UpdateMemberStatus(ctx, groupID, userID, "rejected")
+}
+
+// UpdateMemberStatus implements Service.UpdateMemberStatus.
+func (s *serviceImpl) UpdateMemberStatus(ctx context.Context, groupID, userID uuid.UUID, status string) error {
 	member, err := s.memberRepo.GetMember(ctx, groupID, userID)
 	if err != nil {
 		return err
 	}
-	if member.Status != "pending" {
-		return ErrInvitationPending
+
+	if member.Status == status {
+		return nil
 	}
-	return s.memberRepo.UpdateMemberStatus(ctx, groupID, userID, "rejected")
+
+	// Only members with 'pending' status can be updated to 'accepted' or 'rejected'
+	if member.Status != "pending" {
+		return ErrInvalidStatus
+	}
+
+	return s.memberRepo.UpdateMemberStatus(ctx, groupID, userID, status)
 }
 
 // RemoveMember implements Service.RemoveMember (Kick).
@@ -120,7 +144,7 @@ func (s *serviceImpl) RemoveMember(ctx context.Context, groupID, userID, request
 // LeaveGroup implements Service.LeaveGroup.
 // It checks if the user is the owner before allowing them to leave.
 func (s *serviceImpl) LeaveGroup(ctx context.Context, groupID, userID uuid.UUID) error {
-	
+
 	// Check if group exists
 	exists, err := s.memberRepo.GroupExists(ctx, groupID)
 	if err != nil {
@@ -129,7 +153,7 @@ func (s *serviceImpl) LeaveGroup(ctx context.Context, groupID, userID uuid.UUID)
 	if !exists {
 		return ErrInvalidGroup
 	}
-	
+
 	// Check if user is the owner
 	isOwner, err := s.memberRepo.IsOwner(ctx, groupID, userID)
 	if err != nil {

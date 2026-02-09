@@ -8,8 +8,21 @@ import (
 	"realtime-service/app"
 	"realtime-service/config"
 	"syscall"
+
+	_ "realtime-service/docs"
 )
 
+// @title HealthMate Realtime API
+// @version 1.0
+// @description This is the API for Realtime Service of HealthMate application.
+// @host localhost:5001
+// @BasePath /
+// @schemes http https
+
+// @SecurityDefinitions.apikey BearerAuth
+// @In query
+// @Name token
+// @Description Token should be passed as a query parameter for WebSocket connection.
 func main() {
 	cfg := config.LoadConfig()
 

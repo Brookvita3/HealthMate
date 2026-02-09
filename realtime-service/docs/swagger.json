@@ -1,0 +1,57 @@
+{
+    "schemes": [
+        "http",
+        "https"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "This is the Realtime service for HealthMate application.",
+        "title": "HealthMate Realtime API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:5001",
+    "basePath": "/",
+    "paths": {
+        "/ws": {
+            "get": {
+                "description": "Upgrade to WebSocket connection for real-time metrics",
+                "tags": [
+                    "realtime"
+                ],
+                "summary": "Webhook connection",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authentication token",
+                        "name": "token",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "101": {
+                        "description": "Switching Protocols",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Token should be passed as a query parameter for WebSocket connection.",
+            "type": "apiKey",
+            "name": "token",
+            "in": "query"
+        }
+    }
+}

@@ -108,12 +108,15 @@ func NewHTTPServer(deps *Dependencies) *HTTPServer {
 		groupWithID := groupGroup.Group("/:id")
 		groupWithID.Use(groupMiddleware.ValidateGroupExists())
 		{
+			groupWithID.PUT("", groupHandler.UpdateGroup)
+			groupWithID.DELETE("", groupHandler.DeleteGroup)
+
 			groupWithID.POST("/members", groupHandler.InviteMember)
 			groupWithID.GET("/members", groupHandler.GetMembers)
-			groupWithID.POST("/leave", groupHandler.LeaveGroup)
-			groupWithID.POST("/accept", groupHandler.AcceptInvitation)
-			groupWithID.POST("/reject", groupHandler.RejectInvitation)
-			groupWithID.POST("/transfer-ownership", groupHandler.TransferOwnership)
+			groupWithID.PUT("/members/me", groupHandler.UpdateMyMemberStatus)
+			groupWithID.DELETE("/members/me", groupHandler.LeaveGroup)
+
+			groupWithID.PUT("/owner", groupHandler.TransferOwnership)
 			groupWithID.POST("/permissions", groupHandler.SetPermission)
 			groupWithID.PUT("/permissions", groupHandler.UpdatePermissions)
 			groupWithID.GET("/permissions", groupHandler.GetPermissions)
@@ -179,7 +182,7 @@ func NewDependencies(cfg *config.Config) *Dependencies {
 		OTPService:        otpService,
 		AuthService:       authService,
 		GroupService:      group.NewService(groupRepo, userRepo),
-		MemberService:     member.NewService(memberRepo),
+		MemberService:     member.NewService(memberRepo, userRepo),
 		PermissionService: permission.NewService(permissionRepo),
 		Validator:         validator,
 	}

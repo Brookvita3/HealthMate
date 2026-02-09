@@ -222,6 +222,38 @@ func (r *postgresRepository) FindByOwner(ctx context.Context, ownerID uuid.UUID,
 	return groups, nil
 }
 
+// FindByUser implements GroupRepository.FindByUser
+func (r *postgresRepository) FindByUser(ctx context.Context, userID uuid.UUID, limit, offset int) ([]domain.Group, error) {
+	query := `
+		SELECT g.id, g.name, g.description, g.owner_id, g.created_at, g.updated_at
+		FROM groups g
+		JOIN group_members gm ON g.id = gm.group_id
+		WHERE gm.user_id = $1 AND gm.status = 'accepted'
+		ORDER BY g.created_at DESC
+		LIMIT $2 OFFSET $3`
+
+	rows, err := r.pool.Query(ctx, query, userID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var groups []domain.Group
+	for rows.Next() {
+		pGroup, err := r.scanGroup(rows)
+		if err != nil {
+			return nil, err
+		}
+		groups = append(groups, *r.toDomainGroup(*pGroup))
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return groups, nil
+}
+
 // List implements GroupRepository.List
 func (r *postgresRepository) List(ctx context.Context, params ListGroupsParams) ([]domain.Group, error) {
 	query := `

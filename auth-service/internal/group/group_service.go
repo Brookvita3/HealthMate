@@ -140,8 +140,8 @@ func (s *serviceImpl) DeleteGroup(ctx context.Context, groupID, requesterID uuid
 
 // ListUserGroups implements Service.ListUserGroups
 func (s *serviceImpl) ListUserGroups(ctx context.Context, userID uuid.UUID, limit, offset int) ([]domain.Group, error) {
-	// You might want to add validation that user exists
-	return s.groupRepo.FindByOwner(ctx, userID, limit, offset)
+	// Returns both owned and joined groups
+	return s.groupRepo.FindByUser(ctx, userID, limit, offset)
 }
 
 // ListGroups implements Service.ListGroups

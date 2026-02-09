@@ -1,12 +1,12 @@
 package auth
 
 import (
-	"errors"
 	"net/http"
 	"strings"
 
 	"auth-service/internal/common"
 	"auth-service/internal/domain"
+	webHelpers "auth-service/internal/web/helpers"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -19,14 +19,6 @@ type Handler struct {
 
 func NewHandler(s Service, tokenService TokenService) *Handler {
 	return &Handler{service: s, tokenService: tokenService}
-}
-
-type ErrorResponse struct {
-	Error string `json:"error"`
-}
-
-type SuccessMessageResponse struct {
-	Message string `json:"message"`
 }
 
 type GoogleLoginRequest struct {
@@ -89,16 +81,16 @@ type ResendOTPRequest struct {
 // @Param        token body GoogleLoginRequest true "Google ID Token"
 // @Success      200   {object}  LoginSuccessResponse
 // @Router       /auth/google [post]
-func (h *Handler) GoogleLogin(c *gin.Context) {
+func (handler *Handler) GoogleLogin(c *gin.Context) {
 	var req GoogleLoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Error: common.ErrInvalidRequest.Error()})
+		handler.handleError(c, common.ErrInvalidRequest)
 		return
 	}
 
-	result, err := h.service.LoginWithGoogleIDToken(c.Request.Context(), req.IDToken)
+	result, err := handler.service.LoginWithGoogleIDToken(c.Request.Context(), req.IDToken)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: err.Error()})
+		handler.handleError(c, err)
 		return
 	}
 
@@ -119,16 +111,16 @@ func (h *Handler) GoogleLogin(c *gin.Context) {
 // @Param        token body      RefreshTokenRequest  true  "Refresh Token"
 // @Success      200   {object}  RefreshTokenResponse
 // @Router       /auth/refresh [post]
-func (h *Handler) RefreshToken(c *gin.Context) {
+func (handler *Handler) RefreshToken(c *gin.Context) {
 	var req RefreshTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Error: common.ErrInvalidRequest.Error()})
+		handler.handleError(c, common.ErrInvalidRequest)
 		return
 	}
 
-	newAccessToken, err := h.service.RefreshAccessToken(c.Request.Context(), req.RefreshToken)
+	newAccessToken, err := handler.service.RefreshAccessToken(c.Request.Context(), req.RefreshToken)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: err.Error()})
+		handler.handleError(c, err)
 		return
 	}
 
@@ -145,22 +137,22 @@ func (h *Handler) RefreshToken(c *gin.Context) {
 // @Produce      json
 // @Security     BearerAuth
 // @Param        token body      LogoutRequest        true  "Refresh Token"
-// @Success      200   {object}  SuccessMessageResponse
+// @Success      200   {object}  webHelpers.OKResponse
 // @Router       /auth/logout [post]
-func (h *Handler) LogOut(c *gin.Context) {
+func (handler *Handler) LogOut(c *gin.Context) {
 	var req LogoutRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Error: common.ErrInvalidRequest.Error()})
+		handler.handleError(c, common.ErrInvalidRequest)
 		return
 	}
 
-	err := h.service.Logout(c.Request.Context(), req.RefreshToken)
+	err := handler.service.Logout(c.Request.Context(), req.RefreshToken)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: err.Error()})
+		handler.handleError(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessMessageResponse{Message: "Logged out successfully"})
+	c.JSON(http.StatusOK, webHelpers.OKResponse{Message: "Logged out successfully"})
 }
 
 // Register creates a new user account.
@@ -171,22 +163,22 @@ func (h *Handler) LogOut(c *gin.Context) {
 // @Produce      json
 // @Param        user  body      RegisterRequest      true  "User registration info"
 // @Success      201  {object}  domain.User
-// @Failure      404  {object}  ErrorResponse "user not found"
-// @Failure      409  {object}  ErrorResponse "email is already registered"
-// @Failure      500  {object}  ErrorResponse "an unexpected error occurred"
+// @Failure      404  {object}  webHelpers.ErrorResponse "user not found"
+// @Failure      409  {object}  webHelpers.ErrorResponse "email is already registered"
+// @Failure      500  {object}  webHelpers.ErrorResponse "an unexpected error occurred"
 // @Router       /auth/register [post]
-func (h *Handler) Register(c *gin.Context) {
+func (handler *Handler) Register(c *gin.Context) {
 	var req RegisterRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Error: common.ErrInvalidRequest.Error()})
+		handler.handleError(c, common.ErrInvalidRequest)
 		return
 	}
 
-	createdUser, err := h.service.RegisterWithEmail(c.Request.Context(), req.Email, req.Password, req.Name)
+	createdUser, err := handler.service.RegisterWithEmail(c.Request.Context(), req.Email, req.Password, req.Name)
 
 	if err != nil {
-		h.handleError(c, err)
+		handler.handleError(c, err)
 		return
 	}
 
@@ -203,19 +195,19 @@ func (h *Handler) Register(c *gin.Context) {
 // @Produce      json
 // @Param        verification  body      VerifyRequest        true  "Email and OTP"
 // @Success      200           {object}  LoginResult
-// @Failure      400           {object}  ErrorResponse "Invalid OTP or request"
-// @Failure      404           {object}  ErrorResponse "OTP not found or expired"
+// @Failure      400           {object}  webHelpers.ErrorResponse "Invalid OTP or request"
+// @Failure      404           {object}  webHelpers.ErrorResponse "OTP not found or expired"
 // @Router       /auth/otp/verify [post]
-func (h *Handler) VerifyAccount(c *gin.Context) {
+func (handler *Handler) VerifyAccount(c *gin.Context) {
 	var req VerifyRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Error: common.ErrInvalidBody.Error()})
+		handler.handleError(c, common.ErrInvalidBody)
 		return
 	}
 
-	loginResult, err := h.service.VerifyAccount(c.Request.Context(), req.Email, req.OTP)
+	loginResult, err := handler.service.VerifyAccount(c.Request.Context(), req.Email, req.OTP)
 	if err != nil {
-		h.handleError(c, err)
+		handler.handleError(c, err)
 		return
 	}
 
@@ -228,24 +220,24 @@ func (h *Handler) VerifyAccount(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        email_info body      ResendOTPRequest     true  "User's Email"
-// @Success      200        {object}  SuccessMessageResponse "Always returns a success message for security reasons"
-// @Failure      400        {object}  ErrorResponse
-// @Failure      409        {object}  ErrorResponse "Returned if account is already verified"
+// @Success      200        {object}  webHelpers.OKResponse "Always returns a success message for security reasons"
+// @Failure      400        {object}  webHelpers.ErrorResponse
+// @Failure      409        {object}  webHelpers.ErrorResponse "Returned if account is already verified"
 // @Router       /auth/otp/resend [post]
-func (h *Handler) ResendOTP(c *gin.Context) {
+func (handler *Handler) ResendOTP(c *gin.Context) {
 	var req ResendOTPRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Error: common.ErrInvalidBody.Error()})
+		handler.handleError(c, common.ErrInvalidBody)
 		return
 	}
 
-	err := h.service.ResendVerificationOTP(c.Request.Context(), req.Email)
+	err := handler.service.ResendVerificationOTP(c.Request.Context(), req.Email)
 	if err != nil {
-		h.handleError(c, err)
+		handler.handleError(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessMessageResponse{Message: "If your account exists and hasn`t been verified yet, we`ve sent you a new OTP. Please check your email."})
+	c.JSON(http.StatusOK, webHelpers.OKResponse{Message: "If your account exists and hasn`t been verified yet, we`ve sent you a new OTP. Please check your email."})
 }
 
 // AppLogin handles user login via email and password.
@@ -257,17 +249,17 @@ func (h *Handler) ResendOTP(c *gin.Context) {
 // @Param        credentials body      EmailLoginRequest    true  "User Credentials"
 // @Success      200         {object}  LoginSuccessResponse
 // @Router       /auth/app [post]
-func (h *Handler) AppLogin(c *gin.Context) {
+func (handler *Handler) AppLogin(c *gin.Context) {
 	var req EmailLoginRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Error: common.ErrInvalidRequest.Error()})
+		handler.handleError(c, common.ErrInvalidRequest)
 		return
 	}
 
-	result, err := h.service.LoginWithEmail(c.Request.Context(), req.Email, req.Password)
+	result, err := handler.service.LoginWithEmail(c.Request.Context(), req.Email, req.Password)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: err.Error()})
+		handler.handleError(c, err)
 		return
 	}
 
@@ -285,12 +277,12 @@ func (h *Handler) AppLogin(c *gin.Context) {
 // @Produce      json
 // @Security     BearerAuth
 // @Param        password body      SetPasswordRequest     true  "New Password"
-// @Success      200      {object}  SuccessMessageResponse
+// @Success      200      {object}  webHelpers.OKResponse
 // @Router       /auth/password [post]
-func (h *Handler) SetPassword(c *gin.Context) {
+func (handler *Handler) SetPassword(c *gin.Context) {
 	userIdfromToken, exists := c.Get(string(common.UserIdKey))
 	if !exists {
-		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: common.ErrMissingContextParam.Error()})
+		handler.handleError(c, common.ErrMissingContextParam)
 		return
 	}
 
@@ -299,43 +291,43 @@ func (h *Handler) SetPassword(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Error: common.ErrInvalidRequest.Error()})
+		handler.handleError(c, common.ErrInvalidRequest)
 		return
 	}
 
 	id, err := uuid.Parse(userIdfromToken.(string))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Error: common.ErrInvalidUUIDFormat.Error()})
+		handler.handleError(c, common.ErrInvalidUUIDFormat)
 		return
 	}
 
-	if err := h.service.SetPasswordForUser(c.Request.Context(), id, req.Password); err != nil {
-		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+	if err := handler.service.SetPasswordForUser(c.Request.Context(), id, req.Password); err != nil {
+		handler.handleError(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessMessageResponse{Message: "password set successfully"})
+	c.JSON(http.StatusOK, webHelpers.OKResponse{Message: "password set successfully"})
 }
 
-func (h *Handler) AuthMiddleware() gin.HandlerFunc {
+func (handler *Handler) AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "Missing Authorization header"})
+			handler.handleError(c, &common.BusinessError{Code: 401, Message: "Missing Authorization header"})
 			c.Abort()
 			return
 		}
 
 		parts := strings.SplitN(authHeader, " ", 2)
 		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-			c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "Invalid Authorization header format"})
+			handler.handleError(c, &common.BusinessError{Code: 401, Message: "Invalid Authorization header format"})
 			c.Abort()
 			return
 		}
 
-		claims, err := h.tokenService.ValidateToken(parts[1])
+		claims, err := handler.tokenService.ValidateToken(parts[1])
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "Invalid or expired token"})
+			handler.handleError(c, &common.BusinessError{Code: 401, Message: "Invalid or expired token"})
 			c.Abort()
 			return
 		}
@@ -348,15 +340,6 @@ func (h *Handler) AuthMiddleware() gin.HandlerFunc {
 }
 
 // handleError is a helper function to return an error response to the client.
-// It checks if the error is a BusinessError and if so, returns a JSON response with the error code and message.
-// If the error is not a BusinessError, it returns a JSON response with a generic error message and a 500 status code.
-func (h *Handler) handleError(c *gin.Context, err error) {
-
-	var businessErr *common.BusinessError
-
-	if errors.As(err, &businessErr) {
-		c.JSON(businessErr.Code, ErrorResponse{Error: businessErr.Message})
-	} else {
-		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "an unexpected error occurred"})
-	}
+func (handler *Handler) handleError(c *gin.Context, err error) {
+	webHelpers.HandleError(c, err)
 }

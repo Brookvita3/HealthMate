@@ -47,6 +47,9 @@ type GroupRepository interface {
 	// FindByOwner retrieves all groups owned by a user
 	FindByOwner(ctx context.Context, ownerID uuid.UUID, limit, offset int) ([]domain.Group, error)
 
+	// FindByUser retrieves all groups where the user is a member
+	FindByUser(ctx context.Context, userID uuid.UUID, limit, offset int) ([]domain.Group, error)
+
 	// List retrieves groups with filtering and pagination
 	List(ctx context.Context, params ListGroupsParams) ([]domain.Group, error)
 

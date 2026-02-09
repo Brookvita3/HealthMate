@@ -20,6 +20,14 @@ func NewHandler(tokenValidator auth.TokenValidator, permRepo permission.Reposito
 	return &Handler{tokenValidator: tokenValidator, permRepo: permRepo, hub: hub}
 }
 
+// ServeHTTP handles the WebSocket upgrade request.
+// @Summary Webhook connection
+// @Description Upgrade to WebSocket connection for real-time metrics
+// @Tags realtime
+// @Param token query string true "Authentication token"
+// @Success 101 {string} string "Switching Protocols"
+// @Failure 401 {string} string "Unauthorized"
+// @Router /ws [get]
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	token := r.URL.Query().Get("token")
 	if token == "" {

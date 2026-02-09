@@ -13,13 +13,14 @@ import (
 
 	"auth-service/app"
 	"auth-service/config"
+	_ "auth-service/docs"
 )
 
 // @title HealthMate API
 // @version 1.0
-// @description This is the API for the HealthMate application.
+// @description This is the API for Auth Service of HealthMate application.
 
-// @host localhost:8080
+// @host localhost:5000
 // @BasePath /api/v1
 // @schemes http https
 

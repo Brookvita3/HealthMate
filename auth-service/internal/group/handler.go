@@ -344,15 +344,20 @@ func (handler *Handler) GetPermissions(c *gin.Context) {
 
 // GetMembers handles retrieving all members of a group.
 // @Summary Get group members
-// @Description List all members of a group
+// @Description List all members of a group (Members only)
 // @Tags groups
 // @Produce json
 // @Param id path string true "Group ID"
 // @Success 200 {array} domain.GroupMember
-// @Failure 404 {object} webHelpers.ErrorResponse
+// @Failure 403,404 {object} webHelpers.ErrorResponse
 // @Security BearerAuth
 // @Router /groups/{id}/members [get]
 func (handler *Handler) GetMembers(c *gin.Context) {
+	myID, ok := webHelpers.GetAuthUserID(c)
+	if !ok {
+		return
+	}
+
 	groupID, ok := webHelpers.GetValidatedGroupID(c)
 	if !ok {
 		groupID, ok = webHelpers.GetGroupID(c)
@@ -361,13 +366,46 @@ func (handler *Handler) GetMembers(c *gin.Context) {
 		}
 	}
 
-	members, err := handler.memberService.GetMembers(c.Request.Context(), groupID)
+	members, err := handler.memberService.GetMembers(c.Request.Context(), groupID, myID)
 	if err != nil {
 		handler.handleError(c, err)
 		return
 	}
 
 	c.JSON(http.StatusOK, members)
+}
+
+// ListGroupInvitations handles retrieving all pending invitations of a group.
+// @Summary List group invitations which the current user is invited to
+// @Description List pending invitations (Owner sees all, Members see their own)
+// @Tags groups
+// @Produce json
+// @Param id path string true "Group ID"
+// @Success 200 {array} domain.SentInvitationResponse
+// @Failure 403,404 {object} webHelpers.ErrorResponse
+// @Security BearerAuth
+// @Router /groups/{id}/invitations [get]
+func (handler *Handler) ListGroupInvitations(c *gin.Context) {
+	myID, ok := webHelpers.GetAuthUserID(c)
+	if !ok {
+		return
+	}
+
+	groupID, ok := webHelpers.GetValidatedGroupID(c)
+	if !ok {
+		groupID, ok = webHelpers.GetGroupID(c)
+		if !ok {
+			return
+		}
+	}
+
+	invitations, err := handler.memberService.GetGroupInvitations(c.Request.Context(), groupID, myID)
+	if err != nil {
+		handler.handleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, invitations)
 }
 
 // SetPermission handles enabling or disabling a sharing permission for a member.
@@ -546,7 +584,7 @@ func (handler *Handler) TransferOwnership(c *gin.Context) {
 }
 
 // ListInvitations returns all pending group invitations for the current user.
-// @Summary List group invitations
+// @Summary List group invitations of current user
 // @Description Get current user's group invitations
 // @Tags groups
 // @Produce json

@@ -34,4 +34,7 @@ type MemberRepository interface {
 
 	// IsOwner checks if a user is the owner of a specific group.
 	IsOwner(ctx context.Context, groupID, userID uuid.UUID) (bool, error)
+
+	// GetGroupInvitations retrieves all pending invitations for a specific group.
+	GetGroupInvitations(ctx context.Context, groupID uuid.UUID) ([]domain.SentInvitationResponse, error)
 }

@@ -28,8 +28,6 @@ definitions:
     properties:
       created_at:
         type: string
-      group_id:
-        type: string
       invited_by:
         type: string
       joined_at:
@@ -47,10 +45,10 @@ definitions:
     properties:
       group:
         $ref: '#/definitions/auth-service_internal_domain.GroupInfo'
-      group_id:
-        type: string
       id:
         type: string
+      invite_to:
+        $ref: '#/definitions/auth-service_internal_domain.UserInfo'
       inviter:
         $ref: '#/definitions/auth-service_internal_domain.UserInfo'
       member_count:
@@ -80,6 +78,25 @@ definitions:
       metric_type:
         type: string
       user_id:
+        type: string
+    type: object
+  auth-service_internal_domain.SentInvitationResponse:
+    properties:
+      created_at:
+        type: string
+      group_id:
+        type: string
+      invited_by:
+        type: string
+      inviter_name:
+        type: string
+      status:
+        type: string
+      user_email:
+        type: string
+      user_id:
+        type: string
+      user_name:
         type: string
     type: object
   auth-service_internal_domain.User:
@@ -647,9 +664,40 @@ paths:
       summary: Update group info
       tags:
       - groups
+  /groups/{id}/invitations:
+    get:
+      description: List pending invitations (Owner sees all, Members see their own)
+      parameters:
+      - description: Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/auth-service_internal_domain.SentInvitationResponse'
+            type: array
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List group invitations which the current user is invited to
+      tags:
+      - groups
   /groups/{id}/members:
     get:
-      description: List all members of a group
+      description: List all members of a group (Members only)
       parameters:
       - description: Group ID
         in: path
@@ -665,6 +713,10 @@ paths:
             items:
               $ref: '#/definitions/auth-service_internal_domain.GroupMember'
             type: array
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
         "404":
           description: Not Found
           schema:
@@ -967,7 +1019,7 @@ paths:
             $ref: '#/definitions/auth-service_internal_web_helpers.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: List group invitations
+      summary: List group invitations of current user
       tags:
       - groups
   /groups/metric-types:

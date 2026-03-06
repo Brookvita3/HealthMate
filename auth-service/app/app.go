@@ -116,6 +116,7 @@ func NewHTTPServer(deps *Dependencies) *HTTPServer {
 
 			groupWithID.POST("/members", groupHandler.InviteMember)
 			groupWithID.GET("/members", groupHandler.GetMembers)
+			groupWithID.GET("/invitations", groupHandler.ListGroupInvitations)
 			groupWithID.PUT("/members/me", groupHandler.UpdateMyMemberStatus)
 			groupWithID.DELETE("/members/me", groupHandler.LeaveGroup)
 

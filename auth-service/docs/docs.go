@@ -435,7 +435,7 @@ const docTemplate = `{
                 "tags": [
                     "groups"
                 ],
-                "summary": "List group invitations",
+                "summary": "List group invitations of current user",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -629,6 +629,55 @@ const docTemplate = `{
                 }
             }
         },
+        "/groups/{id}/invitations": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List pending invitations (Owner sees all, Members see their own)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "groups"
+                ],
+                "summary": "List group invitations which the current user is invited to",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/auth-service_internal_domain.SentInvitationResponse"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/auth-service_internal_web_helpers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/auth-service_internal_web_helpers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/groups/{id}/members": {
             "get": {
                 "security": [
@@ -636,7 +685,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "List all members of a group",
+                "description": "List all members of a group (Members only)",
                 "produces": [
                     "application/json"
                 ],
@@ -661,6 +710,12 @@ const docTemplate = `{
                             "items": {
                                 "$ref": "#/definitions/auth-service_internal_domain.GroupMember"
                             }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/auth-service_internal_web_helpers.ErrorResponse"
                         }
                     },
                     "404": {
@@ -1287,9 +1342,6 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
-                "group_id": {
-                    "type": "string"
-                },
                 "invited_by": {
                     "type": "string"
                 },
@@ -1316,11 +1368,11 @@ const docTemplate = `{
                 "group": {
                     "$ref": "#/definitions/auth-service_internal_domain.GroupInfo"
                 },
-                "group_id": {
-                    "type": "string"
-                },
                 "id": {
                     "type": "string"
+                },
+                "invite_to": {
+                    "$ref": "#/definitions/auth-service_internal_domain.UserInfo"
                 },
                 "inviter": {
                     "$ref": "#/definitions/auth-service_internal_domain.UserInfo"
@@ -1366,6 +1418,35 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "auth-service_internal_domain.SentInvitationResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "group_id": {
+                    "type": "string"
+                },
+                "invited_by": {
+                    "type": "string"
+                },
+                "inviter_name": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "user_email": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                },
+                "user_name": {
                     "type": "string"
                 }
             }

@@ -35,6 +35,9 @@ type Service interface {
 
 	// GetMembers retrieves all members of a specific group.
 	GetMembers(ctx context.Context, groupID uuid.UUID) ([]domain.GroupMember, error)
+
+	// GetUserInvitations retrieves all pending invitations for a specific user.
+	GetUserInvitations(ctx context.Context, userID uuid.UUID) ([]domain.InvitationResponse, error)
 }
 
 type serviceImpl struct {
@@ -170,4 +173,21 @@ func (s *serviceImpl) LeaveGroup(ctx context.Context, groupID, userID uuid.UUID)
 // Lists all members in the group including their roles and statuses.
 func (s *serviceImpl) GetMembers(ctx context.Context, groupID uuid.UUID) ([]domain.GroupMember, error) {
 	return s.memberRepo.ListGroupMembers(ctx, groupID)
+}
+
+// GetUserInvitations implements Service.GetUserInvitations.
+// Retrieves pending invitations for the user.
+func (s *serviceImpl) GetUserInvitations(ctx context.Context, userID uuid.UUID) ([]domain.InvitationResponse, error) {
+	invitations, err := s.memberRepo.GetUserInvitations(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range invitations {
+		if invitations[i].SharedMetrics == nil {
+			invitations[i].SharedMetrics = []string{}
+		}
+	}
+
+	return invitations, nil
 }

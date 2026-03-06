@@ -103,12 +103,14 @@ func NewHTTPServer(deps *Dependencies) *HTTPServer {
 		groupGroup.POST("", groupHandler.CreateGroup)
 		groupGroup.GET("", groupHandler.ListMyGroups)
 		groupGroup.GET("/metric-types", groupHandler.ListMetricTypes)
+		groupGroup.GET("/invitations", groupHandler.ListInvitations)
 
 		// Routes that need group validation (have :id param)
 		// Create a subgroup with group validation middleware
 		groupWithID := groupGroup.Group("/:id")
 		groupWithID.Use(groupMiddleware.ValidateGroupExists())
 		{
+			groupWithID.GET("", groupHandler.GetGroup)
 			groupWithID.PUT("", groupHandler.UpdateGroup)
 			groupWithID.DELETE("", groupHandler.DeleteGroup)
 

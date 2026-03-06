@@ -183,6 +183,36 @@ func (_m *GroupRepository) FindByOwner(ctx context.Context, ownerID uuid.UUID, l
 	return r0, r1
 }
 
+// FindByUser provides a mock function with given fields: ctx, userID, limit, offset
+func (_m *GroupRepository) FindByUser(ctx context.Context, userID uuid.UUID, limit int, offset int) ([]domain.Group, error) {
+	ret := _m.Called(ctx, userID, limit, offset)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindByUser")
+	}
+
+	var r0 []domain.Group
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, int, int) ([]domain.Group, error)); ok {
+		return rf(ctx, userID, limit, offset)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, int, int) []domain.Group); ok {
+		r0 = rf(ctx, userID, limit, offset)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]domain.Group)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, int, int) error); ok {
+		r1 = rf(ctx, userID, limit, offset)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // List provides a mock function with given fields: ctx, params
 func (_m *GroupRepository) List(ctx context.Context, params group.ListGroupsParams) ([]domain.Group, error) {
 	ret := _m.Called(ctx, params)

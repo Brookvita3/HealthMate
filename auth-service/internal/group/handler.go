@@ -545,6 +545,58 @@ func (handler *Handler) TransferOwnership(c *gin.Context) {
 	c.JSON(http.StatusOK, webHelpers.OKResponse{Message: "Ownership transferred successfully"})
 }
 
+// ListInvitations returns all pending group invitations for the current user.
+// @Summary List group invitations
+// @Description Get current user's group invitations
+// @Tags groups
+// @Produce json
+// @Success 200 {array} domain.InvitationResponse
+// @Failure 401 {object} webHelpers.ErrorResponse
+// @Security BearerAuth
+// @Router /groups/invitations [get]
+func (handler *Handler) ListInvitations(c *gin.Context) {
+	myID, ok := webHelpers.GetAuthUserID(c)
+	if !ok {
+		return
+	}
+
+	invitations, err := handler.memberService.GetUserInvitations(c.Request.Context(), myID)
+	if err != nil {
+		handler.handleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, invitations)
+}
+
+// GetGroup retrieves detailed information about a single group.
+// @Summary Get a group
+// @Description Retrieve a group by ID
+// @Tags groups
+// @Produce json
+// @Param id path string true "Group ID"
+// @Success 200 {object} domain.Group
+// @Failure 404 {object} webHelpers.ErrorResponse
+// @Security BearerAuth
+// @Router /groups/{id} [get]
+func (handler *Handler) GetGroup(c *gin.Context) {
+	groupID, ok := webHelpers.GetValidatedGroupID(c)
+	if !ok {
+		groupID, ok = webHelpers.GetGroupID(c)
+		if !ok {
+			return
+		}
+	}
+
+	groupInfo, err := handler.groupService.GetGroup(c.Request.Context(), groupID)
+	if err != nil {
+		handler.handleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, groupInfo)
+}
+
 // handleError is a helper function to return an error response to the client.
 func (handler *Handler) handleError(c *gin.Context, err error) {
 	webHelpers.HandleError(c, err)

@@ -185,7 +185,7 @@ func NewDependencies(cfg *config.Config) *Dependencies {
 		TokenService:      tokenService,
 		OTPService:        otpService,
 		AuthService:       authService,
-		GroupService:      group.NewService(groupRepo, userRepo),
+		GroupService:      group.NewService(groupRepo, userRepo, memberRepo),
 		MemberService:     member.NewService(memberRepo, userRepo),
 		PermissionService: permission.NewService(permissionRepo),
 		Validator:         validator,

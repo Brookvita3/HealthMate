@@ -1,7 +1,9 @@
 package group
 
 import (
+	"auth-service/internal/common"
 	"auth-service/internal/domain"
+	"auth-service/internal/member"
 	"auth-service/internal/user"
 	"context"
 	"errors"
@@ -38,15 +40,17 @@ type Service interface {
 
 // serviceImpl implements the group.Service interface
 type serviceImpl struct {
-	groupRepo GroupRepository
-	userRepo  user.UserRepository
+	groupRepo  GroupRepository
+	userRepo   user.UserRepository
+	memberRepo member.MemberRepository
 }
 
 // NewService creates a new group service instance
-func NewService(groupRepo GroupRepository, userRepo user.UserRepository) Service {
+func NewService(groupRepo GroupRepository, userRepo user.UserRepository, memberRepo member.MemberRepository) Service {
 	return &serviceImpl{
-		groupRepo: groupRepo,
-		userRepo:  userRepo,
+		groupRepo:  groupRepo,
+		userRepo:   userRepo,
+		memberRepo: memberRepo,
 	}
 }
 
@@ -133,6 +137,15 @@ func (s *serviceImpl) DeleteGroup(ctx context.Context, groupID, requesterID uuid
 	}
 	if !isOwner {
 		return ErrNotGroupOwner
+	}
+
+	// Requirement: Owner must kick all users before deleting the group
+	count, err := s.memberRepo.CountMembers(ctx, groupID)
+	if err != nil {
+		return err
+	}
+	if count > 1 {
+		return &common.BusinessError{Code: 400, Message: "group must be empty except for the owner before deletion"}
 	}
 
 	return s.groupRepo.Delete(ctx, groupID)

@@ -242,3 +242,10 @@ func (r *postgresRepository) GetGroupInvitations(ctx context.Context, groupID uu
 
 	return invitations, nil
 }
+
+func (r *postgresRepository) CountMembers(ctx context.Context, groupID uuid.UUID) (int, error) {
+	query := `SELECT COUNT(*) FROM group_members WHERE group_id = $1`
+	var count int
+	err := r.pool.QueryRow(ctx, query, groupID).Scan(&count)
+	return count, err
+}

@@ -177,9 +177,27 @@ func (r *postgresRepository) Update(ctx context.Context, id uuid.UUID, params Up
 
 // Delete implements GroupRepository.Delete
 func (r *postgresRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	query := `DELETE FROM groups WHERE id = $1`
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
 
-	cmdTag, err := r.pool.Exec(ctx, query, id)
+	// 1. Delete all sharing permissions for this group
+	_, err = tx.Exec(ctx, `DELETE FROM sharing_permissions WHERE group_id = $1`, id)
+	if err != nil {
+		return err
+	}
+
+	// 2. Delete all group members
+	_, err = tx.Exec(ctx, `DELETE FROM group_members WHERE group_id = $1`, id)
+	if err != nil {
+		return err
+	}
+
+	// 3. Delete the group
+	query := `DELETE FROM groups WHERE id = $1`
+	cmdTag, err := tx.Exec(ctx, query, id)
 	if err != nil {
 		return err
 	}
@@ -188,7 +206,7 @@ func (r *postgresRepository) Delete(ctx context.Context, id uuid.UUID) error {
 		return ErrGroupNotFound
 	}
 
-	return nil
+	return tx.Commit(ctx)
 }
 
 // FindByOwner implements GroupRepository.FindByOwner

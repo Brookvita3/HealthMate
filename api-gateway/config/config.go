@@ -14,6 +14,7 @@ type Config struct {
 	Port            string
 	KafkaBrokerURL  string
 	KafkaTopic      string
+	StorageHTTPURL  string
 	APIPrefix       string
 }
 
@@ -31,6 +32,7 @@ func LoadConfig() Config {
 		KafkaTopic:      os.Getenv("KAFKA_TOPIC"),
 		APIPrefix:       os.Getenv("API_PREFIX"),
 		RealtimeHTTPURL: os.Getenv("REALTIME_HTTP_URL"),
+		StorageHTTPURL:  os.Getenv("STORAGE_HTTP_URL"),
 	}
 
 	return config

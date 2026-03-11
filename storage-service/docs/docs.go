@@ -43,7 +43,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Metric Type (e.g. heartbeat, steps)",
+                        "description": "Metric Type (e.g. heart_rate, steps)",
                         "name": "metric_type",
                         "in": "query",
                         "required": true

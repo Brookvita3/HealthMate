@@ -7,18 +7,15 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/redis/go-redis/v9"
 )
 
 type pgRepository struct {
-	pool  *pgxpool.Pool
-	redis *redis.Client
+	pool *pgxpool.Pool
 }
 
-func NewRepository(pool *pgxpool.Pool, redisClient *redis.Client) MetricRepository {
+func NewRepository(pool *pgxpool.Pool) MetricRepository {
 	return &pgRepository{
-		pool:  pool,
-		redis: redisClient,
+		pool: pool,
 	}
 }
 
@@ -29,26 +26,11 @@ type MetricConfig struct {
 }
 
 func (r *pgRepository) getMetricConfig(ctx context.Context, metricType string) (*MetricConfig, error) {
-	cacheKey := fmt.Sprintf("metric_config:%s", metricType)
-
-	// 1. Check Redis first
-	val, err := r.redis.Get(ctx, cacheKey).Result()
-	if err == nil {
-		var config MetricConfig
-		if jsonErr := json.Unmarshal([]byte(val), &config); jsonErr == nil {
-			return &config, nil
-		}
-	} else if err != redis.Nil {
-		// Log redis error but fallback to DB
-		fmt.Printf("Redis GET error for key %s: %v\n", cacheKey, err)
-	}
-
-	// 2. Fallback to Database
 	query := `SELECT base_table, allowed_agg_funcs FROM metric_types WHERE name = $1`
 	var baseTable string
 	var allowedAggFuncs []byte
 
-	err = r.pool.QueryRow(ctx, query, metricType).Scan(&baseTable, &allowedAggFuncs)
+	err := r.pool.QueryRow(ctx, query, metricType).Scan(&baseTable, &allowedAggFuncs)
 	if err != nil {
 		return nil, ErrUnknownMetricType
 	}
@@ -61,13 +43,6 @@ func (r *pgRepository) getMetricConfig(ctx context.Context, metricType string) (
 	config := &MetricConfig{
 		BaseTable:       baseTable,
 		AllowedAggFuncs: parsedFuncs,
-	}
-
-	// 3. Set to Redis with 24h expiration
-	if jsonStr, err := json.Marshal(config); err == nil {
-		if setErr := r.redis.Set(ctx, cacheKey, jsonStr, 24*time.Hour).Err(); setErr != nil {
-			fmt.Printf("Redis SET error for key %s: %v\n", cacheKey, setErr)
-		}
 	}
 
 	return config, nil

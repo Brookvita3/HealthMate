@@ -15,7 +15,8 @@ type MetricDataPoint struct {
 }
 
 const (
-	RangeLast7Days  = "7d"
-	RangeLast30Days = "30d"
+	RangeLast24Hours = "24h"
+	RangeLast7Days   = "7d"
+	RangeLast30Days  = "30d"
 	RangeCustom     = "custom"
 )

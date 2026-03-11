@@ -49,7 +49,9 @@ func main() {
 
 	select {
 	case err := <-errCh:
-		fmt.Println("Error:", err)
+		log.Printf("Critical error occurred: %v. Triggering shutdown...", err)
+		cancel()
+		os.Exit(1)
 	case <-sigCh:
 		fmt.Println("Shutting down...")
 	case <-ctx.Done():

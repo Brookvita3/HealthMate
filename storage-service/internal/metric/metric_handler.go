@@ -23,7 +23,7 @@ func NewHandler(service Service) *Handler {
 // @Accept json
 // @Produce json
 // @Param user_id query string true "User ID"
-// @Param metric_type query string true "Metric Type (e.g. heartbeat, steps)"
+// @Param metric_type query string true "Metric Type (e.g. heart_rate, steps)"
 // @Param range query string true "Time Range (e.g. 24h, 7d, 30d, custom)"
 // @Param start_time query string false "Start Time (RFC3339) - required for custom range"
 // @Param end_time query string false "End Time (RFC3339) - required for custom range"

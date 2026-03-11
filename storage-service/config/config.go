@@ -12,8 +12,10 @@ type Config struct {
 	Port           string
 	TimeScaleDbURL string
 	RedisURL       string
+	JWTSecret      string
 	KafkaTopic     string
 	KafkaGroupID   string
+	APIPrefix      string
 }
 
 func LoadConfig() Config {
@@ -27,8 +29,10 @@ func LoadConfig() Config {
 		Port:           os.Getenv("PORT"),
 		TimeScaleDbURL: os.Getenv("TIMESCALEDB_URL"),
 		RedisURL:       os.Getenv("REDIS_URL"),
+		JWTSecret:      os.Getenv("JWT_SECRET"),
 		KafkaTopic:     os.Getenv("KAFKA_TOPIC"),
 		KafkaGroupID:   os.Getenv("KAFKA_GROUP_ID"),
+		APIPrefix:      os.Getenv("API_PREFIX"),
 	}
 
 	return config

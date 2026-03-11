@@ -26,6 +26,9 @@ func (s *serviceImpl) GetChartData(ctx context.Context, userID, metricType, time
 	var startTime, endTime time.Time
 
 	switch timeRange {
+	case RangeLast24Hours:
+		endTime = time.Now()
+		startTime = endTime.Add(-24 * time.Hour)
 	case RangeLast7Days:
 		endTime = time.Now()
 		startTime = endTime.AddDate(0, 0, -7)
@@ -48,7 +51,11 @@ func (s *serviceImpl) GetChartData(ctx context.Context, userID, metricType, time
 	var bucketSize string
 
 	days := duration.Hours() / 24
-	if days <= 2 {
+	if days <= 1 {
+		bucketSize = "1 hour" // or "15 minutes" based on preference, using 1 hour for now to ensure consistency, but if we have high res, 15m is good
+		// Let's use 15 minutes for 24h
+		bucketSize = "15 minutes"
+	} else if days <= 2 {
 		bucketSize = "1 hour"
 	} else if days <= 30 {
 		bucketSize = "1 day"

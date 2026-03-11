@@ -27,7 +27,7 @@ paths:
         name: user_id
         required: true
         type: string
-      - description: Metric Type (e.g. heartbeat, steps)
+      - description: Metric Type (e.g. heart_rate, steps)
         in: query
         name: metric_type
         required: true

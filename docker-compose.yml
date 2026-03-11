@@ -47,6 +47,8 @@ services:
     depends_on:
       timescaledb:
         condition: service_healthy
+      storage-service:
+        condition: service_started
 
   realtime-service:
     build:

@@ -20,8 +20,6 @@ RUN apk --no-cache add ca-certificates
 
 COPY --from=builder /app/auth-service .
 
-COPY --from=builder /app/migration ./migration
-
 EXPOSE 5000
 
 CMD ["./auth-service"]

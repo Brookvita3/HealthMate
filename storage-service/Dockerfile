@@ -1,5 +1,5 @@
 # --- Stage 1: Build ---
-FROM golang:1.24 AS builder
+FROM golang:1.26 AS builder
 
 WORKDIR /app
 
@@ -19,6 +19,7 @@ FROM alpine:3.20
 WORKDIR /app
 
 COPY --from=builder /app/storage-service .
+COPY --from=builder /app/migration ./migration
 
 EXPOSE 5003
 

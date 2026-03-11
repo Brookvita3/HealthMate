@@ -5,7 +5,7 @@
 1. [Overview](#overview)
 2. [Architecture](#architecture)
 3. [Use Cases](#use-cases)
-4. [API Reference](#api-reference)
+4. [API Reference (Link Docs)](#api-reference-link-docs)
 5. [Message Formats](#message-formats)
 6. [Configuration](#configuration)
 7. [Quick Start](#quick-start)
@@ -14,14 +14,14 @@
 
 ## Overview
 
-**Realtime Service** là một WebSocket server phục vụ việc truyền tải dữ liệu sức khỏe (health metrics) theo thời gian thực từ hệ thống đến các client đã đăng ký theo dõi.
+**Realtime Service** is a WebSocket server dedicated to transmitting real-time health data (health metrics) from the system to subscribed clients.
 
 ### Key Features
-- 🔐 **JWT Authentication**: Xác thực token JWT cục bộ (không cần gọi auth-service)
-- 📡 **WebSocket**: Kết nối real-time hai chiều với client
-- 🔔 **Pub/Sub Model**: Client subscribe theo dõi metrics của user cụ thể
-- 🛡️ **Permission-based**: Kiểm tra quyền truy cập dựa trên group membership
-- ⚡ **Kafka Integration**: Nhận health metrics từ Kafka topic
+- 🔐 **JWT Authentication**: Local JWT token verification (no need to call auth-service)
+- 📡 **WebSocket**: Two-way real-time connection with clients
+- 🔔 **Pub/Sub Model**: Clients subscribe to track metrics of a specific user
+- 🛡️ **Permission-based**: Access control based on group membership
+- ⚡ **Kafka Integration**: Receives health metrics from Kafka topics
 
 ---
 
@@ -69,19 +69,19 @@ graph TB
 
 ## Use Cases
 
-### UC1: Theo dõi nhịp tim của thành viên trong nhóm
-**Actor**: Bác sĩ, Người thân  
+### UC1: Monitor a group member's heart rate
+**Actor**: Doctor, Family member  
 **Flow**:
-1. User đăng nhập và lấy access token từ auth-service
-2. Kết nối WebSocket với token: `ws://host:5001?token=<JWT>`
-3. Subscribe theo dõi: `{"action": "subscribe", "items": [{"target_user_id": "patient-123", "metric_type": "heart_rate"}]}`
-4. Nhận dữ liệu real-time mỗi khi bệnh nhân có nhịp tim mới
+1. User logs in and gets an access token from auth-service
+2. Connects to WebSocket with token: `ws://host:5001?token=<JWT>`
+3. Subscribes to track: `{"action": "subscribe", "items": [{"target_user_id": "patient-123", "metric_type": "heart_rate"}]}`
+4. Receives real-time data every time the patient has a new heart rate reading
 
-### UC2: Dashboard theo dõi nhiều chỉ số của một người
-**Actor**: Bệnh nhân tự theo dõi, Bác sĩ  
+### UC2: Dashboard monitoring multiple metrics of a person
+**Actor**: Patient self-monitoring, Doctor  
 **Flow**:
-1. Kết nối WebSocket
-2. Subscribe nhiều metric types cùng lúc:
+1. Connects to WebSocket
+2. Subscribes to multiple metric types at once:
 ```json
 {
   "action": "subscribe",
@@ -92,12 +92,12 @@ graph TB
   ]
 }
 ```
-3. Nhận tất cả metrics của user đó theo thời gian thực
+3. Receives all metrics of that user in real time
 
-### UC3: Hủy theo dõi khi không cần thiết
-**Actor**: Bất kỳ client nào  
+### UC3: Unsubscribe when no longer needed
+**Actor**: Any client  
 **Flow**:
-1. Gửi message unsubscribe:
+1. Sends unsubscribe message:
 ```json
 {
   "action": "unsubscribe",
@@ -107,7 +107,9 @@ graph TB
 
 ---
 
-## API Reference
+## API Reference (Link Docs)
+
+*Since the service uses the WebSocket protocol, API documentation is described directly below (no Swagger UI support like HTTP API at the moment).*
 
 ### WebSocket Endpoint
 
@@ -162,9 +164,9 @@ ws://localhost:5001?token=<JWT_ACCESS_TOKEN>
 ```
 
 **Supported `metric_type` values:**
-- `heart_rate` - Nhịp tim (bpm)
-- `steps_count` - Số bước chân
-- `calories_burned` - Calories tiêu thụ
+- `heart_rate` - Heart rate (bpm)
+- `steps_count` - Steps count
+- `calories_burned` - Calories burned
 
 ### Server → Client
 
@@ -188,7 +190,7 @@ ws://localhost:5001?token=<JWT_ACCESS_TOKEN>
 ```json
 {
   "user_id": "patient-123",
-  "type": "heart_rate",
+  "metric_type": "heart_rate",
   "value": 75.5,
   "timestamp": "2026-01-24T14:30:00Z"
 }
@@ -202,10 +204,10 @@ ws://localhost:5001?token=<JWT_ACCESS_TOKEN>
 
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
-| `JWT_SECRET` | Secret key để validate JWT token | - | ✅ |
-| `HTTP_PORT` | Port cho WebSocket server | `5001` | ✅ |
+| `JWT_SECRET` | Secret key to validate JWT token | - | ✅ |
+| `HTTP_PORT` | Port for WebSocket server | `5001` | ✅ |
 | `KAFKA_ADDR` | Kafka broker address | - | ✅ |
-| `KAFKA_TOPIC` | Topic chứa health metrics | `health_metrics` | ✅ |
+| `KAFKA_TOPIC` | Topic containing health metrics | `health_metrics` | ✅ |
 | `KAFKA_GROUP_ID` | Consumer group ID | `realtime-service` | ✅ |
 | `POSTGRES_URL` | PostgreSQL connection string | - | ✅ |
 
@@ -227,6 +229,16 @@ POSTGRES_URL=postgres://postgres:postgres@localhost:5432/healthmate?sslmode=disa
 - Go 1.21+
 - PostgreSQL running with schema
 - Kafka broker running
+
+### How to Build
+Run the following command at the root directory of the project (where `docker-compose.yml` is located):
+```bash
+docker compose build realtime-service
+```
+Or build Docker image independently:
+```bash
+docker build -t brookvita3/realtime-service:local ./realtime-service
+```
 
 ### Run Locally
 
@@ -308,15 +320,15 @@ realtime-service/
 
 ## Permission Model
 
-Để subscribe theo dõi metrics của một user, client phải có quyền truy cập dựa trên:
+To subscribe and monitor a user's metrics, the client must have access privileges based on:
 
-1. **Cùng nhóm (Group Membership)**: Cả observer và target phải cùng thuộc một group với status `accepted`
-2. **Sharing Permission**: Target user phải bật chia sẻ metric type đó trong group
+1. **Group Membership**: Both observer and target must belong to the same group with `accepted` status
+2. **Sharing Permission**: Target user must enable sharing for that metric type in the group
 
 **Database Schema (Simplified):**
 ```sql
--- group_members: Thành viên của các nhóm
--- sharing_permissions: Các metric types mà user cho phép chia sẻ trong group
+-- group_members: Group members
+-- sharing_permissions: Metric types that the user allows sharing in a group
 ```
 
 ---
@@ -325,7 +337,7 @@ realtime-service/
 
 | Issue | Cause | Solution |
 |-------|-------|----------|
-| 401 Unauthorized | Invalid/expired JWT | Lấy access token mới từ auth-service |
-| "No permission for X" | Không có quyền xem | Kiểm tra target user đã share metric trong group chưa |
-| Connection closes immediately | Token expired | Refresh token và reconnect |
-| No metrics received | Không có data mới từ Kafka | Kiểm tra Kafka producer đang publish data |
+| 401 Unauthorized | Invalid/expired JWT | Get a new access token from auth-service |
+| "No permission for X" | No permission to view | Check if the target user has shared the metric in the group |
+| Connection closes immediately | Token expired | Refresh token and reconnect |
+| No metrics received | No new data from Kafka | Check if Kafka producer is publishing data |

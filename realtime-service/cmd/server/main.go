@@ -35,6 +35,7 @@ func main() {
 		if err := application.Start(); err != nil {
 			log.Printf("Application exited with error: %v", err)
 		}
+		stopChan <- syscall.SIGTERM
 	}()
 
 	<-stopChan

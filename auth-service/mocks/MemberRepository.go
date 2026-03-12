@@ -64,6 +64,36 @@ func (_m *MemberRepository) GetMember(ctx context.Context, groupID uuid.UUID, us
 	return r0, r1
 }
 
+// GetUserInvitations provides a mock function with given fields: ctx, userID
+func (_m *MemberRepository) GetUserInvitations(ctx context.Context, userID uuid.UUID) ([]domain.InvitationResponse, error) {
+	ret := _m.Called(ctx, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetUserInvitations")
+	}
+
+	var r0 []domain.InvitationResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) ([]domain.InvitationResponse, error)); ok {
+		return rf(ctx, userID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) []domain.InvitationResponse); ok {
+		r0 = rf(ctx, userID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]domain.InvitationResponse)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = rf(ctx, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GroupExists provides a mock function with given fields: ctx, groupID
 func (_m *MemberRepository) GroupExists(ctx context.Context, groupID uuid.UUID) (bool, error) {
 	ret := _m.Called(ctx, groupID)

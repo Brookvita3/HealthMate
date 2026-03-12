@@ -1,9 +1,11 @@
 package kafka
 
 import (
-	"api-gateway/internal/metric"
+	"storage-service/internal/common"
+	"storage-service/internal/metric"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 
@@ -47,7 +49,12 @@ func (c *Consumer) Start(ctx context.Context, errCh chan error) {
 			}
 
 			if err := c.metricServcie.RecordMetric(ctx, metric); err != nil {
-				log.Println("Process message error:", err)
+				var businessErr *common.BusinessError
+				if errors.As(err, &businessErr) {
+					log.Printf("Process message warning (Business Error): %s (User: %s, Metric: %s)", businessErr.Message, metric.UserID, metric.Type)
+				} else {
+					log.Printf("Process message system error: %v (User: %s, Metric: %s)", err, metric.UserID, metric.Type)
+				}
 			}
 		}
 	}

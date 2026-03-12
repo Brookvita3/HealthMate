@@ -421,6 +421,40 @@ const docTemplate = `{
                 }
             }
         },
+        "/groups/invitations": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get current user's group invitations",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "groups"
+                ],
+                "summary": "List group invitations of current user",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/auth-service_internal_domain.InvitationResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/auth-service_internal_web_helpers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/groups/metric-types": {
             "get": {
                 "security": [
@@ -450,6 +484,44 @@ const docTemplate = `{
             }
         },
         "/groups/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a group by ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "groups"
+                ],
+                "summary": "Get a group",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/auth-service_internal_domain.Group"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/auth-service_internal_web_helpers.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "put": {
                 "security": [
                     {
@@ -557,6 +629,55 @@ const docTemplate = `{
                 }
             }
         },
+        "/groups/{id}/invitations": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List pending invitations (Owner sees all, Members see their own)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "groups"
+                ],
+                "summary": "List group invitations which the current user is invited to",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/auth-service_internal_domain.SentInvitationResponse"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/auth-service_internal_web_helpers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/auth-service_internal_web_helpers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/groups/{id}/members": {
             "get": {
                 "security": [
@@ -564,7 +685,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "List all members of a group",
+                "description": "List all members of a group (Members only)",
                 "produces": [
                     "application/json"
                 ],
@@ -589,6 +710,12 @@ const docTemplate = `{
                             "items": {
                                 "$ref": "#/definitions/auth-service_internal_domain.GroupMember"
                             }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/auth-service_internal_web_helpers.ErrorResponse"
                         }
                     },
                     "404": {
@@ -1195,13 +1322,24 @@ const docTemplate = `{
                 }
             }
         },
+        "auth-service_internal_domain.GroupInfo": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "member_count": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "auth-service_internal_domain.GroupMember": {
             "type": "object",
             "properties": {
                 "created_at": {
-                    "type": "string"
-                },
-                "group_id": {
                     "type": "string"
                 },
                 "invited_by": {
@@ -1221,6 +1359,35 @@ const docTemplate = `{
                 },
                 "user_id": {
                     "type": "string"
+                }
+            }
+        },
+        "auth-service_internal_domain.InvitationResponse": {
+            "type": "object",
+            "properties": {
+                "group": {
+                    "$ref": "#/definitions/auth-service_internal_domain.GroupInfo"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "invite_to": {
+                    "$ref": "#/definitions/auth-service_internal_domain.UserInfo"
+                },
+                "inviter": {
+                    "$ref": "#/definitions/auth-service_internal_domain.UserInfo"
+                },
+                "member_count": {
+                    "type": "integer"
+                },
+                "sent_at": {
+                    "type": "string"
+                },
+                "shared_metrics": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -1255,6 +1422,35 @@ const docTemplate = `{
                 }
             }
         },
+        "auth-service_internal_domain.SentInvitationResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "group_id": {
+                    "type": "string"
+                },
+                "invited_by": {
+                    "type": "string"
+                },
+                "inviter_name": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "user_email": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                },
+                "user_name": {
+                    "type": "string"
+                }
+            }
+        },
         "auth-service_internal_domain.User": {
             "type": "object",
             "properties": {
@@ -1283,6 +1479,20 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "auth-service_internal_domain.UserInfo": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
                     "type": "string"
                 }
             }

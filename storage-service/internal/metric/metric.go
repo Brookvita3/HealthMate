@@ -8,3 +8,15 @@ type HealthMetric struct {
 	Value     float64   `json:"value"`
 	Timestamp time.Time `json:"timestamp"`
 }
+
+type MetricDataPoint struct {
+	Timestamp time.Time `json:"timestamp"`
+	Value     float64   `json:"value"`
+}
+
+const (
+	RangeLast24Hours = "24h"
+	RangeLast7Days   = "7d"
+	RangeLast30Days  = "30d"
+	RangeCustom     = "custom"
+)

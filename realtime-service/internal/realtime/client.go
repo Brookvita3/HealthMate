@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"realtime-service/internal/common"
 	"realtime-service/internal/metric"
 	"time"
 
@@ -157,6 +158,7 @@ func (c *Client) handleControlAction(ctx context.Context, message []byte) {
 
 	switch msg.Action {
 	case "subscribe":
+		hasError := false
 		for _, item := range msg.Items {
 			hasPerm, err := c.hub.permRepo.CheckAccess(
 				ctx,
@@ -166,12 +168,19 @@ func (c *Client) handleControlAction(ctx context.Context, message []byte) {
 			)
 
 			if err != nil {
-				c.sendError("Permission check error")
+				log.Printf("Error checking permission for %s vs %s: %v", c.viewerId, item.TargetUserID, err)
+				if bErr, ok := err.(*common.BusinessError); ok {
+					c.sendError(bErr.Message)
+				} else {
+					c.sendError("Permission check error")
+				}
+				hasError = true
 				continue
 			}
 
 			if !hasPerm {
 				c.sendError(fmt.Sprintf("No permission for %s/%s", item.TargetUserID, item.MetricType))
+				hasError = true
 				continue
 			}
 
@@ -188,7 +197,9 @@ func (c *Client) handleControlAction(ctx context.Context, message []byte) {
 			}
 		}
 
-		c.sendSuccess("Subscribe success")
+		if !hasError {
+			c.sendSuccess("Subscribe success")
+		}
 		return
 
 	case "unsubscribe":
@@ -197,6 +208,10 @@ func (c *Client) handleControlAction(ctx context.Context, message []byte) {
 				Client:       c,
 				TargetUserID: item.TargetUserID,
 				MetricType:   item.MetricType,
+			}
+			// Remove from local cache
+			if _, ok := c.permissions[item.TargetUserID]; ok {
+				delete(c.permissions[item.TargetUserID], item.MetricType)
 			}
 		}
 		c.sendSuccess("Unsubscribe success")

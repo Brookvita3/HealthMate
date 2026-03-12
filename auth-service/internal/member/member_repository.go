@@ -26,9 +26,18 @@ type MemberRepository interface {
 	// ListGroupMembers retrieves all members belonging to a specific group.
 	ListGroupMembers(ctx context.Context, groupID uuid.UUID) ([]domain.GroupMember, error)
 
+	// GetUserInvitations retrieves all pending invitations for a specific user.
+	GetUserInvitations(ctx context.Context, userID uuid.UUID) ([]domain.InvitationResponse, error)
+
 	// GroupExists checks if a group exists.
 	GroupExists(ctx context.Context, groupID uuid.UUID) (bool, error)
 
 	// IsOwner checks if a user is the owner of a specific group.
 	IsOwner(ctx context.Context, groupID, userID uuid.UUID) (bool, error)
+
+	// GetGroupInvitations retrieves all pending invitations for a specific group.
+	GetGroupInvitations(ctx context.Context, groupID uuid.UUID) ([]domain.SentInvitationResponse, error)
+
+	// CountMembers returns the total number of members in a group (all statuses).
+	CountMembers(ctx context.Context, groupID uuid.UUID) (int, error)
 }

@@ -46,24 +46,41 @@ func (r *postgresRepository) UpdateMemberStatus(ctx context.Context, groupID, us
 }
 
 func (r *postgresRepository) RemoveMember(ctx context.Context, groupID, userID uuid.UUID) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	// 1. Delete shared permissions first to avoid foreign key violation
+	_, err = tx.Exec(ctx, `DELETE FROM sharing_permissions WHERE group_id = $1 AND user_id = $2`, groupID, userID)
+	if err != nil {
+		return err
+	}
+
+	// 2. Delete group member
 	query := `DELETE FROM group_members WHERE group_id = $1 AND user_id = $2`
-	cmdTag, err := r.pool.Exec(ctx, query, groupID, userID)
+	cmdTag, err := tx.Exec(ctx, query, groupID, userID)
+	if err != nil {
+		return err
+	}
+
 	if cmdTag.RowsAffected() == 0 {
 		return ErrMemberNotFound
 	}
 
-	return err
+	return tx.Commit(ctx)
 }
 
 func (r *postgresRepository) GetMember(ctx context.Context, groupID, userID uuid.UUID) (*domain.GroupMember, error) {
 	query := `
-		SELECT group_id, user_id, role, status, invited_by, joined_at, created_at, updated_at
+		SELECT user_id, role, status, invited_by, joined_at, created_at, updated_at
 		FROM group_members
 		WHERE group_id = $1 AND user_id = $2`
 
 	var m domain.GroupMember
 	err := r.pool.QueryRow(ctx, query, groupID, userID).Scan(
-		&m.GroupID, &m.UserID, &m.Role, &m.Status, &m.InvitedBy, &m.JoinedAt, &m.CreatedAt, &m.UpdatedAt,
+		&m.UserID, &m.Role, &m.Status, &m.InvitedBy, &m.JoinedAt, &m.CreatedAt, &m.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -76,9 +93,9 @@ func (r *postgresRepository) GetMember(ctx context.Context, groupID, userID uuid
 
 func (r *postgresRepository) ListGroupMembers(ctx context.Context, groupID uuid.UUID) ([]domain.GroupMember, error) {
 	query := `
-		SELECT group_id, user_id, role, status, invited_by, joined_at, created_at, updated_at
+		SELECT user_id, role, status, invited_by, joined_at, created_at, updated_at
 		FROM group_members
-		WHERE group_id = $1`
+		WHERE group_id = $1 AND status = 'accepted'`
 
 	rows, err := r.pool.Query(ctx, query, groupID)
 	if err != nil {
@@ -90,7 +107,7 @@ func (r *postgresRepository) ListGroupMembers(ctx context.Context, groupID uuid.
 	for rows.Next() {
 		var m domain.GroupMember
 		err := rows.Scan(
-			&m.GroupID, &m.UserID, &m.Role, &m.Status, &m.InvitedBy, &m.JoinedAt, &m.CreatedAt, &m.UpdatedAt,
+			&m.UserID, &m.Role, &m.Status, &m.InvitedBy, &m.JoinedAt, &m.CreatedAt, &m.UpdatedAt,
 		)
 		if err != nil {
 			return nil, err
@@ -112,4 +129,123 @@ func (r *postgresRepository) IsOwner(ctx context.Context, groupID, userID uuid.U
 	var exists bool
 	err := r.pool.QueryRow(ctx, query, groupID, userID).Scan(&exists)
 	return exists, err
+}
+
+func (r *postgresRepository) GetUserInvitations(ctx context.Context, userID uuid.UUID) ([]domain.InvitationResponse, error) {
+	query := `
+		SELECT 
+			gm.group_id, 
+			gm.created_at as sent_at,
+			g.id as group_id_info, 
+			g.name as group_name, 
+			(SELECT COUNT(*) FROM group_members WHERE group_id = g.id AND status = 'accepted') as member_count,
+			u.id as inviter_id, 
+			u.name as inviter_name, 
+			u.email as inviter_email,
+			uto.id as invite_to_id,
+			uto.name as invite_to_name,
+			uto.email as invite_to_email
+		FROM group_members gm
+		JOIN groups g ON gm.group_id = g.id
+		JOIN users u ON gm.invited_by = u.id
+		JOIN users uto ON gm.user_id = uto.id
+		WHERE gm.user_id = $1 AND gm.status = 'pending'`
+
+	rows, err := r.pool.Query(ctx, query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var invitations []domain.InvitationResponse
+	for rows.Next() {
+		var inv domain.InvitationResponse
+		var groupInfo domain.GroupInfo
+		var inviterInfo domain.UserInfo
+		var inviteTo domain.UserInfo
+
+		err := rows.Scan(
+			&inv.ID,
+			&inv.SentAt,
+			&groupInfo.ID,
+			&groupInfo.Name,
+			&groupInfo.MemberCount,
+			&inviterInfo.ID,
+			&inviterInfo.Name,
+			&inviterInfo.Email,
+			&inviteTo.ID,
+			&inviteTo.Name,
+			&inviteTo.Email,
+		)
+		if err != nil {
+			return nil, err
+		}
+		inv.Group = groupInfo
+		inv.Inviter = inviterInfo
+		inv.InviteTo = inviteTo
+		inv.MemberCount = groupInfo.MemberCount
+		invitations = append(invitations, inv)
+	}
+
+	if invitations == nil {
+		invitations = []domain.InvitationResponse{}
+	}
+
+	return invitations, nil
+}
+
+func (r *postgresRepository) GetGroupInvitations(ctx context.Context, groupID uuid.UUID) ([]domain.SentInvitationResponse, error) {
+	query := `
+		SELECT 
+			gm.group_id, 
+			gm.user_id, 
+			u.email as user_email, 
+			u.name as user_name, 
+			gm.invited_by, 
+			inv.name as inviter_name, 
+			gm.status, 
+			gm.created_at
+		FROM group_members gm
+		JOIN users u ON gm.user_id = u.id
+		JOIN users inv ON gm.invited_by = inv.id
+		WHERE gm.group_id = $1 AND gm.status = 'pending'
+		ORDER BY gm.created_at DESC`
+
+	rows, err := r.pool.Query(ctx, query, groupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var invitations []domain.SentInvitationResponse
+	for rows.Next() {
+		var inv domain.SentInvitationResponse
+		err := rows.Scan(
+			&inv.GroupID,
+			&inv.UserID,
+			&inv.UserEmail,
+			&inv.UserName,
+			&inv.InvitedBy,
+			&inv.InviterName,
+			&inv.Status,
+			&inv.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		invitations = append(invitations, inv)
+	}
+
+	if invitations == nil {
+		invitations = []domain.SentInvitationResponse{}
+	}
+
+	return invitations, nil
+}
+
+func (r *postgresRepository) CountMembers(ctx context.Context, groupID uuid.UUID) (int, error) {
+	query := `SELECT COUNT(*) FROM group_members WHERE group_id = $1`
+	var count int
+	err := r.pool.QueryRow(ctx, query, groupID).Scan(&count)
+	return count, err
 }

@@ -20,6 +20,9 @@ func (a *App) SetupRoutes(cfg config.Config) {
 
 		protected.Any("/groups/*proxyPath",
 			handlers.ReverseProxy(cfg.AuthHTTPURL, cfg.APIPrefix+"/groups"))
+
+		protected.Any("/metrics/*proxyPath",
+			handlers.ReverseProxy(cfg.StorageHTTPURL, cfg.APIPrefix+"/metrics"))
 	}
 
 	a.Router.GET("/gateway/health", handlers.PingHandler)

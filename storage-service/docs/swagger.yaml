@@ -1,0 +1,73 @@
+basePath: /
+definitions:
+  helpers.DataResponse:
+    properties:
+      data: {}
+    type: object
+  helpers.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+host: localhost:5003
+info:
+  contact: {}
+  description: This is the API for Storage Service of HealthMate application.
+  title: HealthMate Storage API
+  version: "1.0"
+paths:
+  /metrics/charts:
+    get:
+      consumes:
+      - application/json
+      description: Get aggregated chart data for a specific metric type and user
+      parameters:
+      - description: User ID
+        in: query
+        name: user_id
+        required: true
+        type: string
+      - description: Metric Type (e.g. heart_rate, steps)
+        in: query
+        name: metric_type
+        required: true
+        type: string
+      - description: Time Range (e.g. 24h, 7d, 30d, custom)
+        in: query
+        name: range
+        required: true
+        type: string
+      - description: Start Time (RFC3339) - required for custom range
+        in: query
+        name: start_time
+        type: string
+      - description: End Time (RFC3339) - required for custom range
+        in: query
+        name: end_time
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/helpers.DataResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/helpers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get chart data for metrics
+      tags:
+      - metrics
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

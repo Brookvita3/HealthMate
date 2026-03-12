@@ -2,7 +2,6 @@ package permission
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -18,7 +17,7 @@ func NewRepository(pool *pgxpool.Pool) Repository {
 func (r *pgRepository) CheckAccess(ctx context.Context, observerUserID, targetUserID string, metricType string) (bool, error) {
 
 	if observerUserID == targetUserID {
-		return true, nil
+		return false, ErrSelfSubscription
 	}
 
 	sql := `
@@ -44,7 +43,7 @@ func (r *pgRepository) CheckAccess(ctx context.Context, observerUserID, targetUs
 	var hasAccess bool
 	err := r.pool.QueryRow(ctx, sql, observerUserID, targetUserID, metricType).Scan(&hasAccess)
 	if err != nil {
-		return false, fmt.Errorf("error checking access: %w", err)
+		return false, ErrPermissionCheckFailed
 	}
 
 	return hasAccess, nil

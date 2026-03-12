@@ -44,6 +44,64 @@ func (_m *PermissionRepository) IsMember(ctx context.Context, groupID uuid.UUID,
 	return r0, r1
 }
 
+// IsValidMetricType provides a mock function with given fields: ctx, metricType
+func (_m *PermissionRepository) IsValidMetricType(ctx context.Context, metricType string) (bool, error) {
+	ret := _m.Called(ctx, metricType)
+
+	if len(ret) == 0 {
+		panic("no return value specified for IsValidMetricType")
+	}
+
+	var r0 bool
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) (bool, error)); ok {
+		return rf(ctx, metricType)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) bool); ok {
+		r0 = rf(ctx, metricType)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, metricType)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListMetricTypes provides a mock function with given fields: ctx
+func (_m *PermissionRepository) ListMetricTypes(ctx context.Context) ([]domain.MetricType, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListMetricTypes")
+	}
+
+	var r0 []domain.MetricType
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) ([]domain.MetricType, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) []domain.MetricType); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]domain.MetricType)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ListUserPermissionsInGroup provides a mock function with given fields: ctx, groupID, userID
 func (_m *PermissionRepository) ListUserPermissionsInGroup(ctx context.Context, groupID uuid.UUID, userID uuid.UUID) ([]domain.Permission, error) {
 	ret := _m.Called(ctx, groupID, userID)

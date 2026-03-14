@@ -16,6 +16,8 @@ type Config struct {
 	KafkaTopic     string
 	KafkaGroupID   string
 	APIPrefix      string
+	ModelPath      string // path to readiness_model.onnx
+	OnnxLibPath    string // path to libonnxruntime.so / onnxruntime.dll
 }
 
 func LoadConfig() Config {
@@ -33,6 +35,8 @@ func LoadConfig() Config {
 		KafkaTopic:     os.Getenv("KAFKA_TOPIC"),
 		KafkaGroupID:   os.Getenv("KAFKA_GROUP_ID"),
 		APIPrefix:      os.Getenv("API_PREFIX"),
+		ModelPath:      os.Getenv("MODEL_PATH"),
+		OnnxLibPath:    os.Getenv("ONNX_LIB_PATH"),
 	}
 
 	return config

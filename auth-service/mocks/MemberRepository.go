@@ -34,6 +34,64 @@ func (_m *MemberRepository) AddMember(ctx context.Context, groupID uuid.UUID, us
 	return r0
 }
 
+// CountMembers provides a mock function with given fields: ctx, groupID
+func (_m *MemberRepository) CountMembers(ctx context.Context, groupID uuid.UUID) (int, error) {
+	ret := _m.Called(ctx, groupID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CountMembers")
+	}
+
+	var r0 int
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) (int, error)); ok {
+		return rf(ctx, groupID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) int); ok {
+		r0 = rf(ctx, groupID)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = rf(ctx, groupID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetGroupInvitations provides a mock function with given fields: ctx, groupID
+func (_m *MemberRepository) GetGroupInvitations(ctx context.Context, groupID uuid.UUID) ([]domain.SentInvitationResponse, error) {
+	ret := _m.Called(ctx, groupID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetGroupInvitations")
+	}
+
+	var r0 []domain.SentInvitationResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) ([]domain.SentInvitationResponse, error)); ok {
+		return rf(ctx, groupID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) []domain.SentInvitationResponse); ok {
+		r0 = rf(ctx, groupID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]domain.SentInvitationResponse)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = rf(ctx, groupID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetMember provides a mock function with given fields: ctx, groupID, userID
 func (_m *MemberRepository) GetMember(ctx context.Context, groupID uuid.UUID, userID uuid.UUID) (*domain.GroupMember, error) {
 	ret := _m.Called(ctx, groupID, userID)

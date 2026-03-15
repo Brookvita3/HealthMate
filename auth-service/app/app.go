@@ -45,6 +45,7 @@ type Dependencies struct {
 	GroupService      group.Service
 	MemberService     member.Service
 	PermissionService permission.Service
+	UserService       user.Service
 	Validator         *validation.Validator
 }
 
@@ -130,6 +131,16 @@ func NewHTTPServer(deps *Dependencies) *HTTPServer {
 		}
 	}
 
+	// ===== User routes =====
+	userHandler := user.NewHandler(deps.UserService)
+	userGroup := api.Group("/users")
+	userGroup.Use(authHandler.AuthMiddleware())
+	{
+		userGroup.GET("/profile", userHandler.GetProfile)
+		userGroup.PUT("/profile", userHandler.UpdateProfile)
+		userGroup.GET("", userHandler.ListUsers)
+	}
+
 	srv := &http.Server{
 		Addr:    ":" + deps.Config.HTTPPort,
 		Handler: router,
@@ -188,6 +199,7 @@ func NewDependencies(cfg *config.Config) *Dependencies {
 		GroupService:      group.NewService(groupRepo, userRepo, memberRepo),
 		MemberService:     member.NewService(memberRepo, userRepo),
 		PermissionService: permission.NewService(permissionRepo),
+		UserService:       user.NewUserService(userRepo),
 		Validator:         validator,
 	}
 }

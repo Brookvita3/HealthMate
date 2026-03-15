@@ -15,8 +15,8 @@ func (a *App) SetupRoutes(cfg config.Config) {
 	protected := a.Router.Group("")
 	protected.Use(middleware.JWTAuthMiddleware(a.JWTSecret))
 	{
-		protected.Any("/user/data",
-			handlers.KafkaSendHandler(a.KafkaProducer, cfg.KafkaTopic))
+		protected.Any("/users/*proxyPath",
+			handlers.ReverseProxy(cfg.AuthHTTPURL, cfg.APIPrefix+"/users"))
 
 		protected.Any("/groups/*proxyPath",
 			handlers.ReverseProxy(cfg.AuthHTTPURL, cfg.APIPrefix+"/groups"))

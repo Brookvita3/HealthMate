@@ -24,6 +24,14 @@ type postgresUser struct {
 	Role    string      `db:"role"`
 	Status  string      `db:"status"`
 
+	Phone      pgtype.Text    `db:"phone"`
+	Address    pgtype.Text    `db:"address"`
+	Gender     pgtype.Text    `db:"gender"`
+	Birthday   pgtype.Date    `db:"birthday"`
+	Weight     pgtype.Float8  `db:"weight"`
+	Height     pgtype.Float8  `db:"height"`
+	BloodGroup pgtype.Text    `db:"blood_group"`
+
 	Provider string      `db:"provider"`
 	GoogleID pgtype.Text `db:"google_id"`
 	Password pgtype.Text `db:"password"`
@@ -44,8 +52,8 @@ func NewRepository(pool *pgxpool.Pool) UserRepository {
 
 func (r *postgresRepository) CreateUser(ctx context.Context, user *domain.User) error {
 	query := `
-		INSERT INTO users (id, email, name, picture, role, status, provider, google_id, password)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
+		INSERT INTO users (id, email, name, picture, role, status, provider, google_id, password, phone, address, gender, birthday, weight, height, blood_group)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`
 	pUser := fromDomainUser(*user)
 	_, err := r.pool.Exec(ctx, query,
 		pUser.Id,
@@ -57,6 +65,13 @@ func (r *postgresRepository) CreateUser(ctx context.Context, user *domain.User) 
 		pUser.Provider,
 		pUser.GoogleID,
 		pUser.Password,
+		pUser.Phone,
+		pUser.Address,
+		pUser.Gender,
+		pUser.Birthday,
+		pUser.Weight,
+		pUser.Height,
+		pUser.BloodGroup,
 	)
 
 	return err
@@ -64,7 +79,7 @@ func (r *postgresRepository) CreateUser(ctx context.Context, user *domain.User) 
 
 func (r *postgresRepository) GetUserByEmail(ctx context.Context, email string) (*domain.User, error) {
 	query := `
-		SELECT id, email, name, picture, role, status, provider, google_id, password, created_at, updated_at
+		SELECT id, email, name, picture, role, status, provider, google_id, password, phone, address, gender, birthday, weight, height, blood_group, created_at, updated_at
 		FROM users
 		WHERE email = $1`
 
@@ -82,7 +97,7 @@ func (r *postgresRepository) GetUserByEmail(ctx context.Context, email string) (
 
 func (r *postgresRepository) GetUserById(ctx context.Context, id uuid.UUID) (*domain.User, error) {
 	query := `
-		SELECT id, email, name, picture, role, status, provider, google_id, password, created_at, updated_at
+		SELECT id, email, name, picture, role, status, provider, google_id, password, phone, address, gender, birthday, weight, height, blood_group, created_at, updated_at
 		FROM users
 		WHERE id = $1`
 
@@ -117,7 +132,7 @@ func (r *postgresRepository) UpdatePassword(ctx context.Context, id uuid.UUID, p
 }
 
 func (r *postgresRepository) ListUsers(ctx context.Context, params ListUsersParams) ([]domain.User, error) {
-	query := `SELECT id, email, name, picture, role, status, provider, google_id, password, created_at, updated_at
+	query := `SELECT id, email, name, picture, role, status, provider, google_id, password, phone, address, gender, birthday, weight, height, blood_group, created_at, updated_at
 			  FROM users`
 
 	var conditions []string
@@ -197,6 +212,45 @@ func (r *postgresRepository) UpdateUser(ctx context.Context, id uuid.UUID, param
 		args = append(args, *params.Status)
 		argId++
 	}
+	if params.Phone != nil {
+		setClauses = append(setClauses, fmt.Sprintf("phone = $%d", argId))
+		args = append(args, *params.Phone)
+		argId++
+	}
+	if params.Address != nil {
+		setClauses = append(setClauses, fmt.Sprintf("address = $%d", argId))
+		args = append(args, *params.Address)
+		argId++
+	}
+	if params.Gender != nil {
+		setClauses = append(setClauses, fmt.Sprintf("gender = $%d", argId))
+		args = append(args, *params.Gender)
+		argId++
+	}
+	if params.Birthday != nil {
+		if *params.Birthday == "" {
+			setClauses = append(setClauses, "birthday = NULL")
+		} else {
+			setClauses = append(setClauses, fmt.Sprintf("birthday = $%d", argId))
+			args = append(args, *params.Birthday)
+			argId++
+		}
+	}
+	if params.Weight != nil {
+		setClauses = append(setClauses, fmt.Sprintf("weight = $%d", argId))
+		args = append(args, *params.Weight)
+		argId++
+	}
+	if params.Height != nil {
+		setClauses = append(setClauses, fmt.Sprintf("height = $%d", argId))
+		args = append(args, *params.Height)
+		argId++
+	}
+	if params.BloodGroup != nil {
+		setClauses = append(setClauses, fmt.Sprintf("blood_group = $%d", argId))
+		args = append(args, *params.BloodGroup)
+		argId++
+	}
 
 	if len(setClauses) == 0 {
 		return nil
@@ -267,6 +321,13 @@ func (r *postgresRepository) scanUser(row scannable) (*postgresUser, error) {
 		&u.Provider,
 		&u.GoogleID,
 		&u.Password,
+		&u.Phone,
+		&u.Address,
+		&u.Gender,
+		&u.Birthday,
+		&u.Weight,
+		&u.Height,
+		&u.BloodGroup,
 		&u.CreatedAt,
 		&u.UpdatedAt,
 	)
@@ -300,6 +361,27 @@ func toDomainUser(p postgresUser) *domain.User {
 	if p.Password.Valid {
 		u.Password = p.Password.String
 	}
+	if p.Phone.Valid {
+		u.Phone = p.Phone.String
+	}
+	if p.Address.Valid {
+		u.Address = p.Address.String
+	}
+	if p.Gender.Valid {
+		u.Gender = p.Gender.String
+	}
+	if p.Birthday.Valid {
+		u.Birthday = p.Birthday.Time.Format(time.DateOnly)
+	}
+	if p.Weight.Valid {
+		u.Weight = p.Weight.Float64
+	}
+	if p.Height.Valid {
+		u.Height = p.Height.Float64
+	}
+	if p.BloodGroup.Valid {
+		u.BloodGroup = p.BloodGroup.String
+	}
 
 	return u
 }
@@ -327,6 +409,39 @@ func fromDomainUser(u domain.User) *postgresUser {
 
 	if u.Password != "" {
 		p.Password = pgtype.Text{String: u.Password, Valid: true}
+	}
+
+	if u.Phone != "" {
+		p.Phone = pgtype.Text{String: u.Phone, Valid: true}
+	}
+
+	if u.Address != "" {
+		p.Address = pgtype.Text{String: u.Address, Valid: true}
+	}
+
+	if u.Gender != "" {
+		p.Gender = pgtype.Text{String: u.Gender, Valid: true}
+	}
+
+	if u.Birthday != "" {
+		// Try to parse as RFC3339 first, then DateOnly
+		if t, err := time.Parse(time.RFC3339, u.Birthday); err == nil {
+			p.Birthday = pgtype.Date{Time: t, Valid: true}
+		} else if t, err := time.Parse(time.DateOnly, u.Birthday); err == nil {
+			p.Birthday = pgtype.Date{Time: t, Valid: true}
+		}
+	}
+
+	if u.Weight != 0 {
+		p.Weight = pgtype.Float8{Float64: u.Weight, Valid: true}
+	}
+
+	if u.Height != 0 {
+		p.Height = pgtype.Float8{Float64: u.Height, Valid: true}
+	}
+
+	if u.BloodGroup != "" {
+		p.BloodGroup = pgtype.Text{String: u.BloodGroup, Valid: true}
 	}
 
 	return p

@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs wc:*)",
+      "Bash(mkdir -p \"d:/Admin/Documents/GitHub/HealthMate/storage-service/models\")",
+      "Bash(cp \"d:/Admin/Documents/GitHub/HealthMate/models/readiness_model.onnx\" \"d:/Admin/Documents/GitHub/HealthMate/storage-service/models/readiness_model.onnx\")",
+      "Bash(go get:*)",
+      "Bash(cmd /c \"where go 2>&1\")",
+      "Bash(cmd /c \"where go\")",
+      "Bash(cmd /c \"go version 2>&1 || echo NOT_FOUND\")",
+      "Read(//c/Users/Admin/go/**)",
+      "Read(//c/Users/Admin/AppData/Local/**)",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

@@ -15,21 +15,24 @@ import (
 )
 
 type testEnv struct {
-	GroupRepository *mocks.GroupRepository
-	UserRepository  *mocks.UserRepository
-	Service         group.Service
+	GroupRepository  *mocks.GroupRepository
+	UserRepository   *mocks.UserRepository
+	MemberRepository *mocks.MemberRepository
+	Service          group.Service
 }
 
 func setupTest() *testEnv {
 	mockGroupRepo := new(mocks.GroupRepository)
 	mockUserRepo := new(mocks.UserRepository)
+	mockMemberRepo := new(mocks.MemberRepository)
 
-	service := group.NewService(mockGroupRepo, mockUserRepo)
+	service := group.NewService(mockGroupRepo, mockUserRepo, mockMemberRepo)
 
 	return &testEnv{
-		GroupRepository: mockGroupRepo,
-		UserRepository:  mockUserRepo,
-		Service:         service,
+		GroupRepository:  mockGroupRepo,
+		UserRepository:   mockUserRepo,
+		MemberRepository: mockMemberRepo,
+		Service:          service,
 	}
 }
 
@@ -48,6 +51,7 @@ func TestCreateGroup(t *testing.T) {
 		}
 
 		env.UserRepository.On("Exists", mock.Anything, ownerID).Return(true, nil).Once()
+		env.GroupRepository.On("FindByName", mock.Anything, name).Return(nil, group.ErrGroupNotFound).Once()
 		env.GroupRepository.On("Create", mock.Anything, group.CreateGroupParams{
 			Name:        name,
 			Description: &description,
@@ -103,6 +107,7 @@ func TestCreateGroup(t *testing.T) {
 		dbError := errors.New("database error")
 
 		env.UserRepository.On("Exists", mock.Anything, ownerID).Return(true, nil).Once()
+		env.GroupRepository.On("FindByName", mock.Anything, name).Return(nil, group.ErrGroupNotFound).Once()
 		env.GroupRepository.On("Create", mock.Anything, mock.Anything).Return(nil, dbError).Once()
 
 		result, err := env.Service.CreateGroup(context.Background(), ownerID, name, nil)
@@ -161,6 +166,7 @@ func TestUpdateGroup(t *testing.T) {
 		newDescription := "Updated Description"
 
 		env.GroupRepository.On("FindByID", mock.Anything, groupID).Return(&domain.Group{ID: groupID, OwnerID: requesterID}, nil).Once()
+		env.GroupRepository.On("FindByName", mock.Anything, newName).Return(nil, group.ErrGroupNotFound).Once()
 		env.GroupRepository.On("Update", mock.Anything, groupID, group.UpdateGroupParams{
 			Name:        &newName,
 			Description: &newDescription,
@@ -217,6 +223,7 @@ func TestDeleteGroup(t *testing.T) {
 		requesterID := uuid.New()
 
 		env.GroupRepository.On("FindByID", mock.Anything, groupID).Return(&domain.Group{ID: groupID, OwnerID: requesterID}, nil).Once()
+		env.MemberRepository.On("CountMembers", mock.Anything, groupID).Return(1, nil).Once()
 		env.GroupRepository.On("Delete", mock.Anything, groupID).Return(nil).Once()
 
 		err := env.Service.DeleteGroup(context.Background(), groupID, requesterID)

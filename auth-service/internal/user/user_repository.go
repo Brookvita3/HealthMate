@@ -17,10 +17,18 @@ type ListUsersParams struct {
 
 // UpdateUserParams contains the parameters for updating a user's profile.
 type UpdateUserParams struct {
-	Name    *string
-	Role    *string
-	Status  *string
-	Picture *string
+	Name    *string `json:"name"`
+	Role    *string `json:"role"`
+	Status  *string `json:"status"`
+	Picture *string `json:"picture"`
+
+	Phone      *string  `json:"phone"`
+	Address    *string  `json:"address"`
+	Gender     *string  `json:"gender"`
+	Birthday   *string  `json:"birthday"`
+	Weight     *float64 `json:"weight"`
+	Height     *float64 `json:"height"`
+	BloodGroup *string  `json:"blood_group"`
 }
 
 type UserRepository interface {

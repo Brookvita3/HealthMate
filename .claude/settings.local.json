@@ -11,7 +11,8 @@
       "Read(//c/Users/Admin/go/**)",
       "Read(//c/Users/Admin/AppData/Local/**)",
       "Bash(git checkout:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(xargs grep:*)"
     ]
   }
 }

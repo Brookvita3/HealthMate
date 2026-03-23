@@ -49,9 +49,10 @@ func NewApp(cfg *config.Config) *App {
 	kafkaConsumer := kafka.NewConsumer(cfg.KafkaAddr, cfg.KafkaTopic, cfg.KafkaGroupID, metricService)
 
 	if err := readiness.Init(cfg.OnnxLibPath, cfg.ModelPath); err != nil {
-		log.Fatalf("Failed to load readiness model: %v", err)
+		log.Printf("WARNING: Failed to load readiness model (readiness endpoint will be unavailable): %v", err)
+	} else {
+		log.Println("Readiness model loaded successfully.")
 	}
-	log.Println("Readiness model loaded successfully.")
 
 	router := gin.Default()
 	setupRoutes(router, metricHandler, cfg.JWTSecret, cfg.APIPrefix)

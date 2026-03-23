@@ -18,8 +18,8 @@ RUN go mod download
 # Copy full source
 COPY . .
 
-# Build binary with CGO enabled (required by onnxruntime_go)
-RUN CGO_ENABLED=1 GOOS=linux go build -o storage-service ./cmd/server
+# Sync go.sum then build
+RUN go mod tidy && CGO_ENABLED=1 GOOS=linux go build -o storage-service ./cmd/server
 
 # --- Stage 2: Run ---
 FROM debian:bookworm-slim

@@ -17,7 +17,11 @@ type Input struct {
 	CaloriesBurned float64 // kcal (raw)
 }
 
-var session *ort.AdvancedSession
+var (
+	session      *ort.AdvancedSession
+	inputTensor  *ort.Tensor[float32]
+	outputTensor *ort.Tensor[float32]
+)
 
 // Init loads the ONNX Runtime shared library and creates the inference session.
 // Must be called once at application startup before any Predict call.
@@ -28,13 +32,28 @@ func Init(onnxLibPath, modelPath string) error {
 	}
 
 	var err error
+	inputTensor, err = ort.NewTensor(ort.NewShape(1, 6), make([]float32, 6))
+	if err != nil {
+		return fmt.Errorf("create input tensor: %w", err)
+	}
+
+	outputTensor, err = ort.NewEmptyTensor[float32](ort.NewShape(1, 1))
+	if err != nil {
+		inputTensor.Destroy()
+		return fmt.Errorf("create output tensor: %w", err)
+	}
+
 	session, err = ort.NewAdvancedSession(
 		modelPath,
 		[]string{"features"},
 		[]string{"predictions"},
+		[]ort.Value{inputTensor},
+		[]ort.Value{outputTensor},
 		nil,
 	)
 	if err != nil {
+		inputTensor.Destroy()
+		outputTensor.Destroy()
 		return fmt.Errorf("create onnx session: %w", err)
 	}
 	return nil
@@ -64,30 +83,17 @@ func Predict(inp Input) (float64, error) {
 	}
 
 	features := []float32{
-		float32(inp.HeartRate),                               // [0] Heart_Rate
-		float32(inp.SleepDuration),                          // [1] Sleep_Duration
-		stress,                                               // [2] Stress_Level_Num
-		spo2,                                                 // [3] Blood_Oxygen
-		float32(math.Log1p(math.Max(inp.Steps, 0))),         // [4] Steps_log1p
+		float32(inp.HeartRate),                                // [0] Heart_Rate
+		float32(inp.SleepDuration),                           // [1] Sleep_Duration
+		stress,                                                // [2] Stress_Level_Num
+		spo2,                                                  // [3] Blood_Oxygen
+		float32(math.Log1p(math.Max(inp.Steps, 0))),          // [4] Steps_log1p
 		float32(math.Log1p(math.Max(inp.CaloriesBurned, 0))), // [5] Calories_log1p
 	}
 
-	inputTensor, err := ort.NewTensor(ort.NewShape(1, 6), features)
-	if err != nil {
-		return 0, fmt.Errorf("create input tensor: %w", err)
-	}
-	defer inputTensor.Destroy()
+	copy(inputTensor.GetData(), features)
 
-	outputTensor, err := ort.NewEmptyTensor[float32](ort.NewShape(1, 1))
-	if err != nil {
-		return 0, fmt.Errorf("create output tensor: %w", err)
-	}
-	defer outputTensor.Destroy()
-
-	if err := session.Run(
-		[]ort.ArbitraryTensor{inputTensor},
-		[]ort.ArbitraryTensor{outputTensor},
-	); err != nil {
+	if err := session.Run(); err != nil {
 		return 0, fmt.Errorf("onnx inference: %w", err)
 	}
 

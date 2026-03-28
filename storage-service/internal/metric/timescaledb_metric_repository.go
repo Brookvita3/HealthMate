@@ -97,9 +97,5 @@ func (r *pgRepository) GetAggregatedMetrics(ctx context.Context, userID string, 
 		results = append(results, dp)
 	}
 
-	if len(results) == 0 {
-		return nil, ErrMetricNotFound
-	}
-
 	return results, nil
 }

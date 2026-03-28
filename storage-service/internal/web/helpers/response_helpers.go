@@ -30,5 +30,5 @@ func HandleError(c *gin.Context, err error) {
 }
 
 func RespondData(c *gin.Context, data interface{}) {
-	c.JSON(http.StatusOK, data)
+	c.JSON(http.StatusOK, DataResponse{Data: data})
 }

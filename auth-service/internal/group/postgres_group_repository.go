@@ -346,14 +346,14 @@ func (r *postgresRepository) Exists(ctx context.Context, id uuid.UUID) (bool, er
 	return exists, nil
 }
 
-// FindByName implements GroupRepository.FindByName
-func (r *postgresRepository) FindByName(ctx context.Context, name string) (*domain.Group, error) {
+// FindByNameAndOwner retrieves a group by its name and owner ID
+func (r *postgresRepository) FindByNameAndOwner(ctx context.Context, name string, ownerID uuid.UUID) (*domain.Group, error) {
 	query := `
 		SELECT id, name, description, owner_id, created_at, updated_at
 		FROM groups
-		WHERE name = $1`
+		WHERE name = $1 AND owner_id = $2`
 
-	row := r.pool.QueryRow(ctx, query, name)
+	row := r.pool.QueryRow(ctx, query, name, ownerID)
 
 	pGroup, err := r.scanGroup(row)
 	if err != nil {

@@ -70,8 +70,8 @@ func (s *serviceImpl) CreateGroup(ctx context.Context, ownerID uuid.UUID, name s
 		return nil, ErrNotGroupOwner
 	}
 
-	// Check if group name already exists
-	if _, err := s.groupRepo.FindByName(ctx, name); err == nil {
+	// Check if group name already exists for this owner
+	if _, err := s.groupRepo.FindByNameAndOwner(ctx, name, ownerID); err == nil {
 		return nil, ErrGroupAlreadyExists
 	} else if !errors.Is(err, ErrGroupNotFound) {
 		return nil, err
@@ -109,8 +109,8 @@ func (s *serviceImpl) UpdateGroup(ctx context.Context, groupID uuid.UUID, name, 
 			return err
 		}
 
-		// Check if new name already exists for another group
-		existing, err := s.groupRepo.FindByName(ctx, *name)
+		// Check if new name already exists for another group by same owner
+		existing, err := s.groupRepo.FindByNameAndOwner(ctx, *name, requesterID)
 		if err == nil {
 			if existing.ID != groupID {
 				return ErrGroupAlreadyExists

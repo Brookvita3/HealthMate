@@ -123,29 +123,29 @@ func (_m *GroupRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.
 	return r0, r1
 }
 
-// FindByName provides a mock function with given fields: ctx, name
-func (_m *GroupRepository) FindByName(ctx context.Context, name string) (*domain.Group, error) {
-	ret := _m.Called(ctx, name)
+// FindByNameAndOwner provides a mock function with given fields: ctx, name, ownerID
+func (_m *GroupRepository) FindByNameAndOwner(ctx context.Context, name string, ownerID uuid.UUID) (*domain.Group, error) {
+	ret := _m.Called(ctx, name, ownerID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for FindByName")
+		panic("no return value specified for FindByNameAndOwner")
 	}
 
 	var r0 *domain.Group
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) (*domain.Group, error)); ok {
-		return rf(ctx, name)
+	if rf, ok := ret.Get(0).(func(context.Context, string, uuid.UUID) (*domain.Group, error)); ok {
+		return rf(ctx, name, ownerID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string) *domain.Group); ok {
-		r0 = rf(ctx, name)
+	if rf, ok := ret.Get(0).(func(context.Context, string, uuid.UUID) *domain.Group); ok {
+		r0 = rf(ctx, name, ownerID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*domain.Group)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, name)
+	if rf, ok := ret.Get(1).(func(context.Context, string, uuid.UUID) error); ok {
+		r1 = rf(ctx, name, ownerID)
 	} else {
 		r1 = ret.Error(1)
 	}

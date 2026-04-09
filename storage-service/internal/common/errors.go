@@ -12,5 +12,6 @@ func (e *BusinessError) Error() string {
 
 var (
 	ErrInvalidRequest = &BusinessError{Code: 400, Message: "invalid request"}
+	ErrNotFound       = &BusinessError{Code: 404, Message: "not found"}
 	ErrInternalServer = &BusinessError{Code: 500, Message: "internal server error"}
 )

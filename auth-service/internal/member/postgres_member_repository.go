@@ -74,13 +74,21 @@ func (r *postgresRepository) RemoveMember(ctx context.Context, groupID, userID u
 
 func (r *postgresRepository) GetMember(ctx context.Context, groupID, userID uuid.UUID) (*domain.GroupMember, error) {
 	query := `
-		SELECT user_id, role, status, invited_by, joined_at, created_at, updated_at
-		FROM group_members
-		WHERE group_id = $1 AND user_id = $2`
+		SELECT gm.user_id,
+		       COALESCE(
+		         NULLIF(TRIM(u.name), ''),
+		         NULLIF(SPLIT_PART(COALESCE(u.email, ''), '@', 1), ''),
+		         ''
+		       ),
+		       COALESCE(u.email, ''),
+		       gm.role, gm.status, gm.invited_by, gm.joined_at, gm.created_at, gm.updated_at
+		FROM group_members gm
+		INNER JOIN users u ON u.id = gm.user_id
+		WHERE gm.group_id = $1 AND gm.user_id = $2`
 
 	var m domain.GroupMember
 	err := r.pool.QueryRow(ctx, query, groupID, userID).Scan(
-		&m.UserID, &m.Role, &m.Status, &m.InvitedBy, &m.JoinedAt, &m.CreatedAt, &m.UpdatedAt,
+		&m.UserID, &m.Name, &m.Email, &m.Role, &m.Status, &m.InvitedBy, &m.JoinedAt, &m.CreatedAt, &m.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -93,9 +101,17 @@ func (r *postgresRepository) GetMember(ctx context.Context, groupID, userID uuid
 
 func (r *postgresRepository) ListGroupMembers(ctx context.Context, groupID uuid.UUID) ([]domain.GroupMember, error) {
 	query := `
-		SELECT user_id, role, status, invited_by, joined_at, created_at, updated_at
-		FROM group_members
-		WHERE group_id = $1 AND status = 'accepted'`
+		SELECT gm.user_id,
+		       COALESCE(
+		         NULLIF(TRIM(u.name), ''),
+		         NULLIF(SPLIT_PART(COALESCE(u.email, ''), '@', 1), ''),
+		         ''
+		       ),
+		       COALESCE(u.email, ''),
+		       gm.role, gm.status, gm.invited_by, gm.joined_at, gm.created_at, gm.updated_at
+		FROM group_members gm
+		INNER JOIN users u ON u.id = gm.user_id
+		WHERE gm.group_id = $1 AND gm.status = 'accepted'`
 
 	rows, err := r.pool.Query(ctx, query, groupID)
 	if err != nil {
@@ -107,7 +123,7 @@ func (r *postgresRepository) ListGroupMembers(ctx context.Context, groupID uuid.
 	for rows.Next() {
 		var m domain.GroupMember
 		err := rows.Scan(
-			&m.UserID, &m.Role, &m.Status, &m.InvitedBy, &m.JoinedAt, &m.CreatedAt, &m.UpdatedAt,
+			&m.UserID, &m.Name, &m.Email, &m.Role, &m.Status, &m.InvitedBy, &m.JoinedAt, &m.CreatedAt, &m.UpdatedAt,
 		)
 		if err != nil {
 			return nil, err

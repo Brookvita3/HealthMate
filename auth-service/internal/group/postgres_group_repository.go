@@ -346,7 +346,7 @@ func (r *postgresRepository) Exists(ctx context.Context, id uuid.UUID) (bool, er
 	return exists, nil
 }
 
-// FindByNameAndOwner retrieves a group by its name and owner ID
+// FindByNameAndOwner implements GroupRepository.FindByNameAndOwner
 func (r *postgresRepository) FindByNameAndOwner(ctx context.Context, name string, ownerID uuid.UUID) (*domain.Group, error) {
 	query := `
 		SELECT id, name, description, owner_id, created_at, updated_at

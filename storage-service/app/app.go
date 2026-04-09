@@ -5,15 +5,17 @@ import (
 	"net/http"
 	"storage-service/config"
 	"storage-service/internal/kafka"
+	"storage-service/internal/medication"
 	"storage-service/internal/metric"
 	"storage-service/internal/middleware"
+	"storage-service/internal/notification"
 	"storage-service/internal/readiness"
 
 	"context"
 	"fmt"
 	"net"
-	"time"
 	postgrePlatform "storage-service/internal/platform/postgres"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -22,12 +24,15 @@ import (
 )
 
 type App struct {
-	MetricRepo    metric.MetricRepository
-	MetricService metric.Service
-	MetricHandler *metric.Handler
-	KafkaConsumer *kafka.Consumer
-	pgPool        *pgxpool.Pool
-	Router        *gin.Engine
+	MetricRepo        metric.MetricRepository
+	MetricService     metric.Service
+	MetricHandler     *metric.Handler
+	KafkaConsumer     *kafka.Consumer
+	MedicationRepo    medication.Repository
+	MedicationService medication.Service
+	MedicationHandler *medication.Handler
+	pgPool            *pgxpool.Pool
+	Router            *gin.Engine
 }
 
 func NewApp(cfg *config.Config) *App {
@@ -48,6 +53,16 @@ func NewApp(cfg *config.Config) *App {
 
 	kafkaConsumer := kafka.NewConsumer(cfg.KafkaAddr, cfg.KafkaTopic, cfg.KafkaGroupID, metricService)
 
+	tokenRepo := notification.NewRepository(pool)
+	notificationService, err := notification.NewFCMService(context.Background(), tokenRepo, cfg.FirebaseServiceAccountPath)
+	if err != nil {
+		log.Printf("WARNING: Failed to initialize FCM service: %v", err)
+	}
+
+	medicationRepo := medication.NewRepository(pool)
+	medicationService := medication.NewMedicationService(medicationRepo, notificationService, tokenRepo)
+	medicationHandler := medication.NewHandler(medicationService)
+
 	if err := readiness.Init(cfg.OnnxLibPath, cfg.ModelPath); err != nil {
 		log.Printf("WARNING: Failed to load readiness model (readiness endpoint will be unavailable): %v", err)
 	} else {
@@ -55,19 +70,22 @@ func NewApp(cfg *config.Config) *App {
 	}
 
 	router := gin.Default()
-	setupRoutes(router, metricHandler, cfg.JWTSecret, cfg.APIPrefix)
+	setupRoutes(router, metricHandler, medicationHandler, cfg.JWTSecret, cfg.APIPrefix)
 
 	return &App{
-		MetricRepo:    metricRepo,
-		MetricService: metricService,
-		MetricHandler: metricHandler,
-		KafkaConsumer: kafkaConsumer,
-		pgPool:        pool,
-		Router:        router,
+		MetricRepo:        metricRepo,
+		MetricService:     metricService,
+		MetricHandler:     metricHandler,
+		KafkaConsumer:     kafkaConsumer,
+		MedicationRepo:    medicationRepo,
+		MedicationService: medicationService,
+		MedicationHandler: medicationHandler,
+		pgPool:            pool,
+		Router:            router,
 	}
 }
 
-func setupRoutes(r *gin.Engine, metricHandler *metric.Handler, jwtSecret string, apiPrefix string) {
+func setupRoutes(r *gin.Engine, metricHandler *metric.Handler, medicationHandler *medication.Handler, jwtSecret string, apiPrefix string) {
 	// @Summary Health Check
 	// @Description Check if the service is up
 	// @Tags health
@@ -81,11 +99,24 @@ func setupRoutes(r *gin.Engine, metricHandler *metric.Handler, jwtSecret string,
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	api := r.Group(apiPrefix)
+
+	// Metrics endpoints
 	metrics := api.Group("/metrics")
 	metrics.Use(middleware.JWTAuthMiddleware(jwtSecret))
 	{
 		metrics.GET("/charts", metricHandler.GetChartData)
 		metrics.POST("/readiness", readiness.PredictHandler)
+	}
+
+	// Medication endpoints
+	medications := api.Group("/medications")
+	medications.Use(middleware.JWTAuthMiddleware(jwtSecret))
+	{
+		medications.GET("", medicationHandler.ListMedications)
+		medications.POST("", medicationHandler.CreateMedication)
+		medications.DELETE("/:medicationId", medicationHandler.DeleteMedication)
+		medications.POST("/:medicationId/reminders/:reminderId/take", medicationHandler.TakeMedication)
+		medications.POST("/device-token", medicationHandler.RegisterDeviceToken)
 	}
 }
 
@@ -101,6 +132,9 @@ func (a *App) Start(ctx context.Context, cfg *config.Config, errCh chan error) {
 
 		a.KafkaConsumer.Start(ctx, errCh)
 	}()
+
+	// Start Medication Reminder Scheduler
+	medication.StartScheduler(ctx, a.MedicationService)
 
 	log.Printf("Storage service started with Kafka consumer at address %s", cfg.KafkaAddr)
 

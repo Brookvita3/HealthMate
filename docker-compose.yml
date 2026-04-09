@@ -86,6 +86,25 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      ocr-service:
+        condition: service_started
+
+  ocr-service:
+    build:
+      context: ./ocr-service
+      dockerfile: Dockerfile
+    image: brookvita3/ocr-service:local
+    container_name: DACN-ocr-service
+    environment:
+      # keep empty for self-host only mode
+      OCR_FALLBACK_HTTP_URL: ""
+      # set to "ocr_space" to enable free-tier fallback
+      OCR_FALLBACK_MODE: ""
+      OCR_SPACE_API_KEY: ""
+    ports:
+      - "8010:8010"
+    networks:
+      - backend
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.2.15

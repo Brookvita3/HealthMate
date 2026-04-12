@@ -19,6 +19,9 @@ type App struct {
 func NewApp(cfg *config.Config) *App {
 	router := gin.Default()
 
+	router.RedirectTrailingSlash = false
+	router.RedirectFixedPath = false
+
 	KafkaProducer := kafka.NewKafkaProducer([]string{cfg.KafkaBrokerURL})
 
 	return &App{

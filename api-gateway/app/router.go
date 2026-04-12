@@ -15,17 +15,21 @@ func (a *App) SetupRoutes(cfg config.Config) {
 	protected := a.Router.Group("")
 	protected.Use(middleware.JWTAuthMiddleware(a.JWTSecret))
 	{
-		protected.Any("/users/*proxyPath",
-			handlers.ReverseProxy(cfg.AuthHTTPURL, cfg.APIPrefix+"/users"))
+		// Users
+		protected.Any("/users", handlers.ReverseProxy(cfg.AuthHTTPURL, cfg.APIPrefix+"/users"))
+		protected.Any("/users/*proxyPath", handlers.ReverseProxy(cfg.AuthHTTPURL, cfg.APIPrefix+"/users"))
 
-		protected.Any("/groups/*proxyPath",
-			handlers.ReverseProxy(cfg.AuthHTTPURL, cfg.APIPrefix+"/groups"))
+		// Groups
+		protected.Any("/groups", handlers.ReverseProxy(cfg.AuthHTTPURL, cfg.APIPrefix+"/groups"))
+		protected.Any("/groups/*proxyPath", handlers.ReverseProxy(cfg.AuthHTTPURL, cfg.APIPrefix+"/groups"))
 
-		protected.Any("/metrics/*proxyPath",
-			handlers.ReverseProxy(cfg.StorageHTTPURL, cfg.APIPrefix+"/metrics"))
+		// Metrics
+		protected.Any("/metrics", handlers.ReverseProxy(cfg.StorageHTTPURL, cfg.APIPrefix+"/metrics"))
+		protected.Any("/metrics/*proxyPath", handlers.ReverseProxy(cfg.StorageHTTPURL, cfg.APIPrefix+"/metrics"))
 
-		protected.Any("/medications/*proxyPath",
-			handlers.ReverseProxy(cfg.StorageHTTPURL, cfg.APIPrefix+"/medications"))
+		// Medications
+		protected.Any("/medications", handlers.ReverseProxy(cfg.StorageHTTPURL, cfg.APIPrefix+"/medications"))
+		protected.Any("/medications/*proxyPath", handlers.ReverseProxy(cfg.StorageHTTPURL, cfg.APIPrefix+"/medications"))
 	}
 
 	a.Router.GET("/gateway/health", handlers.PingHandler)

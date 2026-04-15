@@ -15,7 +15,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api/v1/medications": {
+        "/medications": {
             "get": {
                 "security": [
                     {
@@ -128,7 +128,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/medications/device-token": {
+        "/medications/device-token": {
             "post": {
                 "security": [
                     {
@@ -188,7 +188,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/medications/{medicationId}": {
+        "/medications/{medicationId}": {
             "delete": {
                 "security": [
                     {
@@ -255,7 +255,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/medications/{medicationId}/reminders/{reminderId}/take": {
+        "/medications/{medicationId}/reminders/{reminderId}/take": {
             "post": {
                 "security": [
                     {
@@ -448,9 +448,89 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/storage-service_internal_web_helpers.ErrorResponse"
                         }
+                    }
+                }
+            }
+        },
+        "/metrics/thresholds": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get current health thresholds for a user (including defaults)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "metrics"
+                ],
+                "summary": "Get user health thresholds",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "user_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/storage-service_internal_web_helpers.DataResponse"
+                        }
                     },
-                    "500": {
-                        "description": "Internal Server Error",
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/storage-service_internal_web_helpers.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create or update a health threshold for a user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "metrics"
+                ],
+                "summary": "Set user health threshold",
+                "parameters": [
+                    {
+                        "description": "Threshold definition",
+                        "name": "threshold",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_metric.UserThreshold"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/storage-service_internal_web_helpers.OKResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/storage-service_internal_web_helpers.ErrorResponse"
                         }
@@ -611,12 +691,38 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_metric.UserThreshold": {
+            "type": "object",
+            "properties": {
+                "is_enabled": {
+                    "type": "boolean"
+                },
+                "max_value": {
+                    "type": "number"
+                },
+                "metric_id": {
+                    "type": "string"
+                },
+                "metric_name": {
+                    "description": "For UI display convenience",
+                    "type": "string"
+                },
+                "min_value": {
+                    "type": "number"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_readiness.predictRequest": {
             "type": "object",
             "required": [
                 "blood_oxygen",
                 "heart_rate",
-                "sleep_duration",
                 "stress_level"
             ],
             "properties": {
@@ -630,6 +736,7 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "sleep_duration": {
+                    "description": "0 is valid (no sleep data)",
                     "type": "number"
                 },
                 "steps": {
@@ -661,6 +768,14 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        },
+        "storage-service_internal_web_helpers.OKResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                }
+            }
         }
     },
     "securityDefinitions": {
@@ -677,7 +792,7 @@ const docTemplate = `{
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
 	Host:             "localhost:5003",
-	BasePath:         "/",
+	BasePath:         "/api/v1",
 	Schemes:          []string{"http", "https"},
 	Title:            "HealthMate Storage API",
 	Description:      "This is the API for Storage Service of HealthMate application.",

@@ -1,6 +1,8 @@
 package readiness
 
 import (
+	"fmt"
+	"log"
 	"net/http"
 	"storage-service/internal/common"
 	"storage-service/internal/web/helpers"
@@ -10,7 +12,7 @@ import (
 
 type predictRequest struct {
 	HeartRate      float64 `json:"heart_rate"      binding:"required"`
-	SleepDuration  float64 `json:"sleep_duration"  binding:"required"`
+	SleepDuration  float64 `json:"sleep_duration"` // 0 is valid (no sleep data)
 	StressLevel    string  `json:"stress_level"    binding:"required"`
 	BloodOxygen    float64 `json:"blood_oxygen"    binding:"required"`
 	Steps          float64 `json:"steps"`
@@ -18,7 +20,26 @@ type predictRequest struct {
 }
 
 type predictResponse struct {
-	ReadinessScore float64 `json:"readiness_score"`
+	ReadinessScore *float64 `json:"readiness_score"`
+}
+
+func validatePredictRequest(req *predictRequest) error {
+	if req.HeartRate < 30 || req.HeartRate > 300 {
+		return fmt.Errorf("heart_rate must be between 30 and 300")
+	}
+	if req.SleepDuration < 0 || req.SleepDuration > 24 {
+		return fmt.Errorf("sleep_duration must be between 0 and 24")
+	}
+	if req.BloodOxygen < 50 || req.BloodOxygen > 100 {
+		return fmt.Errorf("blood_oxygen must be between 50 and 100")
+	}
+	if req.Steps < 0 {
+		return fmt.Errorf("steps must be non-negative")
+	}
+	if req.CaloriesBurned < 0 {
+		return fmt.Errorf("calories_burned must be non-negative")
+	}
+	return nil
 }
 
 // PredictHandler handles readiness score prediction requests.
@@ -30,13 +51,17 @@ type predictResponse struct {
 // @Param body body predictRequest true "Health metrics input"
 // @Success 200 {object} predictResponse
 // @Failure 400 {object} helpers.ErrorResponse
-// @Failure 500 {object} helpers.ErrorResponse
 // @Router /metrics/readiness [post]
 // @Security BearerAuth
 func PredictHandler(c *gin.Context) {
 	var req predictRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		helpers.HandleError(c, common.ErrInvalidRequest)
+		return
+	}
+
+	if err := validatePredictRequest(&req); err != nil {
+		c.JSON(http.StatusBadRequest, helpers.ErrorResponse{Error: err.Error()})
 		return
 	}
 
@@ -49,9 +74,10 @@ func PredictHandler(c *gin.Context) {
 		CaloriesBurned: req.CaloriesBurned,
 	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, helpers.ErrorResponse{Error: err.Error()})
+		log.Printf("readiness: onnx inference error: %v", err)
+		c.JSON(http.StatusOK, predictResponse{ReadinessScore: nil})
 		return
 	}
 
-	c.JSON(http.StatusOK, predictResponse{ReadinessScore: score})
+	c.JSON(http.StatusOK, predictResponse{ReadinessScore: &score})
 }

@@ -3,6 +3,7 @@ package realtime
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"realtime-service/internal/kafka"
 	"realtime-service/internal/metric"
 	"realtime-service/internal/permission"
@@ -81,21 +82,36 @@ func (h *Hub) Run(ctx context.Context) {
 			}
 
 		case m := <-h.broadcast:
+			log.Printf("[Hub] Broadcast received for UserID: %s, Metric: %s", m.UserID, m.Type)
 			subs := h.subscriptions[m.UserID]
 			if subs == nil {
+				log.Printf("[Hub] No subscribers found for UserID: %s", m.UserID)
 				continue
 			}
 
-			data, _ := json.Marshal(m)
+			log.Printf("[Hub] Found %d potential subscribers for UserID: %s", len(subs), m.UserID)
+
+			// Wrap metric in ServerMessage structure
+			msgBody := ServerMessage{
+				Type:    "metric",
+				Payload: m,
+			}
+			data, _ := json.Marshal(msgBody)
+
+			sentCount := 0
 			for client := range subs {
 				if client.CanView(m.UserID, m.Type) {
 					select {
 					case client.send <- data:
+						sentCount++
 					default:
-						// slow client → drop
+						log.Printf("[Hub] Client %s send buffer full, dropping message", client.id)
 					}
+				} else {
+					log.Printf("[Hub] Client %s permission denied for %s/%s", client.id, m.UserID, m.Type)
 				}
 			}
+			log.Printf("[Hub] Successfully broadcasted to %d clients", sentCount)
 		}
 	}
 }

@@ -5,7 +5,8 @@ import (
 )
 
 type Permission struct {
-	GroupId    uuid.UUID `json:"group_id"`
-	UserId     uuid.UUID `json:"user_id"`
-	MetricType string    `json:"metric_type"`
+	GroupId          uuid.UUID  `json:"group_id"`
+	UserId           uuid.UUID  `json:"user_id"`
+	MetricType       string     `json:"metric_type"`
+	SharedWithUserId *uuid.UUID `json:"shared_with_user_id"`
 }

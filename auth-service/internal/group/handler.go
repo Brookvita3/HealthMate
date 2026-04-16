@@ -37,12 +37,14 @@ type UpdateMemberStatusRequest struct {
 }
 
 type SetPermissionRequest struct {
-	MetricType string `json:"metric_type" binding:"required"`
-	Enabled    bool   `json:"enabled"`
+	MetricType   string  `json:"metric_type" binding:"required"`
+	Enabled      bool    `json:"enabled"`
+	TargetUserID *string `json:"target_user_id"`
 }
 
 type UpdatePermissionsRequest struct {
-	MetricTypes []string `json:"metric_types" binding:"required"`
+	MetricTypes  []string `json:"metric_types" binding:"required"`
+	TargetUserID *string  `json:"target_user_id"`
 }
 
 type TransferOwnershipRequest struct {
@@ -333,7 +335,16 @@ func (handler *Handler) GetPermissions(c *gin.Context) {
 		}
 	}
 
-	perms, err := handler.permService.GetPermissions(c.Request.Context(), groupID, myID)
+	targetUserIDStr := c.Query("target_user_id")
+	var targetUserID *uuid.UUID
+	if targetUserIDStr != "" {
+		parsed, err := uuid.Parse(targetUserIDStr)
+		if err == nil {
+			targetUserID = &parsed
+		}
+	}
+
+	perms, err := handler.permService.GetPermissions(c.Request.Context(), groupID, myID, targetUserID)
 	if err != nil {
 		handler.handleError(c, err)
 		return
@@ -440,11 +451,21 @@ func (handler *Handler) SetPermission(c *gin.Context) {
 		return
 	}
 
+	var targetUserID *uuid.UUID
+	if req.TargetUserID != nil && *req.TargetUserID != "" {
+		parsed, err := uuid.Parse(*req.TargetUserID)
+		if err != nil {
+			handler.handleError(c, common.ErrInvalidUUIDFormat)
+			return
+		}
+		targetUserID = &parsed
+	}
+
 	var err error
 	if req.Enabled {
-		err = handler.permService.EnableSharing(c.Request.Context(), groupID, myID, req.MetricType)
+		err = handler.permService.EnableSharing(c.Request.Context(), groupID, myID, req.MetricType, targetUserID)
 	} else {
-		err = handler.permService.DisableSharing(c.Request.Context(), groupID, myID, req.MetricType)
+		err = handler.permService.DisableSharing(c.Request.Context(), groupID, myID, req.MetricType, targetUserID)
 	}
 
 	if err != nil {
@@ -487,7 +508,17 @@ func (handler *Handler) UpdatePermissions(c *gin.Context) {
 		return
 	}
 
-	if err := handler.permService.UpdateSharing(c.Request.Context(), groupID, myID, req.MetricTypes); err != nil {
+	var targetUserID *uuid.UUID
+	if req.TargetUserID != nil && *req.TargetUserID != "" {
+		parsed, err := uuid.Parse(*req.TargetUserID)
+		if err != nil {
+			handler.handleError(c, common.ErrInvalidUUIDFormat)
+			return
+		}
+		targetUserID = &parsed
+	}
+
+	if err := handler.permService.UpdateSharing(c.Request.Context(), groupID, myID, targetUserID, req.MetricTypes); err != nil {
 		handler.handleError(c, err)
 		return
 	}

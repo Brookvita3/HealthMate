@@ -16,24 +16,45 @@ func NewPostgresRepository(pool *pgxpool.Pool) PermissionRepository {
 	return &postgresRepository{pool: pool}
 }
 
-func (r *postgresRepository) SetPermission(ctx context.Context, groupID, userID uuid.UUID, metricType string) error {
+func (r *postgresRepository) SetPermission(ctx context.Context, groupID, userID uuid.UUID, metricType string, sharedWithUserID *uuid.UUID) error {
 	query := `
-		INSERT INTO sharing_permissions (group_id, user_id, metric_type)
-		VALUES ($1, $2, $3)
+		INSERT INTO sharing_permissions (group_id, user_id, metric_type, shared_with_user_id)
+		VALUES ($1, $2, $3, $4)
 		ON CONFLICT DO NOTHING`
-	_, err := r.pool.Exec(ctx, query, groupID, userID, metricType)
+	_, err := r.pool.Exec(ctx, query, groupID, userID, metricType, sharedWithUserID)
 	return err
 }
 
-func (r *postgresRepository) RevokePermission(ctx context.Context, groupID, userID uuid.UUID, metricType string) error {
-	query := `DELETE FROM sharing_permissions WHERE group_id = $1 AND user_id = $2 AND metric_type = $3`
-	_, err := r.pool.Exec(ctx, query, groupID, userID, metricType)
+func (r *postgresRepository) RevokePermission(ctx context.Context, groupID, userID uuid.UUID, metricType string, sharedWithUserID *uuid.UUID) error {
+	var query string
+	var err error
+	if sharedWithUserID == nil {
+		query = `DELETE FROM sharing_permissions WHERE group_id = $1 AND user_id = $2 AND metric_type = $3 AND shared_with_user_id IS NULL`
+		_, err = r.pool.Exec(ctx, query, groupID, userID, metricType)
+	} else {
+		query = `DELETE FROM sharing_permissions WHERE group_id = $1 AND user_id = $2 AND metric_type = $3 AND shared_with_user_id = $4`
+		_, err = r.pool.Exec(ctx, query, groupID, userID, metricType, sharedWithUserID)
+	}
 	return err
 }
 
-func (r *postgresRepository) ListUserPermissionsInGroup(ctx context.Context, groupID, userID uuid.UUID) ([]domain.Permission, error) {
-	query := `SELECT group_id, user_id, metric_type FROM sharing_permissions WHERE group_id = $1 AND user_id = $2`
-	rows, err := r.pool.Query(ctx, query, groupID, userID)
+func (r *postgresRepository) ListUserPermissionsInGroup(ctx context.Context, groupID, userID uuid.UUID, targetUserID *uuid.UUID) ([]domain.Permission, error) {
+	var query string
+	var rows interface {
+		Next() bool
+		Scan(dest ...any) error
+		Close()
+	}
+	var err error
+
+	if targetUserID == nil {
+		query = `SELECT group_id, user_id, metric_type, shared_with_user_id FROM sharing_permissions WHERE group_id = $1 AND user_id = $2`
+		rows, err = r.pool.Query(ctx, query, groupID, userID)
+	} else {
+		query = `SELECT group_id, user_id, metric_type, shared_with_user_id FROM sharing_permissions WHERE group_id = $1 AND user_id = $2 AND (shared_with_user_id = $3 OR shared_with_user_id IS NULL)`
+		rows, err = r.pool.Query(ctx, query, groupID, userID, targetUserID)
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +63,7 @@ func (r *postgresRepository) ListUserPermissionsInGroup(ctx context.Context, gro
 	var perms []domain.Permission
 	for rows.Next() {
 		var p domain.Permission
-		if err := rows.Scan(&p.GroupId, &p.UserId, &p.MetricType); err != nil {
+		if err := rows.Scan(&p.GroupId, &p.UserId, &p.MetricType, &p.SharedWithUserId); err != nil {
 			return nil, err
 		}
 		perms = append(perms, p)
@@ -52,6 +73,12 @@ func (r *postgresRepository) ListUserPermissionsInGroup(ctx context.Context, gro
 func (r *postgresRepository) RevokeAllPermissions(ctx context.Context, groupID, userID uuid.UUID) error {
 	query := `DELETE FROM sharing_permissions WHERE group_id = $1 AND user_id = $2`
 	_, err := r.pool.Exec(ctx, query, groupID, userID)
+	return err
+}
+
+func (r *postgresRepository) RevokeSpecificPermissions(ctx context.Context, groupID, userID uuid.UUID, targetUserID uuid.UUID) error {
+	query := `DELETE FROM sharing_permissions WHERE group_id = $1 AND user_id = $2 AND shared_with_user_id = $3`
+	_, err := r.pool.Exec(ctx, query, groupID, userID, targetUserID)
 	return err
 }
 func (r *postgresRepository) IsMember(ctx context.Context, groupID, userID uuid.UUID) (bool, error) {

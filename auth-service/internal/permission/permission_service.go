@@ -10,16 +10,19 @@ import (
 // Service defines the business logic for managing health metric sharing permissions.
 type Service interface {
 	// EnableSharing grants permission to share a specific metric type within a group.
-	EnableSharing(ctx context.Context, groupID, userID uuid.UUID, metricType string) error
+	// If targetUserID is nil, it sets a Group Rule.
+	EnableSharing(ctx context.Context, groupID, userID uuid.UUID, metricType string, targetUserID *uuid.UUID) error
 
 	// DisableSharing revokes permission to share a specific metric type within a group.
-	DisableSharing(ctx context.Context, groupID, userID uuid.UUID, metricType string) error
+	DisableSharing(ctx context.Context, groupID, userID uuid.UUID, metricType string, targetUserID *uuid.UUID) error
 
 	// GetPermissions retrieves all shared metric types for a user in a group.
-	GetPermissions(ctx context.Context, groupID, userID uuid.UUID) ([]domain.Permission, error)
+	// If targetUserID is not nil, it filters for that specific member.
+	GetPermissions(ctx context.Context, groupID, userID uuid.UUID, targetUserID *uuid.UUID) ([]domain.Permission, error)
 
 	// UpdateSharing updates multiple sharing permissions for a user in a group.
-	UpdateSharing(ctx context.Context, groupID, userID uuid.UUID, metricTypes []string) error
+	// If targetUserID is not nil, it validates that all metricTypes are enabled in the Global Rule.
+	UpdateSharing(ctx context.Context, groupID, userID uuid.UUID, targetUserID *uuid.UUID, metricTypes []string) error
 
 	// ListMetricTypes retrieves all available metric types in the system.
 	ListMetricTypes(ctx context.Context) ([]domain.MetricType, error)
@@ -35,7 +38,7 @@ func NewService(repo PermissionRepository) Service {
 
 // EnableSharing implements Service.EnableSharing.
 // Validates the metric type before saving the permission.
-func (s *serviceImpl) EnableSharing(ctx context.Context, groupID, userID uuid.UUID, metricType string) error {
+func (s *serviceImpl) EnableSharing(ctx context.Context, groupID, userID uuid.UUID, metricType string, targetUserID *uuid.UUID) error {
 	isValid, err := s.repo.IsValidMetricType(ctx, metricType)
 	if err != nil {
 		return err
@@ -53,12 +56,30 @@ func (s *serviceImpl) EnableSharing(ctx context.Context, groupID, userID uuid.UU
 		return ErrPermissionDenied
 	}
 
-	return s.repo.SetPermission(ctx, groupID, userID, metricType)
+	// Hierarchy check: If targetUserID is not nil, check if metricType is in Global Rules
+	if targetUserID != nil {
+		globalPerms, err := s.repo.ListUserPermissionsInGroup(ctx, groupID, userID, nil)
+		if err != nil {
+			return err
+		}
+		found := false
+		for _, p := range globalPerms {
+			if p.MetricType == metricType && p.SharedWithUserId == nil {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return ErrPermissionDenied // Or a more specific error like "Metric not enabled in group level"
+		}
+	}
+
+	return s.repo.SetPermission(ctx, groupID, userID, metricType, targetUserID)
 }
 
 // DisableSharing implements Service.DisableSharing.
 // Revokes the sharing permission for a specific metric.
-func (s *serviceImpl) DisableSharing(ctx context.Context, groupID, userID uuid.UUID, metricType string) error {
+func (s *serviceImpl) DisableSharing(ctx context.Context, groupID, userID uuid.UUID, metricType string, targetUserID *uuid.UUID) error {
 	isValid, err := s.repo.IsValidMetricType(ctx, metricType)
 	if err != nil {
 		return err
@@ -66,18 +87,18 @@ func (s *serviceImpl) DisableSharing(ctx context.Context, groupID, userID uuid.U
 	if !isValid {
 		return ErrInvalidMetricType
 	}
-	return s.repo.RevokePermission(ctx, groupID, userID, metricType)
+	return s.repo.RevokePermission(ctx, groupID, userID, metricType, targetUserID)
 }
 
 // GetPermissions implements Service.GetPermissions.
 // Lists all allowed sharing permissions for a specific user in a group.
-func (s *serviceImpl) GetPermissions(ctx context.Context, groupID, userID uuid.UUID) ([]domain.Permission, error) {
-	return s.repo.ListUserPermissionsInGroup(ctx, groupID, userID)
+func (s *serviceImpl) GetPermissions(ctx context.Context, groupID, userID uuid.UUID, targetUserID *uuid.UUID) ([]domain.Permission, error) {
+	return s.repo.ListUserPermissionsInGroup(ctx, groupID, userID, targetUserID)
 }
 
 // UpdateSharing implements Service.UpdateSharing.
 // It revokes all current permissions and sets new ones.
-func (s *serviceImpl) UpdateSharing(ctx context.Context, groupID, userID uuid.UUID, metricTypes []string) error {
+func (s *serviceImpl) UpdateSharing(ctx context.Context, groupID, userID uuid.UUID, targetUserID *uuid.UUID, metricTypes []string) error {
 	// Validate all metric types first
 	for _, m := range metricTypes {
 		isValid, err := s.repo.IsValidMetricType(ctx, m)
@@ -90,7 +111,6 @@ func (s *serviceImpl) UpdateSharing(ctx context.Context, groupID, userID uuid.UU
 	}
 
 	// Check if user is a member of the group before setting permissions
-	// This prevents the foreign key constraint violation (SQLSTATE 23503)
 	isMember, err := s.repo.IsMember(ctx, groupID, userID)
 	if err != nil {
 		return err
@@ -99,14 +119,37 @@ func (s *serviceImpl) UpdateSharing(ctx context.Context, groupID, userID uuid.UU
 		return ErrPermissionDenied
 	}
 
-	// For simplicity, revoke all and set new ones.
-	// In a production environment, you might want to do this in a transaction.
-	if err := s.repo.RevokeAllPermissions(ctx, groupID, userID); err != nil {
-		return err
+	// Hierarchy check: Member rules must be subset of Global rules
+	if targetUserID != nil {
+		globalPerms, err := s.repo.ListUserPermissionsInGroup(ctx, groupID, userID, nil)
+		if err != nil {
+			return err
+		}
+		globalTypes := make(map[string]bool)
+		for _, p := range globalPerms {
+			globalTypes[p.MetricType] = true
+		}
+
+		for _, m := range metricTypes {
+			if !globalTypes[m] {
+				return ErrPermissionDenied // Or more specific error
+			}
+		}
+
+		// Revoke all existing specific rules for this member before updating
+		if err := s.repo.RevokeSpecificPermissions(ctx, groupID, userID, *targetUserID); err != nil {
+			return err
+		}
+	} else {
+		// Update Global Rule
+		// Revoke all existing global rules first
+		if err := s.repo.RevokeAllPermissions(ctx, groupID, userID); err != nil {
+			return err
+		}
 	}
 
 	for _, m := range metricTypes {
-		if err := s.repo.SetPermission(ctx, groupID, userID, m); err != nil {
+		if err := s.repo.SetPermission(ctx, groupID, userID, m, targetUserID); err != nil {
 			return err
 		}
 	}

@@ -116,8 +116,7 @@ func (r *pgRepository) GetUserThresholds(ctx context.Context, userID string) ([]
 			COALESCE(ut.is_enabled, TRUE) as is_enabled,
 			COALESCE(ut.updated_at, mt.created_at) as updated_at
 		FROM metric_types mt
-		LEFT JOIN user_health_thresholds ut ON mt.id = ut.metric_id AND ut.user_id = $1
-		WHERE mt.name IN ('spo2', 'blood_pressure') OR ut.user_id IS NOT NULL`
+		LEFT JOIN user_health_thresholds ut ON mt.id = ut.metric_id AND ut.user_id = $1`
 
 	rows, err := r.pool.Query(ctx, query, userID)
 	if err != nil {
@@ -182,4 +181,46 @@ func (r *pgRepository) UpsertThreshold(ctx context.Context, t *UserThreshold) er
 		return fmt.Errorf("failed to upsert user threshold: %w", err)
 	}
 	return nil
+}
+
+func (r *pgRepository) GetMetricWatchers(ctx context.Context, userID, metricType string) ([]Watcher, error) {
+	query := `
+		SELECT DISTINCT u.id, u.name as user_name, g.name as group_name
+		FROM users u
+		JOIN group_members gm ON u.id = gm.user_id
+		JOIN groups g ON gm.group_id = g.id
+		JOIN sharing_permissions sp ON gm.group_id = sp.group_id
+		WHERE sp.user_id = $1
+		  AND sp.metric_type = $2
+		  AND (sp.shared_with_user_id IS NULL OR sp.shared_with_user_id = u.id)
+		  AND gm.status = 'accepted'
+		  AND u.id != $1::uuid`
+
+	rows, err := r.pool.Query(ctx, query, userID, metricType)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query metric watchers: %w", err)
+	}
+	defer rows.Close()
+
+	var watchers []Watcher
+	for rows.Next() {
+		var w Watcher
+		if err := rows.Scan(&w.UserID, &w.UserName, &w.GroupName); err != nil {
+			return nil, fmt.Errorf("failed to scan watcher: %w", err)
+		}
+		watchers = append(watchers, w)
+	}
+	return watchers, nil
+}
+
+func (r *pgRepository) GetUserName(ctx context.Context, userID string) (string, error) {
+	var name string
+	err := r.pool.QueryRow(ctx, "SELECT name FROM users WHERE id = $1", userID).Scan(&name)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "Unknown User", nil
+		}
+		return "", fmt.Errorf("failed to get user name: %w", err)
+	}
+	return name, nil
 }

@@ -1342,10 +1342,16 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "email": {
+                    "type": "string"
+                },
                 "invited_by": {
                     "type": "string"
                 },
                 "joined_at": {
+                    "type": "string"
+                },
+                "name": {
                     "type": "string"
                 },
                 "role": {
@@ -1417,6 +1423,9 @@ const docTemplate = `{
                 "metric_type": {
                     "type": "string"
                 },
+                "shared_with_user_id": {
+                    "type": "string"
+                },
                 "user_id": {
                     "type": "string"
                 }
@@ -1454,16 +1463,34 @@ const docTemplate = `{
         "auth-service_internal_domain.User": {
             "type": "object",
             "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "birthday": {
+                    "type": "string"
+                },
+                "blood_group": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
                 "email": {
                     "type": "string"
                 },
+                "gender": {
+                    "type": "string"
+                },
+                "height": {
+                    "type": "number"
+                },
                 "id": {
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "phone": {
                     "type": "string"
                 },
                 "picture": {
@@ -1480,6 +1507,9 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "weight": {
+                    "type": "number"
                 }
             }
         },
@@ -1691,6 +1721,9 @@ const docTemplate = `{
                 },
                 "metric_type": {
                     "type": "string"
+                },
+                "target_user_id": {
+                    "type": "string"
                 }
             }
         },
@@ -1742,13 +1775,34 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                },
+                "target_user_id": {
+                    "type": "string"
                 }
             }
         },
         "internal_user.UpdateUserParams": {
             "type": "object",
             "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "birthday": {
+                    "type": "string"
+                },
+                "blood_group": {
+                    "type": "string"
+                },
+                "gender": {
+                    "type": "string"
+                },
+                "height": {
+                    "type": "number"
+                },
                 "name": {
+                    "type": "string"
+                },
+                "phone": {
                     "type": "string"
                 },
                 "picture": {
@@ -1759,6 +1813,9 @@ const docTemplate = `{
                 },
                 "status": {
                     "type": "string"
+                },
+                "weight": {
+                    "type": "number"
                 }
             }
         }

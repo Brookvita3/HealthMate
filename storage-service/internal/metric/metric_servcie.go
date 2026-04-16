@@ -34,10 +34,8 @@ func (s *serviceImpl) RecordMetric(ctx context.Context, metric HealthMetric) err
 		return err
 	}
 
-	// Check thresholds for spo2 and blood_pressure
-	if metric.Type == "spo2" || metric.Type == "blood_pressure" {
-		go s.checkThresholds(context.Background(), metric)
-	}
+	// Check thresholds for all recorded metrics
+	go s.checkThresholds(context.Background(), metric)
 
 	return nil
 }
@@ -53,35 +51,85 @@ func (s *serviceImpl) checkThresholds(ctx context.Context, m HealthMetric) {
 			// Expected if no threshold is configured for this metric
 			return
 		}
-		log.Printf("Error retrieving threshold for user %s, metric %s: %v", m.UserID, m.Type, err)
+		log.Printf("[Threshold] Error retrieving threshold for user %s, metric %s: %v", m.UserID, m.Type, err)
 		return
 	}
 
 	if t.IsEnabled {
 		alert := false
-		msg := ""
+		level := ""
+		thresholdVal := 0.0
 
 		if t.MinValue != nil && m.Value < *t.MinValue {
 			alert = true
-			msg = fmt.Sprintf("Cảnh báo: %s của bạn đang ở mức thấp (%.2f), ngưỡng tối thiểu là %.2f", m.Type, m.Value, *t.MinValue)
+			level = "low"
+			thresholdVal = *t.MinValue
 		} else if t.MaxValue != nil && m.Value > *t.MaxValue {
 			alert = true
-			msg = fmt.Sprintf("Cảnh báo: %s của bạn đang ở mức cao (%.2f), ngưỡng tối đa là %.2f", m.Type, m.Value, *t.MaxValue)
+			level = "high"
+			thresholdVal = *t.MaxValue
 		}
 
-		if alert && s.notificationSvc != nil {
-			notification := notification.Notification{
-				Title: "Cảnh báo sức khỏe",
-				Body:  msg,
+		if alert {
+			log.Printf("[Threshold Alert] User: %s, Metric: %s, Value: %.2f, Min: %v, Max: %v",
+				m.UserID, m.Type, m.Value, t.MinValue, t.MaxValue)
+
+			if s.notificationSvc == nil {
+				log.Printf("[FCM] Notification service is not initialized, alert not sent.")
+				return
+			}
+
+			// 1. Notify the owner (English)
+			ownerMsg := fmt.Sprintf("Health Alert: Your %s is %s (%.2f). Threshold is %.2f", m.Type, level, m.Value, thresholdVal)
+			ownerNotif := notification.Notification{
+				Title: "Health Alert",
+				Body:  ownerMsg,
 				Data: map[string]string{
 					"type":        "health_alert",
 					"metric_type": m.Type,
 					"value":       fmt.Sprintf("%.2f", m.Value),
+					"level":       level,
 				},
 			}
-			err := s.notificationSvc.SendToUser(ctx, m.UserID, notification)
+			log.Printf("[FCM] Sending health alert to owner %s...", m.UserID)
+			if err := s.notificationSvc.SendToUser(ctx, m.UserID, ownerNotif); err != nil {
+				log.Printf("[FCM] Error sending to owner %s: %v", m.UserID, err)
+			}
+
+			// 2. Notify watchers (English)
+			ownerName, err := s.repo.GetUserName(ctx, m.UserID)
 			if err != nil {
-				log.Printf("Error sending notification to user %s: %v", m.UserID, err)
+				log.Printf("[Threshold] Failed to get owner name for %s: %v", m.UserID, err)
+				ownerName = "A user"
+			}
+
+			watchers, err := s.repo.GetMetricWatchers(ctx, m.UserID, m.Type)
+			if err != nil {
+				log.Printf("[Threshold] Failed to get watchers for user %s: %v", m.UserID, err)
+				return
+			}
+
+			for _, w := range watchers {
+				watcherMsg := fmt.Sprintf("Health Alert: %s's %s in group %s is %s (%.2f). Threshold is %.2f",
+					ownerName, m.Type, w.GroupName, level, m.Value, thresholdVal)
+
+				watcherNotif := notification.Notification{
+					Title: "Health Alert (Shared)",
+					Body:  watcherMsg,
+					Data: map[string]string{
+						"type":        "health_alert_shared",
+						"metric_type": m.Type,
+						"value":       fmt.Sprintf("%.2f", m.Value),
+						"owner_id":    m.UserID,
+						"owner_name":  ownerName,
+						"group_name":  w.GroupName,
+						"level":       level,
+					},
+				}
+				log.Printf("[FCM] Sending health alert to watcher %s (%s) for group %s...", w.UserID, w.UserName, w.GroupName)
+				if err := s.notificationSvc.SendToUser(ctx, w.UserID, watcherNotif); err != nil {
+					log.Printf("[FCM] Error sending to watcher %s: %v", w.UserID, err)
+				}
 			}
 		}
 	}

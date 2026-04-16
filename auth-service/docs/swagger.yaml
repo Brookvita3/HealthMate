@@ -28,9 +28,13 @@ definitions:
     properties:
       created_at:
         type: string
+      email:
+        type: string
       invited_by:
         type: string
       joined_at:
+        type: string
+      name:
         type: string
       role:
         type: string
@@ -77,6 +81,8 @@ definitions:
         type: string
       metric_type:
         type: string
+      shared_with_user_id:
+        type: string
       user_id:
         type: string
     type: object
@@ -101,13 +107,25 @@ definitions:
     type: object
   auth-service_internal_domain.User:
     properties:
+      address:
+        type: string
+      birthday:
+        type: string
+      blood_group:
+        type: string
       created_at:
         type: string
       email:
         type: string
+      gender:
+        type: string
+      height:
+        type: number
       id:
         type: string
       name:
+        type: string
+      phone:
         type: string
       picture:
         description: Allows NULL
@@ -120,6 +138,8 @@ definitions:
         type: string
       updated_at:
         type: string
+      weight:
+        type: number
     type: object
   auth-service_internal_domain.UserInfo:
     properties:
@@ -255,6 +275,8 @@ definitions:
         type: boolean
       metric_type:
         type: string
+      target_user_id:
+        type: string
     required:
     - metric_type
     type: object
@@ -288,12 +310,26 @@ definitions:
         items:
           type: string
         type: array
+      target_user_id:
+        type: string
     required:
     - metric_types
     type: object
   internal_user.UpdateUserParams:
     properties:
+      address:
+        type: string
+      birthday:
+        type: string
+      blood_group:
+        type: string
+      gender:
+        type: string
+      height:
+        type: number
       name:
+        type: string
+      phone:
         type: string
       picture:
         type: string
@@ -301,6 +337,8 @@ definitions:
         type: string
       status:
         type: string
+      weight:
+        type: number
     type: object
 host: localhost:5000
 info:

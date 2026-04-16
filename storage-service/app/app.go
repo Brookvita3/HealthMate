@@ -47,17 +47,17 @@ func NewApp(cfg *config.Config) *App {
 	}
 	log.Println("Successfully connected to Postgres.")
 
-	metricRepo := metric.NewRepository(pool)
-	metricService := metric.NewMetricService(metricRepo)
-	metricHandler := metric.NewHandler(metricService)
-
-	kafkaConsumer := kafka.NewConsumer(cfg.KafkaAddr, cfg.KafkaTopic, cfg.KafkaGroupID, metricService)
-
 	tokenRepo := notification.NewRepository(pool)
 	notificationService, err := notification.NewFCMService(context.Background(), tokenRepo, cfg.FirebaseServiceAccountPath)
 	if err != nil {
-		log.Printf("WARNING: Failed to initialize FCM service: %v", err)
+		log.Printf("WARNING: Failed to initialize FCM service (notifications will be disabled): %v", err)
 	}
+
+	metricRepo := metric.NewRepository(pool)
+	metricService := metric.NewMetricService(metricRepo, notificationService)
+	metricHandler := metric.NewHandler(metricService)
+
+	kafkaConsumer := kafka.NewConsumer(cfg.KafkaAddr, cfg.KafkaTopic, cfg.KafkaGroupID, metricService)
 
 	medicationRepo := medication.NewRepository(pool)
 	medicationService := medication.NewMedicationService(medicationRepo, notificationService, tokenRepo)
@@ -106,6 +106,8 @@ func setupRoutes(r *gin.Engine, metricHandler *metric.Handler, medicationHandler
 	{
 		metrics.GET("/charts", metricHandler.GetChartData)
 		metrics.POST("/readiness", readiness.PredictHandler)
+		metrics.GET("/thresholds", metricHandler.GetThresholds)
+		metrics.POST("/thresholds", metricHandler.SetUserThreshold)
 	}
 
 	// Medication endpoints

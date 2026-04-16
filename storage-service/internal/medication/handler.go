@@ -35,7 +35,7 @@ func getUserID(c *gin.Context) (string, bool) {
 // @Success 200 {array} Medication
 // @Failure 401 {object} map[string]string
 // @Failure 500 {object} map[string]string
-// @Router /api/v1/medications [get]
+// @Router /medications [get]
 // @Security BearerAuth
 func (h *Handler) ListMedications(c *gin.Context) {
 	userID, ok := getUserID(c)
@@ -64,7 +64,7 @@ func (h *Handler) ListMedications(c *gin.Context) {
 // @Failure 400 {object} map[string]string
 // @Failure 401 {object} map[string]string
 // @Failure 500 {object} map[string]string
-// @Router /api/v1/medications [post]
+// @Router /medications [post]
 // @Security BearerAuth
 func (h *Handler) CreateMedication(c *gin.Context) {
 	var req CreateMedicationRequest
@@ -99,7 +99,7 @@ func (h *Handler) CreateMedication(c *gin.Context) {
 // @Failure 401 {object} map[string]string
 // @Failure 404 {object} map[string]string
 // @Failure 500 {object} map[string]string
-// @Router /api/v1/medications/{medicationId} [delete]
+// @Router /medications/{medicationId} [delete]
 // @Security BearerAuth
 func (h *Handler) DeleteMedication(c *gin.Context) {
 	medicationID := c.Param("medicationId")
@@ -136,7 +136,7 @@ func (h *Handler) DeleteMedication(c *gin.Context) {
 // @Failure 403 {object} map[string]string
 // @Failure 404 {object} map[string]string
 // @Failure 500 {object} map[string]string
-// @Router /api/v1/medications/{medicationId}/reminders/{reminderId}/take [post]
+// @Router /medications/{medicationId}/reminders/{reminderId}/take [post]
 // @Security BearerAuth
 func (h *Handler) TakeMedication(c *gin.Context) {
 	medicationID := c.Param("medicationId")
@@ -180,7 +180,7 @@ type RegisterDeviceTokenRequest struct {
 // @Success 200 {object} map[string]string
 // @Failure 401 {object} map[string]string
 // @Failure 500 {object} map[string]string
-// @Router /api/v1/medications/device-token [post]
+// @Router /medications/device-token [post]
 // @Security BearerAuth
 func (h *Handler) RegisterDeviceToken(c *gin.Context) {
 	userID, ok := getUserID(c)

@@ -32,3 +32,7 @@ func HandleError(c *gin.Context, err error) {
 func RespondData(c *gin.Context, data interface{}) {
 	c.JSON(http.StatusOK, DataResponse{Data: data})
 }
+
+func RespondOK(c *gin.Context, message string) {
+	c.JSON(http.StatusOK, OKResponse{Message: message})
+}

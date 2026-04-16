@@ -2,24 +2,97 @@ package metric
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"log"
+	"storage-service/internal/notification"
 	"time"
 )
 
 type Service interface {
 	RecordMetric(ctx context.Context, metric HealthMetric) error
 	GetChartData(ctx context.Context, userID, metricType, timeRange string, start, end *time.Time) ([]MetricDataPoint, error)
+	GetThresholds(ctx context.Context, userID string) ([]UserThreshold, error)
+	SetUserThreshold(ctx context.Context, threshold UserThreshold) error
 }
 
 type serviceImpl struct {
-	repo MetricRepository
+	repo             MetricRepository
+	notificationSvc notification.Service
 }
 
-func NewMetricService(repo MetricRepository) Service {
-	return &serviceImpl{repo: repo}
+func NewMetricService(repo MetricRepository, notificationSvc notification.Service) Service {
+	return &serviceImpl{
+		repo:             repo,
+		notificationSvc: notificationSvc,
+	}
 }
 
 func (s *serviceImpl) RecordMetric(ctx context.Context, metric HealthMetric) error {
-	return s.repo.Store(ctx, &metric)
+	err := s.repo.Store(ctx, &metric)
+	if err != nil {
+		return err
+	}
+
+	// Check thresholds for spo2 and blood_pressure
+	if metric.Type == "spo2" || metric.Type == "blood_pressure" {
+		go s.checkThresholds(context.Background(), metric)
+	}
+
+	return nil
+}
+
+func (s *serviceImpl) checkThresholds(ctx context.Context, m HealthMetric) {
+	// Create a timeout context for the threshold check and notification sending
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	t, err := s.repo.GetThresholdByMetricName(ctx, m.UserID, m.Type)
+	if err != nil {
+		if errors.Is(err, ErrMetricNotFound) || errors.Is(err, ErrUnknownMetricType) {
+			// Expected if no threshold is configured for this metric
+			return
+		}
+		log.Printf("Error retrieving threshold for user %s, metric %s: %v", m.UserID, m.Type, err)
+		return
+	}
+
+	if t.IsEnabled {
+		alert := false
+		msg := ""
+
+		if t.MinValue != nil && m.Value < *t.MinValue {
+			alert = true
+			msg = fmt.Sprintf("Cảnh báo: %s của bạn đang ở mức thấp (%.2f), ngưỡng tối thiểu là %.2f", m.Type, m.Value, *t.MinValue)
+		} else if t.MaxValue != nil && m.Value > *t.MaxValue {
+			alert = true
+			msg = fmt.Sprintf("Cảnh báo: %s của bạn đang ở mức cao (%.2f), ngưỡng tối đa là %.2f", m.Type, m.Value, *t.MaxValue)
+		}
+
+		if alert && s.notificationSvc != nil {
+			notification := notification.Notification{
+				Title: "Cảnh báo sức khỏe",
+				Body:  msg,
+				Data: map[string]string{
+					"type":        "health_alert",
+					"metric_type": m.Type,
+					"value":       fmt.Sprintf("%.2f", m.Value),
+				},
+			}
+			err := s.notificationSvc.SendToUser(ctx, m.UserID, notification)
+			if err != nil {
+				log.Printf("Error sending notification to user %s: %v", m.UserID, err)
+			}
+		}
+	}
+}
+
+func (s *serviceImpl) GetThresholds(ctx context.Context, userID string) ([]UserThreshold, error) {
+	return s.repo.GetUserThresholds(ctx, userID)
+}
+
+func (s *serviceImpl) SetUserThreshold(ctx context.Context, threshold UserThreshold) error {
+	return s.repo.UpsertThreshold(ctx, &threshold)
 }
 
 func (s *serviceImpl) GetChartData(ctx context.Context, userID, metricType, timeRange string, start, end *time.Time) ([]MetricDataPoint, error) {

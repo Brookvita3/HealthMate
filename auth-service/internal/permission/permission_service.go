@@ -1,8 +1,10 @@
 package permission
 
 import (
+	"auth-service/internal/common"
 	"auth-service/internal/domain"
 	"context"
+	"fmt"
 
 	"github.com/google/uuid"
 )
@@ -119,25 +121,32 @@ func (s *serviceImpl) UpdateSharing(ctx context.Context, groupID, userID uuid.UU
 		return ErrPermissionDenied
 	}
 
-	// Hierarchy check: Member rules must be subset of Global rules
+	// Hierarchy check: Member rules must be subset of Global rules (Base)
 	if targetUserID != nil {
-		globalPerms, err := s.repo.ListUserPermissionsInGroup(ctx, groupID, userID, nil)
+		baseRules, err := s.repo.ListUserPermissionsInGroup(ctx, groupID, userID, nil)
 		if err != nil {
 			return err
 		}
-		globalTypes := make(map[string]bool)
-		for _, p := range globalPerms {
-			globalTypes[p.MetricType] = true
+
+		allowedMetrics := make(map[string]bool)
+		for _, b := range baseRules {
+			allowedMetrics[b.MetricType] = true
 		}
 
 		for _, m := range metricTypes {
-			if !globalTypes[m] {
-				return ErrPermissionDenied // Or more specific error
+			if !allowedMetrics[m] {
+				return common.NewBusinessError(fmt.Sprintf("Metric '%s' is not allowed in this group rule (Base). Please enable it globally first.", m))
 			}
 		}
 
 		// Revoke all existing specific rules for this member before updating
 		if err := s.repo.RevokeSpecificPermissions(ctx, groupID, userID, *targetUserID); err != nil {
+			return err
+		}
+
+		// Always insert a special marker to signify this user is "Specially Managed" in this group.
+		// This ensures they don't default back to Global defaults if their specific list is empty.
+		if err := s.repo.SetPermission(ctx, groupID, userID, "access_control", targetUserID); err != nil {
 			return err
 		}
 	} else {

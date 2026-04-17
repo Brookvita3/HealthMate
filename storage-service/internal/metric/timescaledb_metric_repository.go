@@ -184,17 +184,35 @@ func (r *pgRepository) UpsertThreshold(ctx context.Context, t *UserThreshold) er
 }
 
 func (r *pgRepository) GetMetricWatchers(ctx context.Context, userID, metricType string) ([]Watcher, error) {
+	// Simplified unified logic: Group Rule as Base + Per-user Filter
 	query := `
+		-- Strict Base + Filter Intersection Logic
 		SELECT DISTINCT u.id, u.name as user_name, g.name as group_name
-		FROM users u
-		JOIN group_members gm ON u.id = gm.user_id
-		JOIN groups g ON gm.group_id = g.id
-		JOIN sharing_permissions sp ON gm.group_id = sp.group_id
-		WHERE sp.user_id = $1
-		  AND sp.metric_type = $2
-		  AND (sp.shared_with_user_id IS NULL OR sp.shared_with_user_id = u.id)
-		  AND gm.status = 'accepted'
-		  AND u.id != $1::uuid`
+		FROM sharing_permissions base
+		JOIN group_members gm_watcher ON base.group_id = gm_watcher.group_id
+		JOIN users u ON gm_watcher.user_id = u.id
+		JOIN groups g ON g.id = base.group_id
+		WHERE base.user_id = $1 AND base.metric_type = $2
+		  AND base.shared_with_user_id IS NULL -- Metric must be in Group Base
+		  AND gm_watcher.status = 'accepted'
+		  AND u.id != $1::uuid
+		  AND (
+			  -- Check Case 1: Specific Grant exists
+			  EXISTS (
+				  SELECT 1 FROM sharing_permissions spec
+				  WHERE spec.group_id = base.group_id AND spec.user_id = base.user_id 
+				    AND spec.metric_type = base.metric_type AND spec.shared_with_user_id = u.id
+			  )
+			  OR
+			  -- Check Case 2: No specific rules exist for this watcher in this group (Fallback to Global)
+			  NOT EXISTS (
+				  SELECT 1 FROM sharing_permissions filter
+				  WHERE filter.group_id = base.group_id AND filter.user_id = base.user_id 
+				    AND filter.shared_with_user_id = u.id
+			  )
+		  )
+		  -- Ensure the owner is still in the group
+		  AND EXISTS (SELECT 1 FROM group_members WHERE group_id = base.group_id AND user_id = $1 AND status = 'accepted')`
 
 	rows, err := r.pool.Query(ctx, query, userID, metricType)
 	if err != nil {
@@ -223,4 +241,51 @@ func (r *pgRepository) GetUserName(ctx context.Context, userID string) (string, 
 		return "", fmt.Errorf("failed to get user name: %w", err)
 	}
 	return name, nil
+}
+
+func (r *pgRepository) CheckAccess(ctx context.Context, observerID, targetID, metricType string) (bool, error) {
+	if observerID == targetID {
+		return true, nil
+	}
+
+	// Strict Base + Filter Intersection Logic
+	query := `
+	SELECT EXISTS (
+		-- Base Rule Check (Must be enabled in at least one shared group)
+		SELECT 1 FROM sharing_permissions base
+		WHERE base.user_id = $2::uuid AND base.metric_type = $3
+		  AND base.shared_with_user_id IS NULL
+		  AND (
+			  -- Case 1: Specific Filter Check: Grant if specific match exists
+			  EXISTS (
+				  SELECT 1 FROM sharing_permissions spec
+				  WHERE spec.group_id = base.group_id AND spec.user_id = base.user_id 
+				    AND spec.metric_type = base.metric_type AND spec.shared_with_user_id = $1::uuid
+			  )
+			  OR
+			  -- Fallback to Global: Grant ONLY if NO specific rules exist for this observer in this group
+			  NOT EXISTS (
+				  SELECT 1 FROM sharing_permissions filter
+				  WHERE filter.group_id = base.group_id AND filter.user_id = base.user_id 
+				    AND filter.shared_with_user_id = $1::uuid
+			  )
+		  )
+		  -- Shared Group Check
+		  AND base.group_id IN (
+			SELECT gm_observer.group_id
+			FROM group_members gm_observer
+			JOIN group_members gm_target ON gm_observer.group_id = gm_target.group_id
+			WHERE gm_observer.user_id = $1::uuid
+			  AND gm_target.user_id = $2::uuid
+			  AND gm_observer.status = 'accepted'
+			  AND gm_target.status = 'accepted'
+		  )
+	);`
+
+	var hasAccess bool
+	err := r.pool.QueryRow(ctx, query, observerID, targetID, metricType).Scan(&hasAccess)
+	if err != nil {
+		return false, fmt.Errorf("failed to check database access: %w", err)
+	}
+	return hasAccess, nil
 }

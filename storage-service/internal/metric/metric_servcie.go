@@ -11,7 +11,7 @@ import (
 
 type Service interface {
 	RecordMetric(ctx context.Context, metric HealthMetric) error
-	GetChartData(ctx context.Context, userID, metricType, timeRange string, start, end *time.Time) ([]MetricDataPoint, error)
+	GetChartData(ctx context.Context, observerID, userID, metricType, timeRange string, start, end *time.Time) ([]MetricDataPoint, error)
 	GetThresholds(ctx context.Context, userID string) ([]UserThreshold, error)
 	SetUserThreshold(ctx context.Context, threshold UserThreshold) error
 }
@@ -143,7 +143,16 @@ func (s *serviceImpl) SetUserThreshold(ctx context.Context, threshold UserThresh
 	return s.repo.UpsertThreshold(ctx, &threshold)
 }
 
-func (s *serviceImpl) GetChartData(ctx context.Context, userID, metricType, timeRange string, start, end *time.Time) ([]MetricDataPoint, error) {
+func (s *serviceImpl) GetChartData(ctx context.Context, observerID, userID, metricType, timeRange string, start, end *time.Time) ([]MetricDataPoint, error) {
+	// Check access permissions
+	hasAccess, err := s.repo.CheckAccess(ctx, observerID, userID, metricType)
+	if err != nil {
+		return nil, fmt.Errorf("permission check failed: %w", err)
+	}
+	if !hasAccess {
+		return nil, ErrPermissionDenied
+	}
+
 	var startTime, endTime time.Time
 
 	switch timeRange {

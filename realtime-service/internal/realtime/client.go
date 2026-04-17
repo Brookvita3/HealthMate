@@ -3,9 +3,7 @@ package realtime
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
-	"realtime-service/internal/common"
 	"realtime-service/internal/metric"
 	"time"
 
@@ -31,6 +29,7 @@ type ClientMessage struct {
 type SubscribeItem struct {
 	TargetUserID string `json:"target_user_id"  validate:"required"`
 	MetricType   string `json:"metric_type"  validate:"required"` // "heart_rate", "steps_count", "calories_burned"
+	GroupID      string `json:"group_id,omitempty"`
 }
 
 // ServerMessage represents a message sent from server to client
@@ -46,10 +45,6 @@ type Client struct {
 	conn     *websocket.Conn
 	send     chan []byte
 	viewerId string
-
-	// Map: targetUserID -> Map: metricType -> bool
-	// Used to cache client permissions
-	permissions map[string]map[string]bool // user-A-id -> {"heart_rate": true, "steps_count": true}
 }
 
 func NewClient(hub *Hub, conn *websocket.Conn, viewerID string) *Client {
@@ -59,7 +54,6 @@ func NewClient(hub *Hub, conn *websocket.Conn, viewerID string) *Client {
 		conn:        conn,
 		send:        make(chan []byte, 256),
 		viewerId:    viewerID,
-		permissions: make(map[string]map[string]bool),
 	}
 }
 
@@ -158,49 +152,18 @@ func (c *Client) handleControlAction(ctx context.Context, message []byte) {
 
 	switch msg.Action {
 	case "subscribe":
-		hasError := false
 		for _, item := range msg.Items {
-			hasPerm, err := c.hub.permRepo.CheckAccess(
-				ctx,
-				c.viewerId,
-				item.TargetUserID,
-				item.MetricType,
-			)
-
-			if err != nil {
-				log.Printf("Error checking permission for %s vs %s: %v", c.viewerId, item.TargetUserID, err)
-				if bErr, ok := err.(*common.BusinessError); ok {
-					c.sendError(bErr.Message)
-				} else {
-					c.sendError("Permission check error")
-				}
-				hasError = true
-				continue
-			}
-
-			if !hasPerm {
-				c.sendError(fmt.Sprintf("No permission for %s/%s", item.TargetUserID, item.MetricType))
-				hasError = true
-				continue
-			}
-
-			// Cache permission locally
-			if _, ok := c.permissions[item.TargetUserID]; !ok {
-				c.permissions[item.TargetUserID] = make(map[string]bool)
-			}
-			c.permissions[item.TargetUserID][item.MetricType] = true
-			log.Printf("[Client %s] Cached subscription permission for %s/%s", c.id, item.TargetUserID, item.MetricType)
+			log.Printf("[Client %s] Subscription request for %s/%s", c.id, item.TargetUserID, item.MetricType)
 
 			c.hub.subscribe <- SubscriptionEvent{
 				Client:       c,
 				TargetUserID: item.TargetUserID,
 				MetricType:   item.MetricType,
+				GroupID:      item.GroupID,
 			}
 		}
 
-		if !hasError {
-			c.sendSuccess("Subscribe success")
-		}
+		c.sendSuccess("Subscribe success")
 		return
 
 	case "unsubscribe":
@@ -209,10 +172,7 @@ func (c *Client) handleControlAction(ctx context.Context, message []byte) {
 				Client:       c,
 				TargetUserID: item.TargetUserID,
 				MetricType:   item.MetricType,
-			}
-			// Remove from local cache
-			if _, ok := c.permissions[item.TargetUserID]; ok {
-				delete(c.permissions[item.TargetUserID], item.MetricType)
+				GroupID:      item.GroupID,
 			}
 		}
 		c.sendSuccess("Unsubscribe success")
@@ -250,20 +210,6 @@ func (c *Client) handleMetricPush(message []byte) {
 		c.sendError("Failed to process metric data")
 		return
 	}
-}
-
-// CanView checks whether the client has permission
-// to view a specific metric of a target user
-func (c *Client) CanView(targetUserID string, metricType string) bool {
-	if _, ok := c.permissions[targetUserID]; !ok {
-		log.Printf("[Client %s] No permissions found for target user %s", c.id, targetUserID)
-		return false
-	}
-	if _, ok := c.permissions[targetUserID][metricType]; !ok {
-		log.Printf("[Client %s] No permission specifically for %s of user %s", c.id, metricType, targetUserID)
-		return false
-	}
-	return true
 }
 
 // sendError sends an error message to the client

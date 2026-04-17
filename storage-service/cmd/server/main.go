@@ -22,7 +22,7 @@ import (
 // @description This is the API for Storage Service of HealthMate application.
 
 // @host localhost:5003
-// @BasePath /
+// @BasePath /api/v1
 // @schemes http https
 
 // @SecurityDefinitions.apikey BearerAuth

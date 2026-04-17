@@ -35,8 +35,8 @@ type SubscribeItem struct {
 
 // ServerMessage represents a message sent from server to client
 type ServerMessage struct {
-	Type    string `json:"type"`    // "error", "success", "metric"
-	Payload string `json:"payload"` // JSON string
+	Type    string      `json:"type"`    // "error", "success", "metric"
+	Payload interface{} `json:"payload"` // Payload can be string or object
 }
 
 // Client represents a WebSocket client connection
@@ -189,6 +189,7 @@ func (c *Client) handleControlAction(ctx context.Context, message []byte) {
 				c.permissions[item.TargetUserID] = make(map[string]bool)
 			}
 			c.permissions[item.TargetUserID][item.MetricType] = true
+			log.Printf("[Client %s] Cached subscription permission for %s/%s", c.id, item.TargetUserID, item.MetricType)
 
 			c.hub.subscribe <- SubscriptionEvent{
 				Client:       c,
@@ -255,9 +256,11 @@ func (c *Client) handleMetricPush(message []byte) {
 // to view a specific metric of a target user
 func (c *Client) CanView(targetUserID string, metricType string) bool {
 	if _, ok := c.permissions[targetUserID]; !ok {
+		log.Printf("[Client %s] No permissions found for target user %s", c.id, targetUserID)
 		return false
 	}
 	if _, ok := c.permissions[targetUserID][metricType]; !ok {
+		log.Printf("[Client %s] No permission specifically for %s of user %s", c.id, metricType, targetUserID)
 		return false
 	}
 	return true

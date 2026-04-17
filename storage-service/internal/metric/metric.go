@@ -14,6 +14,12 @@ type MetricDataPoint struct {
 	Value     float64   `json:"value"`
 }
 
+type Watcher struct {
+	UserID    string
+	UserName  string // Name of the watcher
+	GroupName string // Group through which the metric is shared
+}
+
 const (
 	RangeLast24Hours = "24h"
 	RangeLast7Days   = "7d"

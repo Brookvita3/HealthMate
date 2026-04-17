@@ -22,21 +22,34 @@ func (r *pgRepository) CheckAccess(ctx context.Context, observerUserID, targetUs
 
 	sql := `
 	SELECT EXISTS (
+		-- Rule 1: Must be enabled in Global Rule for everyone
 		SELECT 1
-		FROM group_members gm_observer
-		JOIN group_members gm_target
-		  ON gm_observer.group_id = gm_target.group_id
-		JOIN groups g
-		  ON g.id = gm_target.group_id
-		JOIN sharing_permissions sp
-		  ON sp.group_id = gm_target.group_id
-		 AND sp.user_id  = gm_target.user_id
-		 AND sp.metric_type = $3
-		WHERE
-			gm_observer.user_id = $1::uuid
-			AND gm_target.user_id = $2::uuid
-			AND gm_observer.status = 'accepted'
-			AND gm_target.status = 'accepted'
+		FROM sharing_permissions sp_global
+		WHERE sp_global.group_id IN (
+			SELECT gm_observer.group_id
+			FROM group_members gm_observer
+			JOIN group_members gm_target ON gm_observer.group_id = gm_target.group_id
+			WHERE gm_observer.user_id = $1::uuid
+			  AND gm_target.user_id = $2::uuid
+			  AND gm_observer.status = 'accepted'
+			  AND gm_target.status = 'accepted'
+		)
+		AND sp_global.user_id = $2::uuid
+		AND sp_global.metric_type = $3
+		AND sp_global.shared_with_user_id IS NULL
+	) AND (
+		-- Rule 2: Either no member rule exists for this observer, OR it is specifically enabled
+		NOT EXISTS (
+			SELECT 1 FROM sharing_permissions 
+			WHERE user_id = $2::uuid 
+			  AND shared_with_user_id = $1::uuid
+		)
+		OR EXISTS (
+			SELECT 1 FROM sharing_permissions 
+			WHERE user_id = $2::uuid 
+			  AND shared_with_user_id = $1::uuid
+			  AND metric_type = $3
+		)
 	);
 `
 

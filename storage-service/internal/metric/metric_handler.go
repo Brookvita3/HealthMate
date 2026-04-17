@@ -73,3 +73,62 @@ func (h *Handler) GetChartData(c *gin.Context) {
 
 	helpers.RespondData(c, data)
 }
+
+// GetThresholds handles getting user health thresholds
+// @Summary Get user health thresholds
+// @Description Get current health thresholds for a user (including defaults)
+// @Tags metrics
+// @Accept json
+// @Produce json
+// @Param user_id query string true "User ID"
+// @Success 200 {object} helpers.DataResponse
+// @Failure 400 {object} helpers.ErrorResponse
+// @Router /metrics/thresholds [get]
+// @Security BearerAuth
+func (h *Handler) GetThresholds(c *gin.Context) {
+	userID := c.Query("user_id")
+	if userID == "" {
+		helpers.HandleError(c, common.ErrInvalidRequest)
+		return
+	}
+
+	data, err := h.service.GetThresholds(c.Request.Context(), userID)
+	if err != nil {
+		helpers.HandleError(c, err)
+		return
+	}
+
+	helpers.RespondData(c, data)
+}
+
+// SetUserThreshold handles setting user health threshold
+// @Summary Set user health threshold
+// @Description Create or update a health threshold for a user
+// @Tags metrics
+// @Accept json
+// @Produce json
+// @Param threshold body UserThreshold true "Threshold definition"
+// @Success 200 {object} helpers.OKResponse
+// @Failure 400 {object} helpers.ErrorResponse
+// @Router /metrics/thresholds [post]
+// @Security BearerAuth
+func (h *Handler) SetUserThreshold(c *gin.Context) {
+	var threshold UserThreshold
+	if err := c.ShouldBindJSON(&threshold); err != nil {
+		helpers.HandleError(c, common.ErrInvalidRequest)
+		return
+	}
+
+	if threshold.UserID == "" || threshold.MetricID == "" {
+		helpers.HandleError(c, common.ErrInvalidRequest)
+		return
+	}
+
+	err := h.service.SetUserThreshold(c.Request.Context(), threshold)
+	if err != nil {
+		helpers.HandleError(c, err)
+		return
+	}
+
+	helpers.RespondOK(c, "Threshold updated successfully")
+}

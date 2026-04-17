@@ -49,9 +49,7 @@ func (h *Handler) upgradeToWebSocket(w http.ResponseWriter, r *http.Request, vie
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
 		CheckOrigin: func(r *http.Request) bool {
-			origin := r.Header.Get("Origin")
-			return origin == "" || origin == "https://healthmate.com"
-
+			return true
 		},
 	}
 	conn, err := upgrader.Upgrade(w, r, nil)

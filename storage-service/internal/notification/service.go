@@ -80,21 +80,16 @@ func (s *fcmService) SendToToken(ctx context.Context, token string, n Notificati
 	operation := func() error {
 		resp, err := s.client.Send(ctx, message)
 		if err != nil {
-			return err
-		}
-
-		log.Println("FCM sent successfully, messageID: %s, message: %v", resp, message)
-		if err != nil {
 			// Check if the token is invalid and should be deleted
 			if messaging.IsUnregistered(err) {
-				log.Printf("Token %s is not registered, deleting...", token)
-				// We don't have userID here easily unless we change the interface,
-				// but we can delete by token if our repo supports it.
-				// For now, just logging.
+				log.Printf("[FCM] Token %s is not registered", token)
+				// Here we should ideally delete the token from repo.
 				return nil // Don't retry for invalid tokens
 			}
 			return err
 		}
+
+		log.Printf("[FCM] Message sent successfully to token %s. MessageID: %s", token, resp)
 		return nil
 	}
 

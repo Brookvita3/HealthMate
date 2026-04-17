@@ -1,4 +1,4 @@
-basePath: /
+basePath: /api/v1
 definitions:
   internal_medication.CreateMedicationRequest:
     properties:
@@ -100,6 +100,24 @@ definitions:
     required:
     - token
     type: object
+  internal_metric.UserThreshold:
+    properties:
+      is_enabled:
+        type: boolean
+      max_value:
+        type: number
+      metric_id:
+        type: string
+      metric_name:
+        description: For UI display convenience
+        type: string
+      min_value:
+        type: number
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
   internal_readiness.predictRequest:
     properties:
       blood_oxygen:
@@ -109,6 +127,7 @@ definitions:
       heart_rate:
         type: number
       sleep_duration:
+        description: 0 is valid (no sleep data)
         type: number
       steps:
         type: number
@@ -117,7 +136,6 @@ definitions:
     required:
     - blood_oxygen
     - heart_rate
-    - sleep_duration
     - stress_level
     type: object
   internal_readiness.predictResponse:
@@ -134,6 +152,11 @@ definitions:
       error:
         type: string
     type: object
+  storage-service_internal_web_helpers.OKResponse:
+    properties:
+      message:
+        type: string
+    type: object
 host: localhost:5003
 info:
   contact: {}
@@ -141,7 +164,7 @@ info:
   title: HealthMate Storage API
   version: "1.0"
 paths:
-  /api/v1/medications:
+  /medications:
     get:
       consumes:
       - application/json
@@ -215,7 +238,7 @@ paths:
       summary: Create a new medication
       tags:
       - medications
-  /api/v1/medications/{medicationId}:
+  /medications/{medicationId}:
     delete:
       consumes:
       - application/json
@@ -259,7 +282,7 @@ paths:
       summary: Delete a medication
       tags:
       - medications
-  /api/v1/medications/{medicationId}/reminders/{reminderId}/take:
+  /medications/{medicationId}/reminders/{reminderId}/take:
     post:
       consumes:
       - application/json
@@ -314,7 +337,7 @@ paths:
       summary: Record medication taken
       tags:
       - medications
-  /api/v1/medications/device-token:
+  /medications/device-token:
     post:
       consumes:
       - application/json
@@ -421,15 +444,65 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/storage-service_internal_web_helpers.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/storage-service_internal_web_helpers.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Predict physical readiness score
       tags:
       - readiness
+  /metrics/thresholds:
+    get:
+      consumes:
+      - application/json
+      description: Get current health thresholds for a user (including defaults)
+      parameters:
+      - description: User ID
+        in: query
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/storage-service_internal_web_helpers.DataResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/storage-service_internal_web_helpers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get user health thresholds
+      tags:
+      - metrics
+    post:
+      consumes:
+      - application/json
+      description: Create or update a health threshold for a user
+      parameters:
+      - description: Threshold definition
+        in: body
+        name: threshold
+        required: true
+        schema:
+          $ref: '#/definitions/internal_metric.UserThreshold'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/storage-service_internal_web_helpers.OKResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/storage-service_internal_web_helpers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Set user health threshold
+      tags:
+      - metrics
 schemes:
 - http
 - https

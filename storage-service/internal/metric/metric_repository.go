@@ -13,4 +13,5 @@ type MetricRepository interface {
 	UpsertThreshold(ctx context.Context, threshold *UserThreshold) error
 	GetMetricWatchers(ctx context.Context, userID, metricType string) ([]Watcher, error)
 	GetUserName(ctx context.Context, userID string) (string, error)
+	CheckAccess(ctx context.Context, observerID, targetID, metricType string) (bool, error)
 }

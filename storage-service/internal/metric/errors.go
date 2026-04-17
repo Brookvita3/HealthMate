@@ -7,4 +7,5 @@ var (
 	ErrMissingTimes      = &common.BusinessError{Code: 400, Message: "start_time and end_time are required for custom range"}
 	ErrUnknownMetricType = &common.BusinessError{Code: 400, Message: "unknown metric type"}
 	ErrMetricNotFound    = &common.BusinessError{Code: 404, Message: "metric data not found"}
+	ErrPermissionDenied  = &common.BusinessError{Code: 403, Message: "permission denied: you do not have access to this metric"}
 )

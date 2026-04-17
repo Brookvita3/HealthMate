@@ -56,7 +56,9 @@ auth-service
 The system supports sharing health metrics either with an entire group or with specific users within that group.
 
 > [!IMPORTANT]
-> **Permission Hierarchy**: A user can only share a metric with a **specific member** if that metric is already shared with the **entire group** globally. If you try to share a metric individually that is not enabled at the group level, the API will return a `403 Forbidden` error.
+> **Permission Hierarchy (Strict Validation)**: A user can only share a metric with a **specific member** if that metric is already shared with the **entire group** globally.
+> - If you try to share a metric individually that is not enabled at the group level, the API will return a `400 Bad Request` with a specific error message.
+> - If the Group Admin (owner) revokes a metric from the Group Base, all specific member overrides for that metric are automatically revoked as well.
 
 ### 1. Share with EVERYONE in Group
 To share a metric with all current and future members of a group:
@@ -96,6 +98,18 @@ To set all shared metrics for a target at once:
 }
 ```
 
-### 4. Fetching Current Permissions
+### 4. Reset User to Group Defaults
+To remove all specific overrides for a user and return them to the global group rules:
+- **Endpoint**: `PUT /groups/:id/permissions`
+- **Body**: Set `metric_types` to `null`.
+
+```json
+{
+  "metric_types": null,
+  "target_user_id": "987e6543-e21b-12d3-a456-426614174000"
+}
+```
+
+### 5. Fetching Current Permissions
 - **Endpoint**: `GET /groups/:id/permissions`
 - **Query Param**: `target_user_id` (optional). If provided, it filters for permissions granted to that specific user (including global group shares).

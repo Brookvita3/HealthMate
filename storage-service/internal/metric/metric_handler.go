@@ -65,7 +65,8 @@ func (h *Handler) GetChartData(c *gin.Context) {
 		end = &endTime
 	}
 
-	data, err := h.service.GetChartData(c.Request.Context(), userID, metricType, timeRange, start, end)
+	observerID := c.GetString("sub")
+	data, err := h.service.GetChartData(c.Request.Context(), observerID, userID, metricType, timeRange, start, end)
 	if err != nil {
 		helpers.HandleError(c, err)
 		return

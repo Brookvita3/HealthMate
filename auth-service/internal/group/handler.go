@@ -51,6 +51,16 @@ type TransferOwnershipRequest struct {
 	NewOwnerID string `json:"new_owner_id" binding:"required"`
 }
 
+type GroupPermissionsResponse struct {
+	Global   []string                   `json:"global"`
+	Specific []MemberPermissionResponse `json:"specific"`
+}
+
+type MemberPermissionResponse struct {
+	UserID  uuid.UUID `json:"user_id"`
+	Metrics []string  `json:"metrics"`
+}
+
 // NewHandler creates a new instance of group.Handler with its dependencies.
 func NewHandler(gs Service, ms member.Service, ps permission.Service) *Handler {
 	return &Handler{
@@ -350,7 +360,31 @@ func (handler *Handler) GetPermissions(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, perms)
+	// Group permissions into Global and Specific
+	resp := GroupPermissionsResponse{
+		Global:   []string{},
+		Specific: []MemberPermissionResponse{},
+	}
+
+	specificMap := make(map[uuid.UUID][]string)
+
+	for _, p := range perms {
+		if p.SharedWithUserId == nil {
+			resp.Global = append(resp.Global, p.MetricType)
+		} else {
+			uid := *p.SharedWithUserId
+			specificMap[uid] = append(specificMap[uid], p.MetricType)
+		}
+	}
+
+	for uid, metrics := range specificMap {
+		resp.Specific = append(resp.Specific, MemberPermissionResponse{
+			UserID:  uid,
+			Metrics: metrics,
+		})
+	}
+
+	c.JSON(http.StatusOK, resp)
 }
 
 // GetMembers handles retrieving all members of a group.

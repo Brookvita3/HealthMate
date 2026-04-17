@@ -10,6 +10,13 @@ func (e *BusinessError) Error() string {
 	return e.Message
 }
 
+func NewBusinessError(message string) *BusinessError {
+	return &BusinessError{
+		Code:    400,
+		Message: message,
+	}
+}
+
 // Other errors
 var (
 	// ErrInvalidUUIDFormat is returned when a string value cannot be parsed into a valid UUID.

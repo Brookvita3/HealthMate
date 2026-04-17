@@ -12,7 +12,7 @@ import (
 type Hub struct {
 	clients map[*Client]bool
 
-	subscriptions map[string]map[*Client]bool // "user-A-id" -> [client_B, client_C]
+	subscriptions map[string]map[string]map[string]map[*Client]bool // "targetUserID" -> "metricType" -> "groupID" -> [client_B, client_C]
 
 	register    chan *Client
 	unregister  chan *Client
@@ -28,12 +28,13 @@ type SubscriptionEvent struct {
 	Client       *Client
 	TargetUserID string
 	MetricType   string
+	GroupID      string
 }
 
 func NewHub(permRepo permission.Repository, producer *kafka.Producer) *Hub {
 	return &Hub{
 		clients:       make(map[*Client]bool),
-		subscriptions: make(map[string]map[*Client]bool),
+		subscriptions: make(map[string]map[string]map[string]map[*Client]bool),
 
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
@@ -66,64 +67,128 @@ func (h *Hub) Run(ctx context.Context) {
 			}
 
 		case ev := <-h.subscribe:
-			subs, ok := h.subscriptions[ev.TargetUserID]
+			userSubs, ok := h.subscriptions[ev.TargetUserID]
 			if !ok {
-				subs = make(map[*Client]bool)
-				h.subscriptions[ev.TargetUserID] = subs
+				userSubs = make(map[string]map[string]map[*Client]bool)
+				h.subscriptions[ev.TargetUserID] = userSubs
 			}
-			subs[ev.Client] = true
+			metricSubs, ok := userSubs[ev.MetricType]
+			if !ok {
+				metricSubs = make(map[string]map[*Client]bool)
+				userSubs[ev.MetricType] = metricSubs
+			}
+			groupSubs, ok := metricSubs[ev.GroupID]
+			if !ok {
+				groupSubs = make(map[*Client]bool)
+				metricSubs[ev.GroupID] = groupSubs
+			}
+			groupSubs[ev.Client] = true
 
 		case ev := <-h.unsubscribe:
-			if subs, ok := h.subscriptions[ev.TargetUserID]; ok {
-				delete(subs, ev.Client)
-				if len(subs) == 0 {
+			if userSubs, ok := h.subscriptions[ev.TargetUserID]; ok {
+				if metricSubs, ok := userSubs[ev.MetricType]; ok {
+					if groupSubs, ok := metricSubs[ev.GroupID]; ok {
+						delete(groupSubs, ev.Client)
+						if len(groupSubs) == 0 {
+							delete(metricSubs, ev.GroupID)
+						}
+					}
+					if len(metricSubs) == 0 {
+						delete(userSubs, ev.MetricType)
+					}
+				}
+				if len(userSubs) == 0 {
 					delete(h.subscriptions, ev.TargetUserID)
 				}
 			}
 
 		case m := <-h.broadcast:
-			log.Printf("[Hub] Broadcast received for UserID: %s, Metric: %s", m.UserID, m.Type)
-			subs := h.subscriptions[m.UserID]
-			if subs == nil {
-				log.Printf("[Hub] No subscribers found for UserID: %s", m.UserID)
+			// log.Printf("[Hub] Broadcast received for UserID: %s, Metric: %s", m.UserID, m.Type)
+			
+			// 1. Fetch live authorized watchers from DB (Strict Base + Filter logic)
+			// authorizedUserGroups maps watcherUserID -> []groupIDs that authorized them
+			authorizedUserGroups, err := h.permRepo.GetMetricWatchers(context.Background(), m.UserID, m.Type)
+			if err != nil {
+				log.Printf("[Hub] Error fetching watchers for %s/%s: %v", m.UserID, m.Type, err)
 				continue
 			}
 
-			log.Printf("[Hub] Found %d potential subscribers for UserID: %s", len(subs), m.UserID)
+			if len(authorizedUserGroups) == 0 {
+				continue
+			}
 
-			// Wrap metric in ServerMessage structure
+			// 2. Fetch active subscribers for this user and metric type
+			userSubs := h.subscriptions[m.UserID]
+			if userSubs == nil {
+				continue
+			}
+			metricSubs := userSubs[m.Type]
+			if len(metricSubs) == 0 {
+				continue
+			}
+
+			// 3. Prepare message
 			msgBody := ServerMessage{
 				Type:    "metric",
 				Payload: m,
 			}
 			data, _ := json.Marshal(msgBody)
 
+			// 4. Send only to clients who are BOTH subscribed and authorized in the same group
 			sentCount := 0
-			for client := range subs {
-				if client.CanView(m.UserID, m.Type) {
-					select {
-					case client.send <- data:
-						sentCount++
-					default:
-						log.Printf("[Hub] Client %s send buffer full, dropping message", client.id)
+			for groupID, clients := range metricSubs {
+				for client := range clients {
+					authorizedGroups := authorizedUserGroups[client.viewerId]
+					isAuthorized := false
+
+					if groupID == "" {
+						// Global subscription (no specific group requested) -> OK if authorized by ANY group
+						isAuthorized = len(authorizedGroups) > 0
+					} else {
+						// Group-isolated subscription -> OK ONLY if authorized by THIS specific group
+						for _, g := range authorizedGroups {
+							if g == groupID {
+								isAuthorized = true
+								break
+							}
+						}
 					}
-				} else {
-					log.Printf("[Hub] Client %s permission denied for %s/%s", client.id, m.UserID, m.Type)
+
+					if isAuthorized {
+						select {
+						case client.send <- data:
+							sentCount++
+						default:
+							log.Printf("[Hub] Client %s buffer full, dropping message", client.id)
+						}
+					}
 				}
 			}
-			log.Printf("[Hub] Successfully broadcasted to %d clients", sentCount)
+			if sentCount > 0 {
+				log.Printf("[Hub] Broadcasted %s/%s to %d authorized subscribers", m.UserID, m.Type, sentCount)
+			}
 		}
 	}
 }
 
 // removeClientSubscriptions deletes all subscriptions of a client
 func (h *Hub) removeClientSubscriptions(client *Client) {
-	for targetUserID, subs := range h.subscriptions {
-		if _, ok := subs[client]; ok {
-			delete(subs, client)
-			if len(subs) == 0 {
-				delete(h.subscriptions, targetUserID)
+	for targetUserID, userSubs := range h.subscriptions {
+		for metricType, metricSubs := range userSubs {
+			for groupID, groupSubs := range metricSubs {
+				if _, ok := groupSubs[client]; ok {
+					delete(groupSubs, client)
+					if len(groupSubs) == 0 {
+						delete(metricSubs, groupID)
+					}
+				}
 			}
+			if len(metricSubs) == 0 {
+				delete(userSubs, metricType)
+			}
+		}
+		if len(userSubs) == 0 {
+			delete(h.subscriptions, targetUserID)
 		}
 	}
 }

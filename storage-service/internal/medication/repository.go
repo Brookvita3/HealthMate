@@ -102,7 +102,8 @@ func (r *postgresRepository) ListByUserID(ctx context.Context, userID string) ([
 		return []Medication{}, nil
 	}
 
-	// Collect medication IDs for batch reminder query
+	// Collect medication IDs for batch reminder query.
+	// Dùng medication_id::text = ANY($1::text[]) vì pgx + ANY(uuid[]) với []string dễ lỗi kiểu → 500.
 	medIDs := make([]string, len(meds))
 	medIndex := make(map[string]int, len(meds))
 	for i, m := range meds {
@@ -113,7 +114,7 @@ func (r *postgresRepository) ListByUserID(ctx context.Context, userID string) ([
 	remQuery := `
 		SELECT id, medication_id, time, is_enabled, last_taken, missed_count, created_at, updated_at
 		FROM medication_reminders
-		WHERE medication_id = ANY($1)
+		WHERE medication_id::text = ANY($1::text[])
 		ORDER BY time ASC
 	`
 	remRows, err := r.pool.Query(ctx, remQuery, medIDs)

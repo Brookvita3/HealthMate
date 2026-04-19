@@ -22,12 +22,15 @@ services:
     container_name: DACN-api-gateway
     env_file:
       - ./api-gateway/.env
+    environment:
+      OCR_HTTP_URL: http://ocr-service:8010
     ports:
       - "5002:5002"
     depends_on:
       - auth-service
       - realtime-service
       - storage-service
+      - ocr-service
     networks:
       - backend
 
@@ -86,8 +89,6 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
-      ocr-service:
-        condition: service_started
 
   ocr-service:
     build:

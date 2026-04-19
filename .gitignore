@@ -1,2 +1,11 @@
 .env
 .vscode
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# OCR local / batch test (không commit)
+ocr-batch-result.json
+run_ocr_batch_test.py

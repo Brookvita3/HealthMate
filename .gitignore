@@ -6,6 +6,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# OCR local / batch test (không commit)
-ocr-batch-result.json
-run_ocr_batch_test.py
+# Local OCR artifacts
+ocr-service/moh_raw.json
+ocr-service/drugs_moh.csv
+ocr-service/ocr-batch-result.json
+ocr-service/run_ocr_batch_test.py
+ocr-service/scripts/__pycache__/
+ocr-service/app/__pycache__/

@@ -1,16 +1,14 @@
 import re
 import os
-import json
-import base64
-import urllib.request
-import urllib.error
-import urllib.parse
 from typing import Any
 
 import cv2
 import numpy as np
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from app.fallback import call_fallback_ocr, call_ocr_space
+from app.preprocess import deskew, ensure_min_ocr_size, preprocess_image
 from paddleocr import PaddleOCR
+from app.postprocess import post_process_items
 
 app = FastAPI(title="healthmate-ocr-service", version="1.0.0")
 
@@ -20,6 +18,7 @@ ocr_engine = PaddleOCR(use_angle_cls=True, lang="en", show_log=False)
 fallback_ocr_url = os.getenv("OCR_FALLBACK_HTTP_URL", "").strip()
 fallback_mode = os.getenv("OCR_FALLBACK_MODE", "").strip().lower()
 ocr_space_api_key = os.getenv("OCR_SPACE_API_KEY", "").strip()
+mistral_api_key = os.getenv("MISTRAL_API_KEY", "").strip()
 enable_synthetic_hint_rows = os.getenv("OCR_ENABLE_SYNTHETIC_HINT_ROWS", "").strip().lower() in {
     "1",
     "true",
@@ -28,72 +27,21 @@ enable_synthetic_hint_rows = os.getenv("OCR_ENABLE_SYNTHETIC_HINT_ROWS", "").str
 
 
 def _crop_to_medication_body_bgr(img_bgr: np.ndarray) -> np.ndarray:
-    """
-    Ảnh dọc kiểu giấy đơn: bỏ phần đầu (logo, barcode, tiêu đề BV, thông tin BN),
-    chỉ giữ thân có danh sách thuốc + SL + Cộng khoản. Không cắt đáy để không mất dòng cuối.
-    Ảnh ngang/vuông (crop tay chỉ vùng thuốc) — giữ nguyên.
-    """
-    h, w = img_bgr.shape[:2]
-    if h < 350:
-        return img_bgr
-    if h <= w * 1.08:
-        return img_bgr
-    try:
-        top_frac = float(os.getenv("OCR_BODY_TOP_SKIP_FRAC", "0.18"))
-    except ValueError:
-        top_frac = 0.18
-    top_frac = max(0.0, min(top_frac, 0.45))
-    top = int(h * top_frac)
-    if top >= h - 120:
-        return img_bgr
-    return img_bgr[top:, :]
+    from app.preprocess import crop_to_medication_body_bgr
+
+    return crop_to_medication_body_bgr(img_bgr)
 
 
 def _preprocess_image(raw: bytes, *, crop_body: bool = True) -> np.ndarray:
-    arr = np.frombuffer(raw, np.uint8)
-    img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
-    if img is None:
-        raise ValueError("invalid image bytes")
-    if crop_body:
-        img = _crop_to_medication_body_bgr(img)
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    gray = cv2.bilateralFilter(gray, 5, 35, 35)
-    gray = cv2.convertScaleAbs(gray, alpha=1.2, beta=6)
-    kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
-    sharp = cv2.filter2D(gray, -1, kernel)
-    return sharp
+    return preprocess_image(raw, crop_body=crop_body)
 
 
 def _deskew(gray: np.ndarray) -> np.ndarray:
-    # Estimate text angle from connected components and rotate back.
-    th = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
-    inv = 255 - th
-    coords = np.column_stack(np.where(inv > 0))
-    if coords.size == 0:
-        return gray
-    angle = cv2.minAreaRect(coords)[-1]
-    if angle < -45:
-        angle = 90 + angle
-    if abs(angle) < 0.5:
-        return gray
-    h, w = gray.shape[:2]
-    m = cv2.getRotationMatrix2D((w // 2, h // 2), angle, 1.0)
-    return cv2.warpAffine(gray, m, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+    return deskew(gray)
 
 
 def _ensure_min_ocr_size(img: np.ndarray, min_long_side: int = 1280) -> np.ndarray:
-    """PaddleOCR dễ bỏ sót chữ nhỏ ở ảnh chụp xa; phóng to trước khi đọc."""
-    h, w = img.shape[:2]
-    long_side = max(h, w)
-    target = min_long_side
-    # Đơn dọc: cần độ phân giải dọc cao hơn để đọc hết các dòng thuốc phía dưới.
-    if h > w * 1.22:
-        target = max(target, 1680)
-    if long_side >= target:
-        return img
-    scale = target / float(long_side)
-    nw, nh = max(1, int(w * scale)), max(1, int(h * scale))
-    return cv2.resize(img, (nw, nh), interpolation=cv2.INTER_CUBIC)
+    return ensure_min_ocr_size(img, min_long_side=min_long_side)
 
 
 def _mean_y_paddle_line(line: Any) -> float:
@@ -676,73 +624,24 @@ def _extract_raw_text(img: np.ndarray) -> tuple[str, float, str]:
 
 
 def _call_fallback_ocr(raw: bytes) -> tuple[str, bool]:
-    if fallback_mode == "ocr_space":
-        return _call_ocr_space(raw)
-    if fallback_ocr_url:
-        return _call_http_fallback(raw)
-    return "", False
+    return call_fallback_ocr(
+        raw,
+        fallback_mode=fallback_mode,
+        fallback_ocr_url=fallback_ocr_url,
+        ocr_space_api_key=ocr_space_api_key,
+    )
 
 
-def _call_http_fallback(raw: bytes) -> tuple[str, bool]:
-    boundary = "----FallbackBoundary"
-    body = (
-        f"--{boundary}\r\n"
-        'Content-Disposition: form-data; name="file"; filename="image.png"\r\n'
-        "Content-Type: image/png\r\n\r\n"
-    ).encode() + raw + f"\r\n--{boundary}--\r\n".encode()
-
-    req = urllib.request.Request(fallback_ocr_url, data=body, method="POST")
-    req.add_header("Content-Type", f"multipart/form-data; boundary={boundary}")
-    req.add_header("Content-Length", str(len(body)))
-    try:
-        with urllib.request.urlopen(req, timeout=45) as resp:
-            payload = json.loads(resp.read().decode("utf-8", "ignore"))
-            if isinstance(payload, dict):
-                raw_text = payload.get("raw_text") or payload.get("text") or ""
-                if isinstance(raw_text, str):
-                    return raw_text.strip(), True
-    except (urllib.error.URLError, json.JSONDecodeError, TimeoutError):
-        return "", False
-    return "", False
+def _call_ocr_space_direct(raw: bytes) -> tuple[str, bool]:
+    return call_ocr_space(raw, ocr_space_api_key=ocr_space_api_key)
 
 
-def _call_ocr_space(raw: bytes) -> tuple[str, bool]:
-    # Free-tier fallback: https://ocr.space/ocrapi
-    # api key can use `helloworld` for quick tests.
-    api_key = ocr_space_api_key if ocr_space_api_key else "helloworld"
-    b64_img = base64.b64encode(raw).decode("ascii")
-    payload = urllib.parse.urlencode(
-        {
-            "base64Image": f"data:image/png;base64,{b64_img}",
-            "language": "eng",
-            "isOverlayRequired": "false",
-            "OCREngine": "2",
-            "scale": "true",
-        }
-    ).encode("utf-8")
-    req = urllib.request.Request("https://api.ocr.space/parse/image", data=payload, method="POST")
-    req.add_header("apikey", api_key)
-    req.add_header("Content-Type", "application/x-www-form-urlencoded")
-    try:
-        with urllib.request.urlopen(req, timeout=45) as resp:
-            data = json.loads(resp.read().decode("utf-8", "ignore"))
-            if not isinstance(data, dict):
-                return "", False
-            parsed = data.get("ParsedResults")
-            if not isinstance(parsed, list) or not parsed:
-                return "", False
-            lines: list[str] = []
-            for item in parsed:
-                if not isinstance(item, dict):
-                    continue
-                txt = str(item.get("ParsedText") or "").strip()
-                if txt:
-                    lines.append(txt)
-            merged = "\n".join(lines).strip()
-            return (merged, True) if merged else ("", False)
-    except (urllib.error.URLError, json.JSONDecodeError, TimeoutError):
-        return "", False
-    return "", False
+def _fallback_pass_tag(mode: str) -> str:
+    if mode == "ocr_space":
+        return "ocr_space"
+    if mode == "mistral_ocr":
+        return "mistral_ocr"
+    return "http"
 
 
 _num_marker = re.compile(r"^\s*[\W_]{0,4}\s*(\d{1,2})\s*[.)/\-]\s*")
@@ -1558,6 +1457,60 @@ def _parse_items_relaxed_from_lines(normalized_text: str) -> list[dict[str, Any]
     return _dedupe_prescription_items(picked)
 
 
+def _parse_items_from_tabular_lines(normalized_text: str) -> list[dict[str, Any]]:
+    """
+    Last-resort parser for table-like prescriptions:
+    tries to recover medicine lines near quantity/sig columns.
+    """
+    lines = [re.sub(r"\s+", " ", ln).strip() for ln in normalized_text.splitlines() if ln.strip()]
+    if not lines:
+        return []
+
+    qty_re = re.compile(r"\b(?:s[oố]\s*l[uư][oợ]ng|sl|sig)\b", re.I)
+    header_re = re.compile(r"\b(?:đơn thuốc|toa thuốc|ngày tái khám|bác sĩ|họ tên|địa chỉ)\b", re.I)
+
+    candidates: list[dict[str, Any]] = []
+    for i, ln in enumerate(lines):
+        if header_re.search(ln):
+            continue
+        if not qty_re.search(ln):
+            continue
+
+        # Prefer left-side medicine segment before quantity/sig.
+        left = re.split(r"\b(?:s[oố]\s*l[uư][oợ]ng|sl|sig)\b", ln, maxsplit=1, flags=re.I)[0].strip()
+        prev = lines[i - 1] if i > 0 else ""
+        next_ln = lines[i + 1] if i + 1 < len(lines) else ""
+        options = [left, prev, next_ln]
+
+        for opt in options:
+            if not opt or len(opt) < 5:
+                continue
+            raw_name = _clean_name(opt)
+            if len(raw_name) < 4:
+                continue
+            if header_re.search(raw_name):
+                continue
+
+            canon = _canonicalize_name(raw_name, opt)
+            dosage_match = _dosage_re.search(opt)
+            dosage = dosage_match.group(1).replace(",", ".") if dosage_match else "Theo đơn"
+            specific_times = _extract_specific_times(f"{opt} {ln}") or ["08:00"]
+            times_per_day = max(1, len(specific_times))
+            candidates.append(
+                {
+                    "name": canon,
+                    "dosage": dosage,
+                    "instructions": _build_instructions(f"{opt} {ln}", specific_times, times_per_day),
+                    "times_per_day": times_per_day,
+                    "specific_times": specific_times,
+                    "confidence": 0.42,
+                }
+            )
+            break
+
+    return _dedupe_prescription_items(candidates)
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -1579,14 +1532,16 @@ async def parse_prescription(file: UploadFile = File(...)) -> dict[str, Any]:
 
     used_fallback = False
     fallback_stage = ""
-    has_fallback = bool(fallback_ocr_url) or fallback_mode == "ocr_space"
+    has_fallback = bool(fallback_ocr_url) or fallback_mode == "ocr_space" or (
+        fallback_mode == "mistral_ocr" and bool(mistral_api_key)
+    )
     if (not raw_text or len(raw_text) < 120 or ocr_score < 0.45) and has_fallback:
         fallback_text, ok = _call_fallback_ocr(raw)
         if ok and len(fallback_text) > len(raw_text):
             raw_text = fallback_text
             used_fallback = True
             fallback_stage = "pre_parse_low_quality"
-            pass_used = "fallback_ocr_space" if fallback_mode == "ocr_space" else "fallback_http"
+            pass_used = f"fallback_{_fallback_pass_tag(fallback_mode)}"
             ocr_score = max(ocr_score, 0.5)
 
     if not raw_text:
@@ -1710,16 +1665,43 @@ async def parse_prescription(file: UploadFile = File(...)) -> dict[str, Any]:
                 normalized_text = fb_norm
                 used_fallback = True
                 fallback_stage = "post_parse_zero_items"
-                pass_used = (
-                    "fallback_ocr_space_post_parse"
-                    if fallback_mode == "ocr_space"
-                    else "fallback_http_post_parse"
-                )
+                pass_used = f"fallback_{_fallback_pass_tag(fallback_mode)}_post_parse"
                 ocr_score = max(ocr_score, 0.5)
+
+    # Last-resort rescue: when Mistral fallback already ran but parser still fails,
+    # retry parse from OCR.Space text for better plain text lines.
+    if not items and fallback_mode == "mistral_ocr":
+        alt_text, ok = _call_ocr_space_direct(raw)
+        if ok:
+            alt_norm = _normalize_ocr_vi(alt_text)
+            alt_items = _parse_items_from_text(alt_norm)
+            alt_items = _dedupe_prescription_items(alt_items)
+            if (len(alt_items) == 0 and len(alt_norm) >= 120) or (
+                len(alt_items) <= 1 and len(alt_norm) >= 650
+            ):
+                alt_relaxed = _parse_items_relaxed_from_lines(alt_norm)
+                if len(alt_relaxed) > len(alt_items):
+                    alt_items = alt_relaxed
+            if len(alt_items) > len(items):
+                items = alt_items
+                normalized_text = alt_norm
+                used_fallback = True
+                fallback_stage = "post_parse_zero_items_ocr_space_rescue"
+                pass_used = "fallback_ocr_space_rescue"
+                ocr_score = max(ocr_score, 0.5)
+
+    if not items:
+        table_items = _parse_items_from_tabular_lines(normalized_text)
+        if table_items:
+            items = table_items
+            fallback_stage = f"{fallback_stage}|tabular_rescue" if fallback_stage else "tabular_rescue"
+            if pass_used.startswith("fallback_"):
+                pass_used = f"{pass_used}_tabular"
 
     items, hinted = _recover_missing_rows_from_text_hints(normalized_text, items)
     if hinted:
         items = _apply_trung_vuong_slip_defaults_when_template_filled(items)
+    items, name_warnings = post_process_items(items)
 
     avg_conf = (
         round(sum(float(item.get("confidence", 0.0)) for item in items) / len(items), 3)
@@ -1729,6 +1711,7 @@ async def parse_prescription(file: UploadFile = File(...)) -> dict[str, Any]:
     warnings: list[str] = []
     if avg_conf < 0.7:
         warnings.append("Cần kiểm tra lại đơn thuốc")
+    warnings.extend(name_warnings)
 
     return {
         "raw_text": normalized_text,

@@ -119,12 +119,46 @@ Header: **`Authorization: Bearer <access_token>`**.
 | Biến | Ý nghĩa |
 |------|---------|
 | `OCR_FALLBACK_HTTP_URL` | URL OCR HTTP khác (custom) khi Paddle yếu |
-| `OCR_FALLBACK_MODE` | Ví dụ `ocr_space` — fallback OCR.Space (free tier) |
+| `OCR_FALLBACK_MODE` | `ocr_space` / `mistral_ocr` / để trống (không fallback cloud) |
 | `OCR_SPACE_API_KEY` | Key OCR.Space (có thể `helloworld` để thử) |
+| `MISTRAL_API_KEY` | API key cho Mistral OCR fallback |
+| `OCR_MISTRAL_MODEL` | Model Mistral OCR (mặc định `mistral-ocr-latest`) |
+| `OCR_MISTRAL_TIMEOUT_SEC` | Timeout gọi Mistral OCR (mặc định `45`) |
 | `OCR_ENABLE_SYNTHETIC_HINT_ROWS` | Gợi ý dòng tổng hợp (khi bật) |
 | `OCR_BODY_TOP_SKIP_FRAC` | Tỷ lệ cắt đầu ảnh dọc (~0.18 mặc định trong code) |
+| `OCR_DRUG_DICT_ENABLED` | Bật/tắt chuẩn hóa tên thuốc theo từ điển (mặc định `true`) |
+| `OCR_DRUG_DICT_CSV_PATH` | Đường dẫn file CSV danh mục thuốc chuẩn (khuyên dùng dữ liệu Cục Quản lý Dược) |
+| `OCR_DRUG_DICT_FUZZY_CUTOFF` | Ngưỡng fuzzy "chắc chắn" để tự chuẩn hóa tên thuốc (mặc định `0.88`) |
+| `OCR_DRUG_DICT_WEAK_CUTOFF` | Ngưỡng fuzzy "gần đúng nhưng chưa chắc" để phát cảnh báo (mặc định `0.80`) |
 
 **Ghi chú:** PaddleOCR vẫn là **primary**; fallback chỉ khi kết quả yếu (text ngắn / điểm thấp). Trong `docker-compose.yml` thường để trống fallback để chỉ self-hosted.
+
+### Chuẩn hóa tên thuốc theo nguồn chính phủ Việt Nam (khuyến nghị)
+
+- Nguồn ưu tiên: cổng công bố thuốc của **Cục Quản lý Dược - Bộ Y tế**.
+- Export dữ liệu về CSV (chứa cột tên thuốc), mount vào container và set:
+
+```env
+OCR_DRUG_DICT_ENABLED=true
+OCR_DRUG_DICT_CSV_PATH=/app/data/drugs_moh.csv
+OCR_DRUG_DICT_FUZZY_CUTOFF=0.88
+OCR_DRUG_DICT_WEAK_CUTOFF=0.80
+```
+
+- Service sẽ fuzzy-match tên OCR về tên chuẩn trong CSV khi độ khớp đủ cao.
+- Nếu chỉ "gần đúng" hoặc không có trong danh mục, API thêm warning để FE yêu cầu người dùng kiểm tra thủ công.
+
+### Ví dụ cấu hình fallback Mistral OCR
+
+```env
+OCR_FALLBACK_MODE=mistral_ocr
+MISTRAL_API_KEY=your_real_key_here
+OCR_MISTRAL_MODEL=mistral-ocr-latest
+OCR_MISTRAL_TIMEOUT_SEC=45
+```
+
+- Chỉ dùng fallback khi OCR chính yếu (text ngắn / điểm thấp hoặc parse ra 0 item).
+- Nếu không set `MISTRAL_API_KEY`, mode `mistral_ocr` sẽ tự bỏ qua fallback.
 
 ---
 
@@ -150,6 +184,18 @@ Multipart `file` + Bearer — FE: `ApiOcrService`, `ApiEndpoints.ocrPrescription
 - Phụ thuộc chất lượng ảnh (sáng, nét, không che chữ).
 - Fallback bên thứ ba (OCR.Space / HTTP) — cân nhắc bảo mật trước khi bật.
 - Container OCR **tốn RAM**; cần giới hạn tài nguyên phù hợp.
+
+---
+
+## 10. Checklist test nhanh (khuyên dùng trước khi merge)
+
+- Chuẩn bị tối thiểu 10 ảnh thật (5 ảnh rõ, 5 ảnh khó: nghiêng, mờ, thiếu sáng).
+- Chạy API parse và ghi lại: `items_count`, `avg_confidence`, số warning.
+- Kiểm tra các case quan trọng:
+  - `name_match_kind=exact|exact_ascii|exact_simplified|fuzzy` (ổn).
+  - `name_match_kind=fuzzy_below_cutoff|not_found` (phải có warning).
+- So sánh trước/sau tối ưu theo 4 trường: tên thuốc, liều lượng, thời điểm dùng, hướng dẫn.
+- Chỉ điều chỉnh `OCR_DRUG_DICT_FUZZY_CUTOFF` / `OCR_DRUG_DICT_WEAK_CUTOFF` nếu warning quá nhiều hoặc normalize quá "liều".
 
 ---
 

@@ -11,6 +11,7 @@ type Config struct {
 	JWTSecret       string
 	AuthHTTPURL     string
 	RealtimeHTTPURL string
+	OCRHTTPURL      string
 	Port            string
 	KafkaBrokerURL  string
 	KafkaTopic      string

@@ -3,6 +3,7 @@ package helpers
 import (
 	"auth-service/internal/common"
 	"errors"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -14,6 +15,7 @@ func HandleError(c *gin.Context, err error) {
 	if errors.As(err, &businessErr) {
 		c.JSON(businessErr.Code, ErrorResponse{Error: businessErr.Message})
 	} else {
+		log.Printf("[ERROR] unhandled error: %v", err)
 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "an unexpected error occurred"})
 	}
 }

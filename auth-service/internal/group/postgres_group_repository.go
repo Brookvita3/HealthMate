@@ -151,11 +151,10 @@ func (r *postgresRepository) Update(ctx context.Context, id uuid.UUID, params Up
 	// Add updated_at timestamp
 	setClauses = append(setClauses, "updated_at = NOW()")
 
-	// Add WHERE clause
-	setClauses = append(setClauses, fmt.Sprintf("WHERE id = $%d", argID))
+	whereClause := fmt.Sprintf("WHERE id = $%d", argID)
 	args = append(args, id)
 
-	query := fmt.Sprintf("UPDATE groups SET %s", strings.Join(setClauses, ", "))
+	query := fmt.Sprintf("UPDATE groups SET %s %s", strings.Join(setClauses, ", "), whereClause)
 
 	cmdTag, err := r.pool.Exec(ctx, query, args...)
 	if err != nil {

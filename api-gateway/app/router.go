@@ -30,6 +30,9 @@ func (a *App) SetupRoutes(cfg config.Config) {
 		// Medications
 		protected.Any("/medications", handlers.ReverseProxy(cfg.StorageHTTPURL, cfg.APIPrefix+"/medications"))
 		protected.Any("/medications/*proxyPath", handlers.ReverseProxy(cfg.StorageHTTPURL, cfg.APIPrefix+"/medications"))
+
+		// OCR (ocr-service)
+		protected.Any("/ocr/*proxyPath", handlers.ReverseProxy(cfg.OCRHTTPURL, "/ocr"))
 	}
 
 	a.Router.GET("/gateway/health", handlers.PingHandler)

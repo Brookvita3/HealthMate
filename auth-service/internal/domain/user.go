@@ -22,7 +22,7 @@ type User struct {
 	Birthday   string  `json:"birthday,omitempty"`
 	Weight     float64 `json:"weight,omitempty"`
 	Height     float64 `json:"height,omitempty"`
-	BloodGroup string  `json:"blood_group,omitempty"`
+	BloodGroup string `json:"blood_group,omitempty"`
 
 	Provider string `json:"-"`
 	// Allows NULL

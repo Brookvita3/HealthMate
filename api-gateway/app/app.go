@@ -18,6 +18,10 @@ type App struct {
 
 func NewApp(cfg *config.Config) *App {
 	router := gin.Default()
+	// Tránh 307/301 (trailing slash / fixed path) trước khi middleware CORS xử lý OPTIONS —
+	// trình duyệt báo "Redirect is not allowed for a preflight request".
+	router.RedirectTrailingSlash = false
+	router.RedirectFixedPath = false
 
 	router.RedirectTrailingSlash = false
 	router.RedirectFixedPath = false

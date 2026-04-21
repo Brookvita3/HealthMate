@@ -10,22 +10,46 @@ import (
 
 func ReverseProxy(target string, basePath string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		url, err := url.Parse(target)
+		t, err := url.Parse(target)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid target"})
 			return
 		}
 
-		proxy := httputil.NewSingleHostReverseProxy(url)
-
-		// Rewrite path
 		proxyPath := c.Param("proxyPath")
 		if proxyPath == "/" {
 			proxyPath = ""
 		}
+		outbound := basePath + proxyPath
 
-		c.Request.URL.Path = basePath + proxyPath
-		c.Request.Host = url.Host
+		proxy := &httputil.ReverseProxy{
+			Rewrite: func(r *httputil.ProxyRequest) {
+				r.SetURL(t)
+				r.Out.URL.Path = outbound
+				r.Out.URL.RawPath = ""
+			},
+		}
+		proxy.ServeHTTP(c.Writer, c.Request)
+	}
+}
+
+// ReverseProxyExact dùng cho route không có *proxyPath (vd. GET /groups, GET /medications).
+// Tránh dựa vào Param rỗng và join path của NewSingleHostReverseProxy.
+func ReverseProxyExact(target string, outboundPath string) gin.HandlerFunc {
+	t, err := url.Parse(target)
+	if err != nil {
+		return func(c *gin.Context) {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid target"})
+		}
+	}
+	proxy := &httputil.ReverseProxy{
+		Rewrite: func(r *httputil.ProxyRequest) {
+			r.SetURL(t)
+			r.Out.URL.Path = outboundPath
+			r.Out.URL.RawPath = ""
+		},
+	}
+	return func(c *gin.Context) {
 		proxy.ServeHTTP(c.Writer, c.Request)
 	}
 }

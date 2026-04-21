@@ -22,12 +22,15 @@ services:
     container_name: DACN-api-gateway
     env_file:
       - ./api-gateway/.env
+    environment:
+      OCR_HTTP_URL: http://ocr-service:8010
     ports:
       - "5002:5002"
     depends_on:
       - auth-service
       - realtime-service
       - storage-service
+      - ocr-service
     networks:
       - backend
 
@@ -86,8 +89,6 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
-      ocr-service:
-        condition: service_started
 
   ocr-service:
     build:
@@ -95,12 +96,8 @@ services:
       dockerfile: Dockerfile
     image: brookvita3/ocr-service:local
     container_name: DACN-ocr-service
-    environment:
-      # keep empty for self-host only mode
-      OCR_FALLBACK_HTTP_URL: ""
-      # set to "ocr_space" to enable free-tier fallback
-      OCR_FALLBACK_MODE: ""
-      OCR_SPACE_API_KEY: ""
+    env_file:
+      - ./ocr-service/.env
     ports:
       - "8010:8010"
     networks:

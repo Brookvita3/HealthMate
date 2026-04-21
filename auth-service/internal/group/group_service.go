@@ -108,16 +108,6 @@ func (s *serviceImpl) UpdateGroup(ctx context.Context, groupID uuid.UUID, name, 
 		if err := s.validateGroupName(*name); err != nil {
 			return err
 		}
-
-		// Check if new name already exists for another group by same owner
-		existing, err := s.groupRepo.FindByNameAndOwner(ctx, *name, requesterID)
-		if err == nil {
-			if existing.ID != groupID {
-				return ErrGroupAlreadyExists
-			}
-		} else if !errors.Is(err, ErrGroupNotFound) {
-			return err
-		}
 	}
 
 	params := UpdateGroupParams{

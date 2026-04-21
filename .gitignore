@@ -1,2 +1,15 @@
 .env
 .vscode
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local OCR artifacts
+ocr-service/moh_raw.json
+ocr-service/drugs_moh.csv
+ocr-service/ocr-batch-result.json
+ocr-service/run_ocr_batch_test.py
+ocr-service/scripts/__pycache__/
+ocr-service/app/__pycache__/

@@ -16,7 +16,6 @@ type Config struct {
 	KafkaBrokerURL  string
 	KafkaTopic      string
 	StorageHTTPURL  string
-	OCRHTTPURL      string
 	APIPrefix       string
 }
 

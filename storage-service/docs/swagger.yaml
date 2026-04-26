@@ -20,6 +20,10 @@ definitions:
         items:
           $ref: '#/definitions/internal_medication.CreateReminderInput'
         type: array
+      shares:
+        items:
+          $ref: '#/definitions/internal_medication.CreateShareInput'
+        type: array
       start_date:
         type: string
       timezone:
@@ -36,6 +40,18 @@ definitions:
         type: boolean
       time:
         type: string
+    type: object
+  internal_medication.CreateShareInput:
+    properties:
+      group_id:
+        type: string
+      notify_offset_minutes:
+        type: integer
+      shared_with_user_id:
+        type: string
+    required:
+    - group_id
+    - shared_with_user_id
     type: object
   internal_medication.Medication:
     properties:
@@ -60,6 +76,10 @@ definitions:
       reminders:
         items:
           $ref: '#/definitions/internal_medication.MedicationReminder'
+        type: array
+      shares:
+        items:
+          $ref: '#/definitions/internal_medication.MedicationShare'
         type: array
       start_date:
         type: string
@@ -89,6 +109,27 @@ definitions:
       updated_at:
         type: string
       user_id:
+        type: string
+    type: object
+  internal_medication.MedicationShare:
+    properties:
+      created_at:
+        type: string
+      group_id:
+        type: string
+      id:
+        type: string
+      last_notified_date:
+        type: string
+      last_notified_reminder_id:
+        type: string
+      medication_id:
+        type: string
+      notify_offset_minutes:
+        type: integer
+      shared_with_user_id:
+        type: string
+      updated_at:
         type: string
     type: object
   internal_medication.RegisterDeviceTokenRequest:
@@ -335,6 +376,151 @@ paths:
       security:
       - BearerAuth: []
       summary: Record medication taken
+      tags:
+      - medications
+  /medications/{medicationId}/shares:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of members with whom the medication schedule is shared
+      parameters:
+      - description: Medication ID
+        in: path
+        name: medicationId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_medication.MedicationShare'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List medication shares
+      tags:
+      - medications
+    post:
+      consumes:
+      - application/json
+      description: Share a medication schedule with a specific group member
+      parameters:
+      - description: Medication ID
+        in: path
+        name: medicationId
+        required: true
+        type: string
+      - description: Share creation request
+        in: body
+        name: share
+        required: true
+        schema:
+          $ref: '#/definitions/internal_medication.CreateShareInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Add a medication share
+      tags:
+      - medications
+  /medications/{medicationId}/shares/{shareId}:
+    delete:
+      consumes:
+      - application/json
+      description: Stop sharing a medication schedule with a specific group member
+      parameters:
+      - description: Medication ID
+        in: path
+        name: medicationId
+        required: true
+        type: string
+      - description: Share ID
+        in: path
+        name: shareId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Remove a medication share
       tags:
       - medications
   /medications/device-token:

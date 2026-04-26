@@ -203,3 +203,115 @@ func (h *Handler) RegisterDeviceToken(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "device token registered"})
 }
+
+// AddShare handles POST /medications/:medicationId/shares
+// @Summary Add a medication share
+// @Description Share a medication schedule with a specific group member
+// @Tags medications
+// @Accept json
+// @Produce json
+// @Param medicationId path string true "Medication ID"
+// @Param share body CreateShareInput true "Share creation request"
+// @Success 201 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /medications/{medicationId}/shares [post]
+// @Security BearerAuth
+func (h *Handler) AddShare(c *gin.Context) {
+	medicationID := c.Param("medicationId")
+	userID, ok := getUserID(c)
+	if !ok {
+		return
+	}
+
+	var req CreateShareInput
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	err := h.service.AddShare(c.Request.Context(), userID, medicationID, req)
+	if err != nil {
+		log.Printf("Failed to add share: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to add share"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "share added"})
+}
+
+// RemoveShare handles DELETE /medications/:medicationId/shares/:shareId
+// @Summary Remove a medication share
+// @Description Stop sharing a medication schedule with a specific group member
+// @Tags medications
+// @Accept json
+// @Produce json
+// @Param medicationId path string true "Medication ID"
+// @Param shareId path string true "Share ID"
+// @Success 200 {object} map[string]string
+// @Failure 401 {object} map[string]string
+// @Failure 403 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /medications/{medicationId}/shares/{shareId} [delete]
+// @Security BearerAuth
+func (h *Handler) RemoveShare(c *gin.Context) {
+	medicationID := c.Param("medicationId")
+	shareID := c.Param("shareId")
+	userID, ok := getUserID(c)
+	if !ok {
+		return
+	}
+
+	err := h.service.RemoveShare(c.Request.Context(), userID, medicationID, shareID)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "share not found"})
+			return
+		}
+		if errors.Is(err, ErrForbidden) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "permission denied"})
+			return
+		}
+		log.Printf("Failed to remove share: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to remove share"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "share removed"})
+}
+
+// ListShares handles GET /medications/:medicationId/shares
+// @Summary List medication shares
+// @Description Get a list of members with whom the medication schedule is shared
+// @Tags medications
+// @Accept json
+// @Produce json
+// @Param medicationId path string true "Medication ID"
+// @Success 200 {array} MedicationShare
+// @Failure 401 {object} map[string]string
+// @Failure 403 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /medications/{medicationId}/shares [get]
+// @Security BearerAuth
+func (h *Handler) ListShares(c *gin.Context) {
+	medicationID := c.Param("medicationId")
+	userID, ok := getUserID(c)
+	if !ok {
+		return
+	}
+
+	shares, err := h.service.ListShares(c.Request.Context(), userID, medicationID)
+	if err != nil {
+		if errors.Is(err, ErrForbidden) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "permission denied"})
+			return
+		}
+		log.Printf("Failed to list shares: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list shares"})
+		return
+	}
+
+	c.JSON(http.StatusOK, shares)
+}

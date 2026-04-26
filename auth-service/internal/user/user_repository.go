@@ -28,7 +28,8 @@ type UpdateUserParams struct {
 	Birthday   *string  `json:"birthday"`
 	Weight     *float64 `json:"weight"`
 	Height     *float64 `json:"height"`
-	BloodGroup *string `json:"blood_group"`
+	BloodGroup *string  `json:"blood_group"`
+	Timezone   *string  `json:"timezone"`
 }
 
 type UserRepository interface {

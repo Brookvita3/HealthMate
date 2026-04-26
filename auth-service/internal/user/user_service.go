@@ -29,7 +29,7 @@ func (s *serviceImpl) GetUserProfile(ctx context.Context, id uuid.UUID) (*domain
 func (s *serviceImpl) UpdateUserProfile(ctx context.Context, id uuid.UUID, params UpdateUserParams) error {
 	if params.Name == nil && params.Picture == nil && params.Phone == nil && params.Address == nil &&
 		params.Gender == nil && params.Birthday == nil && params.Weight == nil && params.Height == nil &&
-		params.BloodGroup == nil {
+		params.BloodGroup == nil && params.Timezone == nil {
 		return common.ErrInvalidRequest
 	}
 	return s.repo.UpdateUser(ctx, id, params)

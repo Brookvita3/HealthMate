@@ -389,7 +389,7 @@ func (handler *Handler) GetPermissions(c *gin.Context) {
 
 // GetMembers handles retrieving all members of a group.
 // @Summary Get group members
-// @Description List all members of a group (Members only)
+// @Description List all members of a group
 // @Tags groups
 // @Produce json
 // @Param id path string true "Group ID"
@@ -398,11 +398,6 @@ func (handler *Handler) GetPermissions(c *gin.Context) {
 // @Security BearerAuth
 // @Router /groups/{id}/members [get]
 func (handler *Handler) GetMembers(c *gin.Context) {
-	myID, ok := webHelpers.GetAuthUserID(c)
-	if !ok {
-		return
-	}
-
 	groupID, ok := webHelpers.GetValidatedGroupID(c)
 	if !ok {
 		groupID, ok = webHelpers.GetGroupID(c)
@@ -411,7 +406,7 @@ func (handler *Handler) GetMembers(c *gin.Context) {
 		}
 	}
 
-	members, err := handler.memberService.GetMembers(c.Request.Context(), groupID, myID)
+	members, err := handler.memberService.GetMembers(c.Request.Context(), groupID)
 	if err != nil {
 		handler.handleError(c, err)
 		return

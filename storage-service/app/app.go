@@ -119,6 +119,11 @@ func setupRoutes(r *gin.Engine, metricHandler *metric.Handler, medicationHandler
 		medications.DELETE("/:medicationId", medicationHandler.DeleteMedication)
 		medications.POST("/:medicationId/reminders/:reminderId/take", medicationHandler.TakeMedication)
 		medications.POST("/device-token", medicationHandler.RegisterDeviceToken)
+
+		// Sharing
+		medications.POST("/:medicationId/shares", medicationHandler.AddShare)
+		medications.DELETE("/:medicationId/shares/:shareId", medicationHandler.RemoveShare)
+		medications.GET("/:medicationId/shares", medicationHandler.ListShares)
 	}
 }
 

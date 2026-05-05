@@ -1,0 +1,1 @@
+ALTER TABLE medications ADD COLUMN timezone VARCHAR(50) DEFAULT 'UTC';

@@ -34,7 +34,7 @@ type Service interface {
 	LeaveGroup(ctx context.Context, groupID, userID uuid.UUID) error
 
 	// GetMembers retrieves all members of a specific group.
-	GetMembers(ctx context.Context, groupID, requesterID uuid.UUID) ([]domain.GroupMember, error)
+	GetMembers(ctx context.Context, groupID uuid.UUID) ([]domain.GroupMember, error)
 
 	// GetUserInvitations retrieves all pending invitations for a specific user.
 	GetUserInvitations(ctx context.Context, userID uuid.UUID) ([]domain.InvitationResponse, error)
@@ -174,7 +174,7 @@ func (s *serviceImpl) LeaveGroup(ctx context.Context, groupID, userID uuid.UUID)
 
 // GetMembers implements Service.GetMembers.
 // Lists all members in the group including their roles and statuses.
-func (s *serviceImpl) GetMembers(ctx context.Context, groupID, requesterID uuid.UUID) ([]domain.GroupMember, error) {
+func (s *serviceImpl) GetMembers(ctx context.Context, groupID uuid.UUID) ([]domain.GroupMember, error) {
 	// 1. Check if group exists
 	exists, err := s.memberRepo.GroupExists(ctx, groupID)
 	if err != nil {
@@ -182,15 +182,6 @@ func (s *serviceImpl) GetMembers(ctx context.Context, groupID, requesterID uuid.
 	}
 	if !exists {
 		return nil, ErrInvalidGroup
-	}
-
-	// 2. Only members with status 'accepted' can see the member list
-	member, err := s.memberRepo.GetMember(ctx, groupID, requesterID)
-	if err != nil {
-		return nil, ErrNotMember
-	}
-	if member.Status != "accepted" {
-		return nil, ErrNotMember
 	}
 
 	return s.memberRepo.ListGroupMembers(ctx, groupID)

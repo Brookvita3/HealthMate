@@ -35,6 +35,7 @@ type postgresUser struct {
 	Provider string      `db:"provider"`
 	GoogleID pgtype.Text `db:"google_id"`
 	Password pgtype.Text `db:"password"`
+	Timezone pgtype.Text `db:"timezone"`
 
 	CreatedAt time.Time `db:"created_at"`
 	UpdatedAt time.Time `db:"updated_at"`
@@ -52,8 +53,8 @@ func NewRepository(pool *pgxpool.Pool) UserRepository {
 
 func (r *postgresRepository) CreateUser(ctx context.Context, user *domain.User) error {
 	query := `
-		INSERT INTO users (id, email, name, picture, role, status, provider, google_id, password, phone, address, gender, birthday, weight, height, blood_group)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`
+		INSERT INTO users (id, email, name, picture, role, status, provider, google_id, password, phone, address, gender, birthday, weight, height, blood_group, timezone)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`
 	pUser := fromDomainUser(*user)
 	_, err := r.pool.Exec(ctx, query,
 		pUser.Id,
@@ -72,6 +73,7 @@ func (r *postgresRepository) CreateUser(ctx context.Context, user *domain.User) 
 		pUser.Weight,
 		pUser.Height,
 		pUser.BloodGroup,
+		pUser.Timezone,
 	)
 
 	return err
@@ -79,7 +81,7 @@ func (r *postgresRepository) CreateUser(ctx context.Context, user *domain.User) 
 
 func (r *postgresRepository) GetUserByEmail(ctx context.Context, email string) (*domain.User, error) {
 	query := `
-		SELECT id, email, name, picture, role, status, provider, google_id, password, phone, address, gender, birthday, weight, height, blood_group, created_at, updated_at
+		SELECT id, email, name, picture, role, status, provider, google_id, password, phone, address, gender, birthday, weight, height, blood_group, timezone, created_at, updated_at
 		FROM users
 		WHERE email = $1`
 
@@ -97,7 +99,7 @@ func (r *postgresRepository) GetUserByEmail(ctx context.Context, email string) (
 
 func (r *postgresRepository) GetUserById(ctx context.Context, id uuid.UUID) (*domain.User, error) {
 	query := `
-		SELECT id, email, name, picture, role, status, provider, google_id, password, phone, address, gender, birthday, weight, height, blood_group, created_at, updated_at
+		SELECT id, email, name, picture, role, status, provider, google_id, password, phone, address, gender, birthday, weight, height, blood_group, timezone, created_at, updated_at
 		FROM users
 		WHERE id = $1`
 
@@ -132,7 +134,7 @@ func (r *postgresRepository) UpdatePassword(ctx context.Context, id uuid.UUID, p
 }
 
 func (r *postgresRepository) ListUsers(ctx context.Context, params ListUsersParams) ([]domain.User, error) {
-	query := `SELECT id, email, name, picture, role, status, provider, google_id, password, phone, address, gender, birthday, weight, height, blood_group, created_at, updated_at
+	query := `SELECT id, email, name, picture, role, status, provider, google_id, password, phone, address, gender, birthday, weight, height, blood_group, timezone, created_at, updated_at
 			  FROM users`
 
 	var conditions []string
@@ -251,6 +253,11 @@ func (r *postgresRepository) UpdateUser(ctx context.Context, id uuid.UUID, param
 		args = append(args, *params.BloodGroup)
 		argId++
 	}
+	if params.Timezone != nil {
+		setClauses = append(setClauses, fmt.Sprintf("timezone = $%d", argId))
+		args = append(args, *params.Timezone)
+		argId++
+	}
 
 	if len(setClauses) == 0 {
 		return nil
@@ -328,6 +335,7 @@ func (r *postgresRepository) scanUser(row scannable) (*postgresUser, error) {
 		&u.Weight,
 		&u.Height,
 		&u.BloodGroup,
+		&u.Timezone,
 		&u.CreatedAt,
 		&u.UpdatedAt,
 	)
@@ -381,6 +389,9 @@ func toDomainUser(p postgresUser) *domain.User {
 	}
 	if p.BloodGroup.Valid {
 		u.BloodGroup = p.BloodGroup.String
+	}
+	if p.Timezone.Valid {
+		u.Timezone = p.Timezone.String
 	}
 
 	return u
@@ -442,6 +453,10 @@ func fromDomainUser(u domain.User) *postgresUser {
 
 	if u.BloodGroup != "" {
 		p.BloodGroup = pgtype.Text{String: u.BloodGroup, Valid: true}
+	}
+
+	if u.Timezone != "" {
+		p.Timezone = pgtype.Text{String: u.Timezone, Valid: true}
 	}
 
 	return p

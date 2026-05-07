@@ -1,0 +1,43 @@
+{
+  "generated_at": "20260508_004721",
+  "n_total": 66,
+  "n_ok": 66,
+  "n_error": 0,
+  "accuracy": {
+    "micro_precision": 0.4602,
+    "micro_recall": 0.47,
+    "micro_f1": 0.465,
+    "macro_precision": 0.4585,
+    "macro_recall": 0.4815,
+    "macro_f1": 0.4626,
+    "tp": 133,
+    "fp": 156,
+    "fn": 150
+  },
+  "field_accuracy": {
+    "strength_acc": 0.0,
+    "strength_n": 25,
+    "dose_acc": 0.3,
+    "dose_n": 30
+  },
+  "latency_ms": {
+    "service_mean": 0.0,
+    "service_median": 0.0,
+    "service_p90": 0.0,
+    "service_p95": 0.0,
+    "service_min": 0.0,
+    "service_max": 0.0,
+    "wall_mean": 14933.0,
+    "wall_median": 12781.9,
+    "wall_p95": 27408.5
+  },
+  "pass_distribution": {
+    "adaptive": 16,
+    "enhanced": 37,
+    "enhanced_no_crop_retry": 3,
+    "soft": 4,
+    "fallback_mistral_ocr_post_parse": 1,
+    "adaptive_no_crop_retry": 4,
+    "fallback_mistral_ocr": 1
+  }
+}

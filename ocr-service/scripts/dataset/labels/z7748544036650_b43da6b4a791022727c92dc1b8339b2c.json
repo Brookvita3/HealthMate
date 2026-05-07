@@ -1,0 +1,72 @@
+{
+  "items": [
+    {
+      "name": "Paracetamol",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "fuzzy",
+      "strength": "",
+      "dose_amount": "1 liều"
+    },
+    {
+      "name": "Tahero",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    },
+    {
+      "name": "Colchicine",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    },
+    {
+      "name": "SL Colchicina Seid tablet",
+      "dosage": "",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "10 ml",
+      "dose_amount": ""
+    }
+  ],
+  "warnings": [
+    "Không tìm thấy 'Tahero' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'Colchicine' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'SL Colchicina Seid tablet' trong danh mục thuốc, cần kiểm tra thủ công"
+  ],
+  "meta": {
+    "engine": "paddleocr",
+    "version": "2.5",
+    "items_count": 4,
+    "avg_confidence": 0.95,
+    "ocr_score": 1.0,
+    "pass_used": "enhanced",
+    "used_fallback": false,
+    "fallback_stage": ""
+  },
+  "source_image": "z7748544036650_b43da6b4a791022727c92dc1b8339b2c.jpg"
+}

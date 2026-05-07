@@ -1,0 +1,59 @@
+{
+  "items": [
+    {
+      "name": "Entacron",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    },
+    {
+      "name": "AGIFUROS",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    },
+    {
+      "name": "SilymarinVCP",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    }
+  ],
+  "warnings": [
+    "Không tìm thấy 'Entacron' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'AGIFUROS' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'SilymarinVCP' trong danh mục thuốc, cần kiểm tra thủ công"
+  ],
+  "meta": {
+    "engine": "paddleocr",
+    "version": "2.5",
+    "items_count": 3,
+    "avg_confidence": 0.95,
+    "ocr_score": 1.0,
+    "pass_used": "enhanced",
+    "used_fallback": false,
+    "fallback_stage": ""
+  },
+  "source_image": "c8eac591-e5c2-4272-aeda-8a6b2d7d55a7.jpg"
+}

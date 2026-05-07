@@ -1,0 +1,29 @@
+{
+  "items": [
+    {
+      "name": "Sucralfat",
+      "dosage": "1 gói",
+      "times_per_day": 3,
+      "specific_times": [
+        "08:00",
+        "12:00",
+        "16:30"
+      ],
+      "instructions": "Mỗi lần 1 gói, uống sáng trưa chiều",
+      "strength": "1500mg",
+      "dose_amount": "1 gói"
+    },
+    {
+      "name": "Pantoprazole",
+      "dosage": "1 viên",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "instructions": "Mỗi lần 1 viên, uống sáng",
+      "strength": "40mg",
+      "dose_amount": "1 viên"
+    }
+  ],
+  "source": "manual_by_assistant_from_image"
+}

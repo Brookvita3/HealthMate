@@ -1,0 +1,88 @@
+{
+  "items": [
+    {
+      "name": "AGIFUROS",
+      "dosage": "2 viên",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "2 viên"
+    },
+    {
+      "name": "Di n tim thuong",
+      "dosage": "1 viên",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 viên"
+    },
+    {
+      "name": "phutDamipidRebamipid",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    },
+    {
+      "name": "Iuong",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    },
+    {
+      "name": "UJong",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    }
+  ],
+  "warnings": [
+    "Không tìm thấy 'AGIFUROS' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'Di n tim thuong' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'phutDamipidRebamipid' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'Iuong' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'UJong' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Bỏ qua tên thuốc nhiễu: 'Khi tai khim nhts mang theo don'"
+  ],
+  "meta": {
+    "engine": "paddleocr",
+    "version": "2.5",
+    "items_count": 5,
+    "avg_confidence": 0.95,
+    "ocr_score": 1.0,
+    "pass_used": "adaptive_no_crop_retry",
+    "used_fallback": false,
+    "fallback_stage": ""
+  },
+  "source_image": "7bd21d98-39a1-424f-9b1a-2b4db6bc8925.jpg"
+}

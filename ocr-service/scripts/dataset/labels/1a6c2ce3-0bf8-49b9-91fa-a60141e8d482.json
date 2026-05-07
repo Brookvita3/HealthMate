@@ -1,0 +1,31 @@
+{
+  "items": [
+    {
+      "name": "Ursodiol 300mg",
+      "dosage": "1 viên",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "300mg",
+      "dose_amount": "1 viên"
+    }
+  ],
+  "warnings": [
+    "Không tìm thấy 'Ursodiol 300mg' trong danh mục thuốc, cần kiểm tra thủ công"
+  ],
+  "meta": {
+    "engine": "paddleocr",
+    "version": "2.5",
+    "items_count": 1,
+    "avg_confidence": 0.95,
+    "ocr_score": 1.0,
+    "pass_used": "adaptive",
+    "used_fallback": false,
+    "fallback_stage": ""
+  },
+  "source_image": "1a6c2ce3-0bf8-49b9-91fa-a60141e8d482.jpg"
+}

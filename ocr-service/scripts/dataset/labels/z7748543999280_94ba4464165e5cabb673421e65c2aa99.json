@@ -1,0 +1,59 @@
+{
+  "items": [
+    {
+      "name": "LosartanLosartan",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    },
+    {
+      "name": "Trimetazidin SaVi Trimetazidine MR",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    },
+    {
+      "name": "Piracetam",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "fuzzy_below_cutoff",
+      "strength": "",
+      "dose_amount": "1 liều"
+    }
+  ],
+  "warnings": [
+    "Không tìm thấy 'LosartanLosartan' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'Trimetazidin SaVi Trimetazidine MR' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Tên thuốc 'Piracetam' gần đúng nhưng chưa đủ chắc chắn, cần kiểm tra thủ công"
+  ],
+  "meta": {
+    "engine": "paddleocr",
+    "version": "2.5",
+    "items_count": 3,
+    "avg_confidence": 0.95,
+    "ocr_score": 1.0,
+    "pass_used": "adaptive",
+    "used_fallback": false,
+    "fallback_stage": ""
+  },
+  "source_image": "z7748543999280_94ba4464165e5cabb673421e65c2aa99.jpg"
+}

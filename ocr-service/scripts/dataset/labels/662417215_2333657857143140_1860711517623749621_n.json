@@ -1,0 +1,83 @@
+{
+  "items": [
+    {
+      "name": "Amlodipin + Valsartan",
+      "dosage": "1 viên",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "instructions": "Sáng 1 viên",
+      "strength": "5mg+80mg",
+      "dose_amount": "1 viên"
+    },
+    {
+      "name": "Nebivolol",
+      "dosage": "1 viên",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "instructions": "Sáng 1/2 viên",
+      "strength": "2.5mg",
+      "dose_amount": "1 viên"
+    },
+    {
+      "name": "Aspirin",
+      "dosage": "1 viên",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "instructions": "Sáng 1 viên",
+      "strength": "81mg",
+      "dose_amount": "1 viên"
+    },
+    {
+      "name": "Atorvastatin",
+      "dosage": "1 viên",
+      "times_per_day": 1,
+      "specific_times": [
+        "20:00"
+      ],
+      "instructions": "Uống tối 1 viên",
+      "strength": "40mg",
+      "dose_amount": "1 viên"
+    },
+    {
+      "name": "Magnesi + Potassium",
+      "dosage": "1 viên",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "instructions": "Sáng 1 viên",
+      "strength": "470mg+500mg",
+      "dose_amount": "1 viên"
+    },
+    {
+      "name": "Vitamin B6",
+      "dosage": "1 viên",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "instructions": "Uống 1 viên/ngày",
+      "strength": "",
+      "dose_amount": "1 viên"
+    },
+    {
+      "name": "Levosulpiride",
+      "dosage": "1 viên",
+      "times_per_day": 2,
+      "specific_times": [
+        "08:00",
+        "20:00"
+      ],
+      "instructions": "Uống 1/2 viên sáng và 1/2 viên tối",
+      "strength": "50mg",
+      "dose_amount": "1 viên"
+    }
+  ],
+  "source": "manual_by_assistant_from_image"
+}

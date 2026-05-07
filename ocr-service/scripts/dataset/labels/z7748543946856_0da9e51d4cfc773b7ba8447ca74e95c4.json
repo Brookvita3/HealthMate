@@ -1,0 +1,73 @@
+{
+  "items": [
+    {
+      "name": "Valsartan + hydroclorothiazid Valsartan Plus DWP",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    },
+    {
+      "name": "ClopidogrelVixcar",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    },
+    {
+      "name": "Diosmin+hesperidin Dacolfort",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    },
+    {
+      "name": "CelecoxibCelecoxib",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    }
+  ],
+  "warnings": [
+    "Không tìm thấy 'Valsartan + hydroclorothiazid Valsartan Plus DWP' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'ClopidogrelVixcar' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'Diosmin+hesperidin Dacolfort' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'CelecoxibCelecoxib' trong danh mục thuốc, cần kiểm tra thủ công"
+  ],
+  "meta": {
+    "engine": "paddleocr",
+    "version": "2.5",
+    "items_count": 4,
+    "avg_confidence": 0.95,
+    "ocr_score": 1.0,
+    "pass_used": "enhanced",
+    "used_fallback": false,
+    "fallback_stage": ""
+  },
+  "source_image": "z7748543946856_0da9e51d4cfc773b7ba8447ca74e95c4.jpg"
+}

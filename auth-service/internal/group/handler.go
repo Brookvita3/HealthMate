@@ -32,6 +32,8 @@ type InviteMemberRequest struct {
 	Email string `json:"email" binding:"required,email"`
 }
 
+// UpdateMemberStatusRequest is sent by the invitee to accept ("accepted") or decline ("rejected").
+// The handler remaps "accepted" → "pending_owner_approval" before calling the service.
 type UpdateMemberStatusRequest struct {
 	Status string `json:"status" binding:"required,oneof=accepted rejected"`
 }
@@ -210,14 +212,14 @@ func (handler *Handler) InviteMember(c *gin.Context) {
 	c.JSON(http.StatusOK, webHelpers.OKResponse{Message: "Invitation sent"})
 }
 
-// UpdateMyMemberStatus handles updating the current user's membership status (Accept/Reject).
-// @Summary Update membership status
-// @Description Accept or reject a group invitation
+// UpdateMyMemberStatus handles the current user accepting or rejecting their group invitation.
+// @Summary Respond to a group invitation
+// @Description Accept (→ pending_owner_approval, awaiting owner approval) or reject a group invitation.
 // @Tags groups
 // @Accept json
 // @Produce json
 // @Param id path string true "Group ID"
-// @Param request body UpdateMemberStatusRequest true "Status update"
+// @Param request body UpdateMemberStatusRequest true "Status: 'accepted' | 'rejected'"
 // @Success 200 {object} webHelpers.OKResponse
 // @Failure 400,404 {object} webHelpers.ErrorResponse
 // @Security BearerAuth
@@ -239,12 +241,123 @@ func (handler *Handler) UpdateMyMemberStatus(c *gin.Context) {
 		return
 	}
 
-	if err := handler.memberService.UpdateMemberStatus(c.Request.Context(), groupID, myID, req.Status); err != nil {
+	// Accepting an invitation now requires owner approval before the user fully joins.
+	// Remap "accepted" → "pending_owner_approval" so the service layer validates correctly.
+	status := req.Status
+	if status == "accepted" {
+		status = "pending_owner_approval"
+	}
+
+	if err := handler.memberService.UpdateMemberStatus(c.Request.Context(), groupID, myID, status); err != nil {
 		handler.handleError(c, err)
 		return
 	}
 
 	c.JSON(http.StatusOK, webHelpers.OKResponse{Message: "Membership status updated"})
+}
+
+// ApproveMember lets the group owner approve a member waiting for approval.
+// @Summary Approve a pending join request
+// @Description Owner approves a member with status pending_owner_approval → accepted
+// @Tags groups
+// @Produce json
+// @Param id path string true "Group ID"
+// @Param member_id path string true "Member User ID"
+// @Success 200 {object} webHelpers.OKResponse
+// @Failure 400,403,404 {object} webHelpers.ErrorResponse
+// @Security BearerAuth
+// @Router /groups/{id}/approve/{member_id} [post]
+func (handler *Handler) ApproveMember(c *gin.Context) {
+	requesterID, ok := webHelpers.GetAuthUserID(c)
+	if !ok {
+		return
+	}
+
+	groupID, ok := webHelpers.GetValidatedGroupID(c)
+	if !ok {
+		return
+	}
+
+	memberIDStr := c.Param("member_id")
+	memberID, err := uuid.Parse(memberIDStr)
+	if err != nil {
+		handler.handleError(c, common.ErrInvalidUUIDFormat)
+		return
+	}
+
+	if err := handler.memberService.ApproveJoinRequest(c.Request.Context(), groupID, requesterID, memberID); err != nil {
+		handler.handleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, webHelpers.OKResponse{Message: "Join request approved"})
+}
+
+// RejectApproval lets the group owner reject a member waiting for approval.
+// @Summary Reject a pending join request
+// @Description Owner rejects a member with status pending_owner_approval → rejected
+// @Tags groups
+// @Produce json
+// @Param id path string true "Group ID"
+// @Param member_id path string true "Member User ID"
+// @Success 200 {object} webHelpers.OKResponse
+// @Failure 400,403,404 {object} webHelpers.ErrorResponse
+// @Security BearerAuth
+// @Router /groups/{id}/reject-approval/{member_id} [post]
+func (handler *Handler) RejectApproval(c *gin.Context) {
+	requesterID, ok := webHelpers.GetAuthUserID(c)
+	if !ok {
+		return
+	}
+
+	groupID, ok := webHelpers.GetValidatedGroupID(c)
+	if !ok {
+		return
+	}
+
+	memberIDStr := c.Param("member_id")
+	memberID, err := uuid.Parse(memberIDStr)
+	if err != nil {
+		handler.handleError(c, common.ErrInvalidUUIDFormat)
+		return
+	}
+
+	if err := handler.memberService.RejectJoinRequest(c.Request.Context(), groupID, requesterID, memberID); err != nil {
+		handler.handleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, webHelpers.OKResponse{Message: "Join request rejected"})
+}
+
+// GetPendingApprovals returns members awaiting owner approval for a group.
+// @Summary List members pending owner approval
+// @Description Owner-only: returns members with status pending_owner_approval
+// @Tags groups
+// @Produce json
+// @Param id path string true "Group ID"
+// @Success 200 {array} domain.SentInvitationResponse
+// @Failure 403,404 {object} webHelpers.ErrorResponse
+// @Security BearerAuth
+// @Router /groups/{id}/pending-approvals [get]
+func (handler *Handler) GetPendingApprovals(c *gin.Context) {
+	requesterID, ok := webHelpers.GetAuthUserID(c)
+	if !ok {
+		return
+	}
+
+	groupID, ok := webHelpers.GetValidatedGroupID(c)
+	if !ok {
+		return
+	}
+
+	approvals, err := handler.memberService.GetPendingApprovals(c.Request.Context(), groupID, requesterID)
+	if err != nil {
+		handler.handleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, approvals)
 }
 
 // RemoveMember handles removing a member from a group (Kick).

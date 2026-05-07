@@ -1,0 +1,51 @@
+{
+  "items": [
+    {
+      "name": "Furosemid",
+      "dosage": "1 viên",
+      "times_per_day": 2,
+      "specific_times": [
+        "08:00",
+        "16:30"
+      ],
+      "instructions": "Mỗi lần 1 viên, uống sáng chiều",
+      "strength": "40mg",
+      "dose_amount": "1 viên"
+    },
+    {
+      "name": "Atorvastatin",
+      "dosage": "2 viên",
+      "times_per_day": 1,
+      "specific_times": [
+        "16:30"
+      ],
+      "instructions": "Mỗi lần 2 viên, uống chiều",
+      "strength": "10mg",
+      "dose_amount": "2 viên"
+    },
+    {
+      "name": "Bidiferon",
+      "dosage": "1 viên",
+      "times_per_day": 2,
+      "specific_times": [
+        "08:00",
+        "16:30"
+      ],
+      "instructions": "Mỗi lần 1 viên, uống sáng chiều",
+      "strength": "502mg",
+      "dose_amount": "1 viên"
+    },
+    {
+      "name": "Caldihason",
+      "dosage": "1 viên",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "instructions": "Mỗi lần 1 viên, uống sáng",
+      "strength": "307mg",
+      "dose_amount": "1 viên"
+    }
+  ],
+  "source": "manual_by_assistant_from_image"
+}

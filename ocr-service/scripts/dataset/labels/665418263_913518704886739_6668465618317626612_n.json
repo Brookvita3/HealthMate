@@ -1,0 +1,59 @@
+{
+  "items": [
+    {
+      "name": "GelacireFos.ng+",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    },
+    {
+      "name": "GeiactireFots",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    },
+    {
+      "name": "Gelacireos",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    }
+  ],
+  "warnings": [
+    "Không tìm thấy 'GelacireFos.ng+' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'GeiactireFots' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'Gelacireos' trong danh mục thuốc, cần kiểm tra thủ công"
+  ],
+  "meta": {
+    "engine": "paddleocr",
+    "version": "2.5",
+    "items_count": 3,
+    "avg_confidence": 0.95,
+    "ocr_score": 1.0,
+    "pass_used": "adaptive",
+    "used_fallback": false,
+    "fallback_stage": ""
+  },
+  "source_image": "665418263_913518704886739_6668465618317626612_n.jpg"
+}

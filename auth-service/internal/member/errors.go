@@ -28,4 +28,8 @@ var (
 
 	// ErrNotGroupOwner is returned when a non-owner attempts an owner-only action.
 	ErrNotGroupOwner = &common.BusinessError{Code: 403, Message: "user is not the group owner"}
+
+	// ErrNotPendingOwnerApproval is returned when trying to approve/reject a member
+	// whose status is not 'pending_owner_approval'.
+	ErrNotPendingOwnerApproval = &common.BusinessError{Code: 400, Message: "member is not awaiting owner approval"}
 )

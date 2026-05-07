@@ -1,0 +1,59 @@
+{
+  "items": [
+    {
+      "name": "Caldihason Calci carbonat + Vitamin D3",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    },
+    {
+      "name": "EsomeprazolEmanera",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    },
+    {
+      "name": "Chan doan HENOCH SCHONLEIN M . Diosmin",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    }
+  ],
+  "warnings": [
+    "Không tìm thấy 'Caldihason Calci carbonat + Vitamin D3' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'EsomeprazolEmanera' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'Chan doan HENOCH SCHONLEIN M . Diosmin' trong danh mục thuốc, cần kiểm tra thủ công"
+  ],
+  "meta": {
+    "engine": "paddleocr",
+    "version": "2.5",
+    "items_count": 3,
+    "avg_confidence": 0.95,
+    "ocr_score": 1.0,
+    "pass_used": "soft",
+    "used_fallback": false,
+    "fallback_stage": ""
+  },
+  "source_image": "z7748544025474_5f45dd65302c60b57552fb89b9d368a8.jpg"
+}

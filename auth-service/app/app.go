@@ -121,6 +121,11 @@ func NewHTTPServer(deps *Dependencies) *HTTPServer {
 			groupWithID.PUT("/members/me", groupHandler.UpdateMyMemberStatus)
 			groupWithID.DELETE("/members/me", groupHandler.LeaveGroup)
 
+			// Invite-approval flow (owner only)
+			groupWithID.GET("/pending-approvals", groupHandler.GetPendingApprovals)
+			groupWithID.POST("/approve/:member_id", groupHandler.ApproveMember)
+			groupWithID.POST("/reject-approval/:member_id", groupHandler.RejectApproval)
+
 			groupWithID.PUT("/owner", groupHandler.TransferOwnership)
 			groupWithID.POST("/permissions", groupHandler.SetPermission)
 			groupWithID.PUT("/permissions", groupHandler.UpdatePermissions)

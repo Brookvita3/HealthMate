@@ -224,7 +224,7 @@ func (r *postgresRepository) GetGroupInvitations(ctx context.Context, groupID uu
 		FROM group_members gm
 		JOIN users u ON gm.user_id = u.id
 		JOIN users inv ON gm.invited_by = inv.id
-		WHERE gm.group_id = $1 AND gm.status = 'pending'
+		WHERE gm.group_id = $1 AND gm.status IN ('pending', 'pending_owner_approval')
 		ORDER BY gm.created_at DESC`
 
 	rows, err := r.pool.Query(ctx, query, groupID)
@@ -257,6 +257,55 @@ func (r *postgresRepository) GetGroupInvitations(ctx context.Context, groupID uu
 	}
 
 	return invitations, nil
+}
+
+func (r *postgresRepository) GetPendingApprovals(ctx context.Context, groupID uuid.UUID) ([]domain.SentInvitationResponse, error) {
+	query := `
+		SELECT
+			gm.group_id,
+			gm.user_id,
+			u.email as user_email,
+			u.name as user_name,
+			gm.invited_by,
+			inv.name as inviter_name,
+			gm.status,
+			gm.created_at
+		FROM group_members gm
+		JOIN users u ON gm.user_id = u.id
+		JOIN users inv ON gm.invited_by = inv.id
+		WHERE gm.group_id = $1 AND gm.status = 'pending_owner_approval'
+		ORDER BY gm.created_at DESC`
+
+	rows, err := r.pool.Query(ctx, query, groupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var approvals []domain.SentInvitationResponse
+	for rows.Next() {
+		var inv domain.SentInvitationResponse
+		err := rows.Scan(
+			&inv.GroupID,
+			&inv.UserID,
+			&inv.UserEmail,
+			&inv.UserName,
+			&inv.InvitedBy,
+			&inv.InviterName,
+			&inv.Status,
+			&inv.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		approvals = append(approvals, inv)
+	}
+
+	if approvals == nil {
+		approvals = []domain.SentInvitationResponse{}
+	}
+
+	return approvals, nil
 }
 
 func (r *postgresRepository) CountMembers(ctx context.Context, groupID uuid.UUID) (int, error) {

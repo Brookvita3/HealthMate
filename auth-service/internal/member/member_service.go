@@ -41,6 +41,15 @@ type Service interface {
 
 	// GetGroupInvitations retrieves pending invitations for a group with visibility logic.
 	GetGroupInvitations(ctx context.Context, groupID, requesterID uuid.UUID) ([]domain.SentInvitationResponse, error)
+
+	// ApproveJoinRequest allows the group owner to approve a pending_owner_approval member.
+	ApproveJoinRequest(ctx context.Context, groupID, requesterID, memberID uuid.UUID) error
+
+	// RejectJoinRequest allows the group owner to reject a pending_owner_approval member.
+	RejectJoinRequest(ctx context.Context, groupID, requesterID, memberID uuid.UUID) error
+
+	// GetPendingApprovals returns all members awaiting owner approval in a group (owner only).
+	GetPendingApprovals(ctx context.Context, groupID, requesterID uuid.UUID) ([]domain.SentInvitationResponse, error)
 }
 
 type serviceImpl struct {
@@ -87,9 +96,9 @@ func (s *serviceImpl) InviteByEmail(ctx context.Context, groupID uuid.UUID, emai
 }
 
 // AcceptInvitation implements Service.AcceptInvitation.
-// It changes the member status to 'accepted' and sets the joined time.
+// Moves the invitee to 'pending_owner_approval'; owner must approve before they fully join.
 func (s *serviceImpl) AcceptInvitation(ctx context.Context, groupID, userID uuid.UUID) error {
-	return s.UpdateMemberStatus(ctx, groupID, userID, "accepted")
+	return s.UpdateMemberStatus(ctx, groupID, userID, "pending_owner_approval")
 }
 
 // RejectInvitation implements Service.RejectInvitation.
@@ -99,6 +108,8 @@ func (s *serviceImpl) RejectInvitation(ctx context.Context, groupID, userID uuid
 }
 
 // UpdateMemberStatus implements Service.UpdateMemberStatus.
+// Called when the invitee responds to their invitation.
+// Valid transitions: "pending" → "pending_owner_approval" | "rejected"
 func (s *serviceImpl) UpdateMemberStatus(ctx context.Context, groupID, userID uuid.UUID, status string) error {
 	member, err := s.memberRepo.GetMember(ctx, groupID, userID)
 	if err != nil {
@@ -109,8 +120,13 @@ func (s *serviceImpl) UpdateMemberStatus(ctx context.Context, groupID, userID uu
 		return nil
 	}
 
-	// Only members with 'pending' status can be updated to 'accepted' or 'rejected'
+	// Only invitees with 'pending' status may respond
 	if member.Status != "pending" {
+		return ErrInvalidStatus
+	}
+
+	// Invitees may only set pending_owner_approval (accept) or rejected (decline)
+	if status != "pending_owner_approval" && status != "rejected" {
 		return ErrInvalidStatus
 	}
 
@@ -230,6 +246,72 @@ func (s *serviceImpl) GetGroupInvitations(ctx context.Context, groupID, requeste
 	}
 
 	return filtered, nil
+}
+
+// ApproveJoinRequest implements Service.ApproveJoinRequest.
+// Owner approves a member whose status is 'pending_owner_approval' → 'accepted'.
+func (s *serviceImpl) ApproveJoinRequest(ctx context.Context, groupID, requesterID, memberID uuid.UUID) error {
+	isOwner, err := s.memberRepo.IsOwner(ctx, groupID, requesterID)
+	if err != nil {
+		return err
+	}
+	if !isOwner {
+		return ErrNotGroupOwner
+	}
+
+	member, err := s.memberRepo.GetMember(ctx, groupID, memberID)
+	if err != nil {
+		return err
+	}
+	if member.Status != "pending_owner_approval" {
+		return ErrNotPendingOwnerApproval
+	}
+
+	return s.memberRepo.UpdateMemberStatus(ctx, groupID, memberID, "accepted")
+}
+
+// RejectJoinRequest implements Service.RejectJoinRequest.
+// Owner rejects a member whose status is 'pending_owner_approval' → 'rejected'.
+func (s *serviceImpl) RejectJoinRequest(ctx context.Context, groupID, requesterID, memberID uuid.UUID) error {
+	isOwner, err := s.memberRepo.IsOwner(ctx, groupID, requesterID)
+	if err != nil {
+		return err
+	}
+	if !isOwner {
+		return ErrNotGroupOwner
+	}
+
+	member, err := s.memberRepo.GetMember(ctx, groupID, memberID)
+	if err != nil {
+		return err
+	}
+	if member.Status != "pending_owner_approval" {
+		return ErrNotPendingOwnerApproval
+	}
+
+	return s.memberRepo.UpdateMemberStatus(ctx, groupID, memberID, "rejected")
+}
+
+// GetPendingApprovals implements Service.GetPendingApprovals.
+// Returns all members awaiting owner approval; restricted to group owner.
+func (s *serviceImpl) GetPendingApprovals(ctx context.Context, groupID, requesterID uuid.UUID) ([]domain.SentInvitationResponse, error) {
+	exists, err := s.memberRepo.GroupExists(ctx, groupID)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, ErrInvalidGroup
+	}
+
+	isOwner, err := s.memberRepo.IsOwner(ctx, groupID, requesterID)
+	if err != nil {
+		return nil, err
+	}
+	if !isOwner {
+		return nil, ErrNotGroupOwner
+	}
+
+	return s.memberRepo.GetPendingApprovals(ctx, groupID)
 }
 
 // GetUserInvitations implements Service.GetUserInvitations.

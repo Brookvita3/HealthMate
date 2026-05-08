@@ -1,0 +1,17 @@
+{
+  "items": [],
+  "warnings": [
+    "Cần kiểm tra lại đơn thuốc"
+  ],
+  "meta": {
+    "engine": "paddleocr",
+    "version": "2.5",
+    "items_count": 0,
+    "avg_confidence": 0.0,
+    "ocr_score": 1.0,
+    "pass_used": "enhanced",
+    "used_fallback": false,
+    "fallback_stage": ""
+  },
+  "source_image": "z7748544017410_4cb276fbbe46ee579f3777fb91c0c85b.jpg"
+}

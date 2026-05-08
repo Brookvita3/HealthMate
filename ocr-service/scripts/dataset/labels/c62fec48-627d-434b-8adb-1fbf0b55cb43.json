@@ -1,0 +1,87 @@
+{
+  "items": [
+    {
+      "name": "Losartan kali 50mg",
+      "dosage": "1 viên",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "50mg",
+      "dose_amount": "1 viên"
+    },
+    {
+      "name": "Atorvastatin 10mg",
+      "dosage": "1 viên",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: chiều\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "16:30"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "10mg",
+      "dose_amount": "1 viên"
+    },
+    {
+      "name": "Methylprednisolon 16mg",
+      "dosage": "0.5 viên",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "16mg",
+      "dose_amount": "0.5 viên"
+    },
+    {
+      "name": "Esomeprazol 40mg",
+      "dosage": "1 viên",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "40mg",
+      "dose_amount": "1 viên"
+    },
+    {
+      "name": "Calci carbonat 1250mg + Vitamin D3 125UI",
+      "dosage": "1 viên",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "1250mg+125UI",
+      "dose_amount": "1 viên"
+    }
+  ],
+  "warnings": [
+    "Không tìm thấy 'Losartan kali 50mg' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'Atorvastatin 10mg' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'Methylprednisolon 16mg' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'Esomeprazol 40mg' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'Calci carbonat 1250mg + Vitamin D3 125UI' trong danh mục thuốc, cần kiểm tra thủ công"
+  ],
+  "meta": {
+    "engine": "paddleocr",
+    "version": "2.5",
+    "items_count": 5,
+    "avg_confidence": 0.95,
+    "ocr_score": 1.0,
+    "pass_used": "adaptive",
+    "used_fallback": false,
+    "fallback_stage": ""
+  },
+  "source_image": "c62fec48-627d-434b-8adb-1fbf0b55cb43.jpg"
+}

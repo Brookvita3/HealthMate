@@ -1,0 +1,31 @@
+{
+  "items": [
+    {
+      "name": "SaviALLOPURNL",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    }
+  ],
+  "warnings": [
+    "Không tìm thấy 'SaviALLOPURNL' trong danh mục thuốc, cần kiểm tra thủ công"
+  ],
+  "meta": {
+    "engine": "paddleocr",
+    "version": "2.5",
+    "items_count": 1,
+    "avg_confidence": 0.95,
+    "ocr_score": 0.934,
+    "pass_used": "adaptive_no_crop_retry",
+    "used_fallback": false,
+    "fallback_stage": ""
+  },
+  "source_image": "z7748543950320_1de0413799126d2c412c013b48a5da22.jpg"
+}

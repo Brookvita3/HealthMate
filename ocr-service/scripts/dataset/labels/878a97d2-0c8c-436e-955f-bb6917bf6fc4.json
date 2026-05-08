@@ -1,0 +1,60 @@
+{
+  "items": [
+    {
+      "name": "Clarithromycin",
+      "dosage": "16 viên",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng, chiều\nNgày uống: 2 lần",
+      "times_per_day": 2,
+      "specific_times": [
+        "08:00",
+        "16:30"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "16 viên"
+    },
+    {
+      "name": "Silymax Complex Cao Diep ha chau+Ngu vj",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: chiều\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "16:30"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    },
+    {
+      "name": "tran+Silymarin+Tinh chat Nghe",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    }
+  ],
+  "warnings": [
+    "Không tìm thấy 'Clarithromycin' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'Silymax Complex Cao Diep ha chau+Ngu vj' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'tran+Silymarin+Tinh chat Nghe' trong danh mục thuốc, cần kiểm tra thủ công"
+  ],
+  "meta": {
+    "engine": "paddleocr",
+    "version": "2.5",
+    "items_count": 3,
+    "avg_confidence": 0.95,
+    "ocr_score": 1.0,
+    "pass_used": "enhanced",
+    "used_fallback": false,
+    "fallback_stage": ""
+  },
+  "source_image": "878a97d2-0c8c-436e-955f-bb6917bf6fc4.jpg"
+}

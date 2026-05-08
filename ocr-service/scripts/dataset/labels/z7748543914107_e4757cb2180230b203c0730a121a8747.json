@@ -1,0 +1,185 @@
+{
+  "items": [
+    {
+      "name": "DH Nhiet doC HA mmHg Mach lần/p",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    },
+    {
+      "name": "Acetylsalicylicacid",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: chiều, tối\nNgày uống: 2 lần",
+      "times_per_day": 2,
+      "specific_times": [
+        "16:30",
+        "20:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    },
+    {
+      "name": "Sang TruaOChieu SaviProlo",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    },
+    {
+      "name": "Bisoprolol",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    },
+    {
+      "name": "Atorvastatin",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: chiều\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "16:30"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    },
+    {
+      "name": "MetforminHCI",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: chiều\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "16:30"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    },
+    {
+      "name": "Amlodipine",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    },
+    {
+      "name": "SLValsartanSTELLA",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    },
+    {
+      "name": "Aspirin 500mg",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "exact_simplified",
+      "strength": "",
+      "dose_amount": "1 liều"
+    },
+    {
+      "name": "SLSaviProlot",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    },
+    {
+      "name": "SLMETFORMIN",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    },
+    {
+      "name": "MelforminHCI",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    }
+  ],
+  "warnings": [
+    "Không tìm thấy 'DH Nhiet doC HA mmHg Mach lần/p' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'Acetylsalicylicacid' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'Sang TruaOChieu SaviProlo' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'Bisoprolol' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'Atorvastatin' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'MetforminHCI' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'Amlodipine' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'SLValsartanSTELLA' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'SLSaviProlot' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'SLMETFORMIN' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'MelforminHCI' trong danh mục thuốc, cần kiểm tra thủ công"
+  ],
+  "meta": {
+    "engine": "paddleocr",
+    "version": "2.5",
+    "items_count": 12,
+    "avg_confidence": 0.95,
+    "ocr_score": 1.0,
+    "pass_used": "enhanced",
+    "used_fallback": false,
+    "fallback_stage": ""
+  },
+  "source_image": "z7748543914107_e4757cb2180230b203c0730a121a8747.jpg"
+}

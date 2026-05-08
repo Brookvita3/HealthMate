@@ -1,0 +1,60 @@
+{
+  "items": [
+    {
+      "name": "Clopidogrel",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    },
+    {
+      "name": "Amlodipine",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    },
+    {
+      "name": "Rosuvastatin",
+      "dosage": "1 liều",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: chiều\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "16:30"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 liều"
+    }
+  ],
+  "warnings": [
+    "Không tìm thấy 'Clopidogrel' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'Amlodipine' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'Rosuvastatin' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Bỏ qua tên thuốc nhiễu: 'Rosuvastatin Tai kham sau'"
+  ],
+  "meta": {
+    "engine": "paddleocr",
+    "version": "2.5",
+    "items_count": 3,
+    "avg_confidence": 0.95,
+    "ocr_score": 1.0,
+    "pass_used": "adaptive",
+    "used_fallback": false,
+    "fallback_stage": ""
+  },
+  "source_image": "544a2e2e-9f19-4d68-9f6f-cb018dd83c91.jpg"
+}

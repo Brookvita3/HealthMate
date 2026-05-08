@@ -38,6 +38,9 @@ type MemberRepository interface {
 	// GetGroupInvitations retrieves all pending invitations for a specific group.
 	GetGroupInvitations(ctx context.Context, groupID uuid.UUID) ([]domain.SentInvitationResponse, error)
 
+	// GetPendingApprovals retrieves all members with status 'pending_owner_approval' for a group.
+	GetPendingApprovals(ctx context.Context, groupID uuid.UUID) ([]domain.SentInvitationResponse, error)
+
 	// CountMembers returns the total number of members in a group (all statuses).
 	CountMembers(ctx context.Context, groupID uuid.UUID) (int, error)
 }

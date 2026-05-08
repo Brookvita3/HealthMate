@@ -1,0 +1,115 @@
+{
+  "items": [
+    {
+      "name": "Simvastatin + Ezetimibe 10mg + 20mg",
+      "dosage": "1 viên",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: tối\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "20:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "10mg+20mg",
+      "dose_amount": "1 viên"
+    },
+    {
+      "name": "Bisoprolol 5mg",
+      "dosage": "1 viên",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "5mg",
+      "dose_amount": "1 viên"
+    },
+    {
+      "name": "Nifedipin 30mg",
+      "dosage": "1 viên",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "30mg",
+      "dose_amount": "1 viên"
+    },
+    {
+      "name": "Losartan kali 50mg",
+      "dosage": "1 viên",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "50mg",
+      "dose_amount": "1 viên"
+    },
+    {
+      "name": "Calci carbonat + Vitamin D3 CALDIHASAN",
+      "dosage": "1 viên",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "",
+      "dose_amount": "1 viên"
+    },
+    {
+      "name": "Gliclazid 30mg",
+      "dosage": "3 viên",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "30mg",
+      "dose_amount": "3 viên"
+    },
+    {
+      "name": "Metformin 850mg",
+      "dosage": "1 viên",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: chiều\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "16:30"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "850mg",
+      "dose_amount": "1 viên"
+    }
+  ],
+  "warnings": [
+    "Không tìm thấy 'Simvastatin + Ezetimibe 10mg + 20mg' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'Bisoprolol 5mg' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'Nifedipin 30mg' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'Losartan kali 50mg' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'Calci carbonat + Vitamin D3 CALDIHASAN' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'Gliclazid 30mg' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'Metformin 850mg' trong danh mục thuốc, cần kiểm tra thủ công"
+  ],
+  "meta": {
+    "engine": "paddleocr",
+    "version": "2.5",
+    "items_count": 7,
+    "avg_confidence": 0.95,
+    "ocr_score": 1.0,
+    "pass_used": "adaptive",
+    "used_fallback": false,
+    "fallback_stage": ""
+  },
+  "source_image": "2c68f313-fbbd-4141-a079-77722646fc15.jpg"
+}

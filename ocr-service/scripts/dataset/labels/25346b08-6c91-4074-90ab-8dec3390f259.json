@@ -1,0 +1,60 @@
+{
+  "items": [
+    {
+      "name": "Pantoprazole 40mg",
+      "dosage": "1 viên",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "40mg",
+      "dose_amount": "1 viên"
+    },
+    {
+      "name": "Amlodipine besylate 5mg",
+      "dosage": "1 viên",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng\nNgày uống: 1 lần",
+      "times_per_day": 1,
+      "specific_times": [
+        "08:00"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "5mg",
+      "dose_amount": "1 viên"
+    },
+    {
+      "name": "Silymarin 150mg",
+      "dosage": "1 viên",
+      "instructions": "Cách dùng: không rõ\nGiờ dùng: sáng, chiều\nNgày uống: 2 lần",
+      "times_per_day": 2,
+      "specific_times": [
+        "08:00",
+        "16:30"
+      ],
+      "confidence": 0.95,
+      "name_match_kind": "not_found",
+      "strength": "150mg",
+      "dose_amount": "1 viên"
+    }
+  ],
+  "warnings": [
+    "Không tìm thấy 'Pantoprazole 40mg' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'Amlodipine besylate 5mg' trong danh mục thuốc, cần kiểm tra thủ công",
+    "Không tìm thấy 'Silymarin 150mg' trong danh mục thuốc, cần kiểm tra thủ công"
+  ],
+  "meta": {
+    "engine": "paddleocr",
+    "version": "2.5",
+    "items_count": 3,
+    "avg_confidence": 0.95,
+    "ocr_score": 1.0,
+    "pass_used": "adaptive",
+    "used_fallback": false,
+    "fallback_stage": ""
+  },
+  "source_image": "25346b08-6c91-4074-90ab-8dec3390f259.jpg"
+}

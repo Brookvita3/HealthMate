@@ -7,6 +7,7 @@ import (
 	"api-gateway/internal/kafka"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 )
 
 type App struct {
@@ -14,6 +15,7 @@ type App struct {
 	KafkaProducer kafka.Producer
 	JWTSecret     string
 	Router        *gin.Engine
+	RedisClient   *redis.Client
 }
 
 func NewApp(cfg *config.Config) *App {
@@ -28,11 +30,18 @@ func NewApp(cfg *config.Config) *App {
 
 	KafkaProducer := kafka.NewKafkaProducer([]string{cfg.KafkaBrokerURL})
 
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     cfg.RedisHost + ":" + cfg.RedisPort,
+		Password: cfg.RedisPassword,
+		DB:       0,
+	})
+
 	return &App{
 		Router:        router,
 		Config:        cfg,
 		KafkaProducer: KafkaProducer,
 		JWTSecret:     cfg.JWTSecret,
+		RedisClient:   rdb,
 	}
 }
 

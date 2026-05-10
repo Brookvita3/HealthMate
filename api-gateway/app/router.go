@@ -9,11 +9,15 @@ import (
 func (a *App) SetupRoutes(cfg config.Config) {
 
 	a.Router.Use(middleware.CORSMiddleware())
-	a.Router.Any("/auth/*proxyPath",
-		handlers.ReverseProxy(cfg.AuthHTTPURL, cfg.APIPrefix+"/auth"))
+
+	// Public routes with rate limiting (uses API Key or IP since sub is not set)
+	authGroup := a.Router.Group("/auth")
+	authGroup.Use(middleware.RateLimitMiddleware(a.RedisClient, cfg.RateLimitLimit, cfg.RateLimitWindow))
+	authGroup.Any("/*proxyPath", handlers.ReverseProxy(cfg.AuthHTTPURL, cfg.APIPrefix+"/auth"))
 
 	protected := a.Router.Group("")
 	protected.Use(middleware.JWTAuthMiddleware(a.JWTSecret))
+	protected.Use(middleware.RateLimitMiddleware(a.RedisClient, cfg.RateLimitLimit, cfg.RateLimitWindow))
 	{
 		// Users
 		protected.Any("/users", handlers.ReverseProxy(cfg.AuthHTTPURL, cfg.APIPrefix+"/users"))

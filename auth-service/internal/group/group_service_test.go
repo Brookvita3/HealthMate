@@ -166,7 +166,6 @@ func TestUpdateGroup(t *testing.T) {
 		newDescription := "Updated Description"
 
 		env.GroupRepository.On("FindByID", mock.Anything, groupID).Return(&domain.Group{ID: groupID, OwnerID: requesterID}, nil).Once()
-		env.GroupRepository.On("FindByNameAndOwner", mock.Anything, newName, requesterID).Return(nil, group.ErrGroupNotFound).Once()
 		env.GroupRepository.On("Update", mock.Anything, groupID, group.UpdateGroupParams{
 			Name:        &newName,
 			Description: &newDescription,

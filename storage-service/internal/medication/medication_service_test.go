@@ -405,6 +405,121 @@ func TestListShares(t *testing.T) {
 	})
 }
 
+// ─── CheckAndTriggerReminders ─────────────────────────────────────────────────
+
+func TestCheckAndTriggerReminders(t *testing.T) {
+	t.Run("success: no pending reminders and no missed items — returns nil", func(t *testing.T) {
+		// When both repo calls return empty slices the service must return nil
+		// without touching the notification service.
+		env := newMedTestEnv()
+
+		env.repo.On("GetRemindersToTrigger", mock.Anything).Return([]medication.MedicationReminder{}, nil).Once()
+		env.repo.On("GetMissedRemindersToNotify", mock.Anything, mock.AnythingOfType("time.Time")).
+			Return([]medication.MissedReminderNotification{}, nil).Once()
+
+		err := env.service.CheckAndTriggerReminders(context.Background())
+
+		assert.NoError(t, err)
+		env.notif.AssertNotCalled(t, "SendToUser")
+		env.repo.AssertExpectations(t)
+	})
+
+	t.Run("success: sends reminder notification for each due reminder", func(t *testing.T) {
+		// For every reminder returned by GetRemindersToTrigger the service must call
+		// SendToUser with the corresponding UserID and a "Medication Reminder" title.
+		env := newMedTestEnv()
+		reminders := []medication.MedicationReminder{
+			{ID: "rem-1", MedicationID: "med-1", UserID: "user-1", Time: "08:00"},
+			{ID: "rem-2", MedicationID: "med-2", UserID: "user-2", Time: "08:00"},
+		}
+
+		env.repo.On("GetRemindersToTrigger", mock.Anything).Return(reminders, nil).Once()
+		env.notif.On("SendToUser", mock.Anything, "user-1",
+			mock.MatchedBy(func(n notification.Notification) bool { return n.Title == "Medication Reminder" }),
+		).Return(nil).Once()
+		env.notif.On("SendToUser", mock.Anything, "user-2",
+			mock.MatchedBy(func(n notification.Notification) bool { return n.Title == "Medication Reminder" }),
+		).Return(nil).Once()
+		env.repo.On("GetMissedRemindersToNotify", mock.Anything, mock.AnythingOfType("time.Time")).
+			Return([]medication.MissedReminderNotification{}, nil).Once()
+
+		err := env.service.CheckAndTriggerReminders(context.Background())
+
+		assert.NoError(t, err)
+		env.repo.AssertExpectations(t)
+		env.notif.AssertExpectations(t)
+	})
+
+	t.Run("success: notifies owner and buddy for each missed reminder and updates status", func(t *testing.T) {
+		// For every missed-reminder record the service must send two notifications
+		// (owner gets "Missed Medication!", buddy gets "Medication Alert!") and
+		// then call UpdateShareNotificationStatus to prevent duplicate alerts.
+		env := newMedTestEnv()
+		missed := []medication.MissedReminderNotification{
+			{
+				ShareID:          "share-1",
+				MedicationID:     "med-1",
+				MedicationName:   "Aspirin",
+				ReminderID:       "rem-1",
+				ReminderTime:     "08:00",
+				OwnerUserID:      "owner-1",
+				SharedWithUserID: "buddy-1",
+				NotifyOffset:     15,
+				Timezone:         "UTC",
+			},
+		}
+
+		env.repo.On("GetRemindersToTrigger", mock.Anything).Return([]medication.MedicationReminder{}, nil).Once()
+		env.repo.On("GetMissedRemindersToNotify", mock.Anything, mock.AnythingOfType("time.Time")).
+			Return(missed, nil).Once()
+		env.notif.On("SendToUser", mock.Anything, "owner-1",
+			mock.MatchedBy(func(n notification.Notification) bool { return n.Title == "Missed Medication!" }),
+		).Return(nil).Once()
+		env.notif.On("SendToUser", mock.Anything, "buddy-1",
+			mock.MatchedBy(func(n notification.Notification) bool { return n.Title == "Medication Alert!" }),
+		).Return(nil).Once()
+		env.repo.On("UpdateShareNotificationStatus", mock.Anything, "share-1", "rem-1", mock.Anything).
+			Return(nil).Once()
+
+		err := env.service.CheckAndTriggerReminders(context.Background())
+
+		assert.NoError(t, err)
+		env.repo.AssertExpectations(t)
+		env.notif.AssertExpectations(t)
+	})
+
+	t.Run("error: GetRemindersToTrigger failure is returned with wrapping", func(t *testing.T) {
+		// When fetching reminders fails the service must return an error that
+		// contains "error getting reminders" and must not proceed further.
+		env := newMedTestEnv()
+
+		env.repo.On("GetRemindersToTrigger", mock.Anything).Return(nil, errors.New("db timeout")).Once()
+
+		err := env.service.CheckAndTriggerReminders(context.Background())
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "error getting reminders")
+		env.repo.AssertNotCalled(t, "GetMissedRemindersToNotify")
+		env.notif.AssertNotCalled(t, "SendToUser")
+	})
+
+	t.Run("error: GetMissedRemindersToNotify failure is returned with wrapping", func(t *testing.T) {
+		// Failures in the missed-reminder query must be returned as
+		// "error getting missed reminders: <original>".
+		env := newMedTestEnv()
+
+		env.repo.On("GetRemindersToTrigger", mock.Anything).Return([]medication.MedicationReminder{}, nil).Once()
+		env.repo.On("GetMissedRemindersToNotify", mock.Anything, mock.AnythingOfType("time.Time")).
+			Return(nil, errors.New("query failed")).Once()
+
+		err := env.service.CheckAndTriggerReminders(context.Background())
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "error getting missed reminders")
+		env.repo.AssertExpectations(t)
+	})
+}
+
 // ─── RegisterDeviceToken ──────────────────────────────────────────────────────
 
 func TestRegisterDeviceToken(t *testing.T) {

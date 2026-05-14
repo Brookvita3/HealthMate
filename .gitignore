@@ -13,3 +13,5 @@ ocr-service/ocr-batch-result.json
 ocr-service/run_ocr_batch_test.py
 ocr-service/scripts/__pycache__/
 ocr-service/app/__pycache__/
+
+deploy/env/

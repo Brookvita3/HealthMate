@@ -1,19 +1,35 @@
 package main
 
 import (
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
+
 	"api-gateway/app"
 	"api-gateway/config"
 )
 
 func main() {
-
 	cfg := config.LoadConfig()
 
-	app := app.NewApp(&cfg)
+	myApp := app.NewApp(&cfg)
 
-	app.SetupRoutes(cfg)
+	myApp.SetupRoutes(cfg)
 
-	app.Start(":" + cfg.Port)
+	stopChan := make(chan os.Signal, 1)
+	signal.Notify(stopChan, syscall.SIGINT, syscall.SIGTERM)
 
-	defer app.Shutdown()
+	go func() {
+		if err := myApp.Start(); err != nil {
+			log.Printf("Application exited with error: %v", err)
+		}
+		stopChan <- syscall.SIGTERM
+	}()
+
+	<-stopChan
+
+	log.Println("OS interrupt signal received. Initiating shutdown...")
+	myApp.Shutdown()
+	log.Println("Application has been shut down.")
 }

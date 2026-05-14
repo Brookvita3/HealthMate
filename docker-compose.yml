@@ -13,6 +13,7 @@ services:
       - storage-service
     networks:
       - backend
+    restart: always
 
   api-gateway:
     build:
@@ -33,6 +34,7 @@ services:
       - ocr-service
     networks:
       - backend
+    restart: always
 
   auth-service:
     build:
@@ -46,7 +48,7 @@ services:
       - "5000:5000"
     networks:
       - backend
-    restart: on-failure
+    restart: always
     depends_on:
       timescaledb:
         condition: service_healthy
@@ -102,63 +104,31 @@ services:
       - "8010:8010"
     networks:
       - backend
+    deploy:
+      resources:
+        limits:
+          memory: 2G
 
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.2.15
-    container_name: DACN-zookeeper
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - "2181:2181"
-    volumes:
-      - zookeeper_data:/var/lib/zookeeper/data
-      - zookeeper_log:/var/lib/zookeeper/log
-    networks:
-      - backend
-
-  kafka:
-    image: confluentinc/cp-kafka:7.2.15
-    container_name: DACN-kafka
-    depends_on:
-      - zookeeper
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v25.1.4
+    container_name: DACN-redpanda
+    command:
+      - redpanda
+      - start
+      - --overprovisioned
+      - --smp=1
+      - --memory=1G
+      - --reserve-memory=0M
+      - --node-id=0
+      - --check=false
+      - --kafka-addr=PLAINTEXT://0.0.0.0:9092
+      - --advertise-kafka-addr=PLAINTEXT://redpanda:9092
     ports:
       - "9092:9092"
-      - "9094:9094"
     volumes:
-      - kafka_data:/var/lib/kafka/data
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9094,PLAINTEXT_HOST://localhost:9092
-      # KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9094,PLAINTEXT_HOST://kafka:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      - redpanda_data:/var/lib/redpanda/data
     networks:
       - backend
-    healthcheck:
-      test: ["CMD-SHELL", "cub kafka-ready -b localhost:9092 1 10"]
-      interval: 10s 
-      timeout: 5s 
-      retries: 5
-
-  kafka-init:
-    image: confluentinc/cp-kafka:7.2.15
-    depends_on:
-      - kafka
-    entrypoint: ["/bin/bash", "-c"]
-    command: >
-      "
-      echo Waiting for Kafka...;
-      sleep 5;
-      kafka-topics --bootstrap-server kafka:9094 --create --topic health_metrics --partitions 1 --replication-factor 1;
-      echo 'Topic healthmetric created';
-      "
-    networks:
-      - backend
-
   kafka-ui:
     container_name: kafka-ui
     image: provectuslabs/kafka-ui:v0.7.2
@@ -169,7 +139,7 @@ services:
     volumes:
       - ./kafka/kui/config.yml:/etc/kafkaui/dynamic_config.yaml
     depends_on:
-      - kafka
+      - redpanda
     networks:
       - backend
 

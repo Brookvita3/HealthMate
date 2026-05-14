@@ -72,6 +72,36 @@ func NewHTTPServer(deps *Dependencies) *HTTPServer {
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "UP"})
+	})
+	router.GET("/ready", func(c *gin.Context) {
+		ctx := c.Request.Context()
+		dbErr := deps.DB.Ping(ctx)
+		redisErr := deps.Redis.Ping(ctx).Err()
+
+		if dbErr != nil || redisErr != nil {
+			status := gin.H{"status": "not ready"}
+			if dbErr != nil {
+				status["database"] = "error"
+			} else {
+				status["database"] = "ok"
+			}
+			if redisErr != nil {
+				status["redis"] = "error"
+			} else {
+				status["redis"] = "ok"
+			}
+			c.JSON(http.StatusServiceUnavailable, status)
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"status":   "ready",
+			"database": "ok",
+			"redis":    "ok",
+		})
+	})
 
 	api := router.Group(deps.Config.APIPrefix)
 

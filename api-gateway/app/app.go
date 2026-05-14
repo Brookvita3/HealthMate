@@ -34,11 +34,11 @@ func NewApp(cfg *config.Config) *App {
 
 	KafkaProducer := kafka.NewKafkaProducer([]string{cfg.KafkaBrokerURL})
 
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     cfg.RedisHost + ":" + cfg.RedisPort,
-		Password: cfg.RedisPassword,
-		DB:       0,
-	})
+	opt, err := redis.ParseURL(cfg.RedisURL)
+	if err != nil {
+		log.Fatalf("Failed to parse Redis URL: %v", err)
+	}
+	rdb := redis.NewClient(opt)
 
 	return &App{
 		Router:        router,

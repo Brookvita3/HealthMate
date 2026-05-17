@@ -10,6 +10,7 @@ import (
 	"storage-service/internal/middleware"
 	"storage-service/internal/notification"
 	"storage-service/internal/readiness"
+	"storage-service/internal/stress"
 
 	"context"
 	"fmt"
@@ -69,6 +70,12 @@ func NewApp(cfg *config.Config) *App {
 		log.Println("Readiness model loaded successfully.")
 	}
 
+	if err := stress.Init(cfg.OnnxLibPath, cfg.StressModelPath, cfg.StressNormStatsPath); err != nil {
+		log.Printf("WARNING: Failed to load stress model (stress endpoint will be unavailable): %v", err)
+	} else {
+		log.Println("Stress model loaded successfully.")
+	}
+
 	router := gin.Default()
 	setupRoutes(router, metricHandler, medicationHandler, cfg.JWTSecret, cfg.APIPrefix)
 
@@ -108,6 +115,8 @@ func setupRoutes(r *gin.Engine, metricHandler *metric.Handler, medicationHandler
 		metrics.POST("/readiness", readiness.PredictHandler)
 		metrics.GET("/thresholds", metricHandler.GetThresholds)
 		metrics.POST("/thresholds", metricHandler.SetUserThreshold)
+		metrics.POST("/stress/predict", stress.PredictHandler)
+		metrics.POST("/stress/calibrate", stress.CalibrateHandler)
 	}
 
 	// Medication endpoints

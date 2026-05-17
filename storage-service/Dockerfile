@@ -4,7 +4,7 @@ FROM golang:1.26 AS builder
 WORKDIR /app
 
 # Download ONNX Runtime shared library (Linux x86-64)
-ARG ONNX_VERSION=1.20.1
+ARG ONNX_VERSION=1.21.0
 RUN apt-get update -qq && apt-get install -y -q wget \
     && wget -q "https://github.com/microsoft/onnxruntime/releases/download/v${ONNX_VERSION}/onnxruntime-linux-x64-${ONNX_VERSION}.tgz" \
     && tar -xzf onnxruntime-linux-x64-${ONNX_VERSION}.tgz \
@@ -40,5 +40,7 @@ EXPOSE 5003
 
 ENV ONNX_LIB_PATH=/app/libonnxruntime.so
 ENV MODEL_PATH=/app/models/readiness_model.onnx
+ENV STRESS_MODEL_PATH=/app/models/wesad_stress_hgbc.onnx
+ENV STRESS_NORM_STATS_PATH=/app/models/wesad_norm_stats.json
 
 CMD ["./storage-service"]

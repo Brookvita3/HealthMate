@@ -18,6 +18,8 @@ type Config struct {
 	APIPrefix                  string
 	ModelPath                  string // path to readiness_model.onnx
 	OnnxLibPath                string // path to libonnxruntime.so / onnxruntime.dll
+	StressModelPath            string // path to wesad_stress_hgbc.onnx
+	StressNormStatsPath        string // path to wesad_norm_stats.json
 	FirebaseServiceAccountPath string
 }
 
@@ -38,6 +40,8 @@ func LoadConfig() Config {
 		APIPrefix:                  os.Getenv("API_PREFIX"),
 		ModelPath:                  os.Getenv("MODEL_PATH"),
 		OnnxLibPath:                os.Getenv("ONNX_LIB_PATH"),
+		StressModelPath:            os.Getenv("STRESS_MODEL_PATH"),
+		StressNormStatsPath:        os.Getenv("STRESS_NORM_STATS_PATH"),
 		FirebaseServiceAccountPath: os.Getenv("FIREBASE_SERVICE_ACCOUNT_PATH"),
 	}
 

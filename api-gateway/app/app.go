@@ -1,7 +1,10 @@
 package app
 
 import (
+	"context"
 	"log"
+	"net/http"
+	"time"
 
 	"api-gateway/config"
 	"api-gateway/internal/kafka"
@@ -16,6 +19,7 @@ type App struct {
 	JWTSecret     string
 	Router        *gin.Engine
 	RedisClient   *redis.Client
+	Server        *http.Server
 }
 
 func NewApp(cfg *config.Config) *App {
@@ -30,11 +34,11 @@ func NewApp(cfg *config.Config) *App {
 
 	KafkaProducer := kafka.NewKafkaProducer([]string{cfg.KafkaBrokerURL})
 
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     cfg.RedisHost + ":" + cfg.RedisPort,
-		Password: cfg.RedisPassword,
-		DB:       0,
-	})
+	opt, err := redis.ParseURL(cfg.RedisURL)
+	if err != nil {
+		log.Fatalf("Failed to parse Redis URL: %v", err)
+	}
+	rdb := redis.NewClient(opt)
 
 	return &App{
 		Router:        router,
@@ -42,16 +46,32 @@ func NewApp(cfg *config.Config) *App {
 		KafkaProducer: KafkaProducer,
 		JWTSecret:     cfg.JWTSecret,
 		RedisClient:   rdb,
+		Server: &http.Server{
+			Addr:    ":" + cfg.Port,
+			Handler: router,
+		},
 	}
 }
 
-func (a *App) Start(addr string) {
-	log.Printf("Server starting on %s", addr)
-	if err := a.Router.Run(addr); err != nil {
-		log.Fatalf("Failed to start api-gateway: %v", err)
-	}
+func (a *App) Start() error {
+	log.Printf("Server starting on %s", a.Server.Addr)
+	return a.Server.ListenAndServe()
 }
 
 func (a *App) Shutdown() {
-	log.Println("Shutting down api-gateway...")
+	log.Println("Executing graceful shutdown for api-gateway...")
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutdownCancel()
+
+	if err := a.Server.Shutdown(shutdownCtx); err != nil {
+		log.Printf("HTTP server shutdown error: %v", err)
+	}
+
+	if a.RedisClient != nil {
+		a.RedisClient.Close()
+		log.Println("Redis connection closed.")
+	}
+
+	log.Println("Shutdown complete.")
 }

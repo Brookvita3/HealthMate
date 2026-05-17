@@ -12,6 +12,16 @@ from app.postprocess import post_process_items
 
 app = FastAPI(title="healthmate-ocr-service", version="1.0.0")
 
+
+@app.get("/health")
+def health_check():
+    return {"status": "UP"}
+
+
+@app.get("/ready")
+def ready_check():
+    return {"status": "UP"}
+
 # English model works reliably with Vietnamese medicine names written in Latin.
 # We normalize field extraction in post-processing.
 ocr_engine = PaddleOCR(use_angle_cls=True, lang="en", show_log=False)

@@ -77,7 +77,7 @@ func NewApp(cfg *config.Config) *App {
 	}
 
 	router := gin.Default()
-	setupRoutes(router, metricHandler, medicationHandler, cfg.JWTSecret, cfg.APIPrefix)
+	setupRoutes(router, metricHandler, medicationHandler, pool, cfg.JWTSecret, cfg.APIPrefix)
 
 	return &App{
 		MetricRepo:        metricRepo,
@@ -92,7 +92,7 @@ func NewApp(cfg *config.Config) *App {
 	}
 }
 
-func setupRoutes(r *gin.Engine, metricHandler *metric.Handler, medicationHandler *medication.Handler, jwtSecret string, apiPrefix string) {
+func setupRoutes(r *gin.Engine, metricHandler *metric.Handler, medicationHandler *medication.Handler, pool *pgxpool.Pool, jwtSecret string, apiPrefix string) {
 	// @Summary Health Check
 	// @Description Check if the service is up
 	// @Tags health
@@ -101,6 +101,24 @@ func setupRoutes(r *gin.Engine, metricHandler *metric.Handler, medicationHandler
 	// @Router /health [get]
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
+	r.GET("/ready", func(c *gin.Context) {
+		ctx := c.Request.Context()
+		dbErr := pool.Ping(ctx)
+
+		if dbErr != nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{
+				"status":   "not ready",
+				"database": "error",
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"status":   "ready",
+			"database": "ok",
+		})
 	})
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

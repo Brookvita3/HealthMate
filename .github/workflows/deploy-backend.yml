@@ -1,0 +1,83 @@
+name: Deploy Backend
+
+on:
+  workflow_run:
+    workflows: ['ci-backend']
+    types:
+      - completed
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set image tag
+        run: echo "IMAGE_TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+      - name: Login Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # API GATEWAY
+      - name: Build API Gateway
+        run: |
+          docker build \
+            -t brookvita3/healthmate-api-gateway:${IMAGE_TAG} \
+            ./api-gateway
+
+      - name: Push API Gateway
+        run: |
+          docker push brookvita3/healthmate-api-gateway:${IMAGE_TAG}
+
+      # AUTH
+      - name: Build Auth Service
+        run: |
+          docker build \
+            -t brookvita3/healthmate-auth-service:${IMAGE_TAG} \
+            ./auth-service
+
+      - name: Push Auth Service
+        run: |
+          docker push brookvita3/healthmate-auth-service:${IMAGE_TAG}
+
+      # REALTIME
+      - name: Build Realtime Service
+        run: |
+          docker build \
+            -t brookvita3/healthmate-realtime-service:${IMAGE_TAG} \
+            ./realtime-service
+
+      - name: Push Realtime Service
+        run: |
+          docker push brookvita3/healthmate-realtime-service:${IMAGE_TAG}
+
+      # STORAGE
+      - name: Build Storage Service
+        run: |
+          docker build \
+            -t brookvita3/healthmate-storage-service:${IMAGE_TAG} \
+            ./storage-service
+
+      - name: Push Storage Service
+        run: |
+          docker push brookvita3/healthmate-storage-service:${IMAGE_TAG}
+
+      # DEPLOY
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd ~/HealthMate/deploy
+
+            sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
+
+            ./deploy.sh

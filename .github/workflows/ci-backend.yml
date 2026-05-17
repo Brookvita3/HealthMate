@@ -1,0 +1,89 @@
+name: CI Backend
+
+on:
+  push:
+    branches: ['main']
+    paths:
+      - 'api-gateway/**'
+      - 'auth-service/**'
+      - 'realtime-service/**'
+      - 'storage-service/**'
+
+  pull_request:
+    branches: ['main']
+    paths:
+      - 'api-gateway/**'
+      - 'auth-service/**'
+      - 'realtime-service/**'
+      - 'storage-service/**'
+
+jobs:
+  test-api-gateway:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api-gateway
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: '1.24' }
+      - run: go mod download
+      - run: go test ./... -v
+
+  test-auth-service:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: auth-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: '1.24' }
+      - run: go mod download
+      - run: go test ./... -v
+
+  test-realtime-service:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: realtime-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: '1.24' }
+      - run: go mod download
+      - run: go test ./... -v
+
+  test-storage-service:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: storage-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: '1.26' }
+
+      # Install C compiler + build tools (CGO)
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc g++ make wget
+
+      # Install ONNX Runtime (required by onnxruntime_go)
+      - name: Install ONNX Runtime
+        run: |
+          wget https://github.com/microsoft/onnxruntime/releases/download/v1.20.1/onnxruntime-linux-x64-1.20.1.tgz
+          tar -xzf onnxruntime-linux-x64-1.20.1.tgz
+          sudo cp onnxruntime-linux-x64-1.20.1/lib/libonnxruntime.so* /usr/lib/
+
+      # Set CGO + library path
+      - name: Setup CGO
+        run: |
+          echo "CGO_ENABLED=1" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=/usr/lib" >> $GITHUB_ENV
+
+      - run: go mod download
+      - run: go test ./... -v
+        env:
+          CGO_ENABLED: 1

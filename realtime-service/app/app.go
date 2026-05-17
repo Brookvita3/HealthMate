@@ -86,6 +86,21 @@ func NewHttpServer(deps *Dependencies, hub *realtime.Hub) *http.Server {
 	mux := http.NewServeMux()
 	mux.Handle("/ws", wsHandler)
 	mux.Handle("/swagger/", httpSwagger.Handler())
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"UP"}`))
+	})
+	mux.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		err := deps.PgPool.Ping(ctx)
+		if err != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			w.Write([]byte(`{"status":"not ready", "database":"error"}`))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"ready", "database":"ok"}`))
+	})
 
 	httpServer := &http.Server{
 		Addr:    ":" + deps.Config.HTTPPort,

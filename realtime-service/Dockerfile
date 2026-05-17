@@ -3,20 +3,19 @@ FROM golang:1.24 AS builder
 
 WORKDIR /app
 
-# Copy dependencies trước để cache
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy toàn bộ source vào container
 COPY . .
 
-# Build binary từ thư mục cmd/server
-RUN CGO_ENABLED=0 GOOS=linux go build -o realtime-service ./cmd/server
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o realtime-service ./cmd/server
 
-# --- Stage 2: Run (image tối ưu) ---
+# --- Stage 2: Run ---
 FROM alpine:3.20
 
 WORKDIR /app
+
+RUN apk --no-cache add ca-certificates
 
 COPY --from=builder /app/realtime-service .
 

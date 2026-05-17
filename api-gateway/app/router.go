@@ -39,5 +39,6 @@ func (a *App) SetupRoutes(cfg config.Config) {
 		protected.Any("/ocr/*proxyPath", handlers.ReverseProxy(cfg.OCRHTTPURL, "/ocr"))
 	}
 
-	a.Router.GET("/gateway/health", handlers.PingHandler)
+	a.Router.GET("/health", handlers.PingHandler)
+	a.Router.GET("/ready", handlers.ReadyHandler(a.RedisClient))
 }

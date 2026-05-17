@@ -17,9 +17,7 @@ type Config struct {
 	KafkaTopic      string
 	StorageHTTPURL  string
 	APIPrefix       string
-	RedisHost       string
-	RedisPort       string
-	RedisPassword   string
+	RedisURL        string
 	RateLimitLimit  string
 	RateLimitWindow string
 }
@@ -40,9 +38,7 @@ func LoadConfig() Config {
 		RealtimeHTTPURL: os.Getenv("REALTIME_HTTP_URL"),
 		StorageHTTPURL:  os.Getenv("STORAGE_HTTP_URL"),
 		OCRHTTPURL:      os.Getenv("OCR_HTTP_URL"),
-		RedisHost:       os.Getenv("REDIS_HOST"),
-		RedisPort:       os.Getenv("REDIS_PORT"),
-		RedisPassword:   os.Getenv("REDIS_PASSWORD"),
+		RedisURL:        os.Getenv("REDIS_URL"),
 		RateLimitLimit:  os.Getenv("RATE_LIMIT_LIMIT"),
 		RateLimitWindow: os.Getenv("RATE_LIMIT_WINDOW"),
 	}

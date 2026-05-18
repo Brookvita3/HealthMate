@@ -8,8 +8,10 @@ import (
 
 	"api-gateway/config"
 	"api-gateway/internal/kafka"
+	"api-gateway/internal/middleware"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -31,6 +33,9 @@ func NewApp(cfg *config.Config) *App {
 
 	router.RedirectTrailingSlash = false
 	router.RedirectFixedPath = false
+
+	router.Use(middleware.PrometheusMiddleware())
+	router.GET("/prometheus-metrics", gin.WrapH(promhttp.Handler()))
 
 	KafkaProducer := kafka.NewKafkaProducer([]string{cfg.KafkaBrokerURL})
 

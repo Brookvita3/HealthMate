@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"D:\\\\HealthMate\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(find D:\\\\\\\\HealthMate -type d -not -path '*/.git/*')",
+      "Bash(Select-String -Path 'C:\\\\Users\\\\bach\\\\.claude\\\\projects\\\\D--HealthMate\\\\58fee964-b3f9-492e-8f2d-2b435c612bc9.jsonl' -Pattern '\"command\".*go test')",
+      "Bash(Select-Object -First 20)",
+      "Bash(Get-ChildItem -Path \"D:\\\\HealthMate\\\\auth-service\" -Recurse -Filter \"*.go\")",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Sort-Object)",
+      "Bash(go test *)",
+      "Bash(go mod *)"
+    ]
+  }
+}

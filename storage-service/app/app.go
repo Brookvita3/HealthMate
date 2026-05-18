@@ -7,7 +7,7 @@ import (
 	"storage-service/internal/kafka"
 	"storage-service/internal/medication"
 	"storage-service/internal/metric"
-	"storage-service/internal/middleware"
+	storageMiddleware "storage-service/internal/middleware"
 	"storage-service/internal/notification"
 	"storage-service/internal/readiness"
 	"storage-service/internal/stress"
@@ -20,6 +20,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
@@ -77,6 +78,8 @@ func NewApp(cfg *config.Config) *App {
 	}
 
 	router := gin.Default()
+	router.Use(storageMiddleware.PrometheusMiddleware())
+	router.GET("/prometheus-metrics", gin.WrapH(promhttp.Handler()))
 	setupRoutes(router, metricHandler, medicationHandler, pool, cfg.JWTSecret, cfg.APIPrefix)
 
 	return &App{
@@ -127,7 +130,7 @@ func setupRoutes(r *gin.Engine, metricHandler *metric.Handler, medicationHandler
 
 	// Metrics endpoints
 	metrics := api.Group("/metrics")
-	metrics.Use(middleware.JWTAuthMiddleware(jwtSecret))
+	metrics.Use(storageMiddleware.JWTAuthMiddleware(jwtSecret))
 	{
 		metrics.GET("/charts", metricHandler.GetChartData)
 		metrics.POST("/readiness", readiness.PredictHandler)
@@ -139,7 +142,7 @@ func setupRoutes(r *gin.Engine, metricHandler *metric.Handler, medicationHandler
 
 	// Medication endpoints
 	medications := api.Group("/medications")
-	medications.Use(middleware.JWTAuthMiddleware(jwtSecret))
+	medications.Use(storageMiddleware.JWTAuthMiddleware(jwtSecret))
 	{
 		medications.GET("", medicationHandler.ListMedications)
 		medications.POST("", medicationHandler.CreateMedication)

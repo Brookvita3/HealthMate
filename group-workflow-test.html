@@ -1,0 +1,1593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HealthMate | Group Workflow Test UI</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #22d3ee;
+            --success: #10b981;
+            --error: #ef4444;
+            --border: #334155;
+            --font-main: 'Outfit', 'Inter', -apple-system, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-main);
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            line-height: 1.6;
+            padding: 40px 20px;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(34, 211, 238, 0.1) 0px, transparent 50%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 15px;
+        }
+
+        .subtitle {
+            color: var(--text-dim);
+            font-size: 1.2rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Config Bar - Glassmorphism */
+        .config-bar {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 24px;
+            border-radius: 20px;
+            margin-bottom: 40px;
+            display: grid;
+            grid-template-columns: 1fr 2fr auto;
+            gap: 20px;
+            align-items: end;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-dim);
+        }
+
+        input, textarea, select {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 12px;
+            outline: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 0.95rem;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+            background: rgba(15, 23, 42, 0.8);
+        }
+
+        button {
+            cursor: pointer;
+            padding: 12px 24px;
+            border-radius: 12px;
+            border: none;
+            font-weight: 700;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-size: 0.95rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, #4f46e5 100%);
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.5);
+            filter: brightness(1.1);
+        }
+
+        .btn-outline {
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            color: var(--primary);
+        }
+
+        .btn-outline:hover {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: var(--primary);
+        }
+
+        /* Tabs/Workflow Steps */
+        .workflow-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .workflow-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            overflow: hidden;
+            transition: all 0.4s ease;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .workflow-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-header {
+            padding: 24px 32px;
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .step-num {
+            background: rgba(99, 102, 241, 0.2);
+            border: 1px solid var(--primary);
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            color: var(--primary);
+        }
+
+        .card-body {
+            padding: 32px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .full-width {
+            grid-column: span 2;
+        }
+
+        .response-area {
+            margin-top: 24px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .response-box {
+            background: #020617;
+            border-radius: 16px;
+            padding: 20px;
+            font-family: 'Fira Code', 'Monaco', monospace;
+            font-size: 0.85rem;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+
+        .response-box::-webkit-scrollbar {
+            width: 8px;
+        }
+        .response-box::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .status-badge {
+            font-size: 0.7rem;
+            padding: 4px 10px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            font-weight: 800;
+        }
+
+        .status-ok { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .status-err { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+        pre {
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: #cbd5e1;
+        }
+
+        /* List Styling */
+        .member-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(15, 23, 42, 0.4);
+            padding: 16px 20px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            margin-bottom: 12px;
+            transition: all 0.2s;
+        }
+
+        .member-item:hover {
+            border-color: var(--accent);
+            background: rgba(15, 23, 42, 0.6);
+        }
+
+        .member-info h4 {
+            font-size: 0.95rem;
+            color: var(--text-main);
+            margin-bottom: 4px;
+        }
+
+        .member-info p {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+
+        /* Perm Grid */
+        .perm-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+            background: rgba(15, 23, 42, 0.4);
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+        }
+
+        .perm-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.9rem;
+            padding: 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .perm-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .perm-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--primary);
+        }
+
+        /* Utils */
+        .hidden { display: none; }
+        .flex { display: flex; align-items: center; gap: 12px; }
+        .mt-8 { margin-top: 32px; }
+        
+        .badge-invite {
+            background: linear-gradient(135deg, rgba(34, 211, 238, 0.1) 0%, rgba(34, 211, 238, 0.05) 100%);
+            border: 1px solid rgba(34, 211, 238, 0.2);
+            padding: 24px;
+            border-radius: 20px;
+            margin-bottom: 32px;
+        }
+
+        .copy-btn {
+            background: rgba(255,255,255,0.05);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            cursor: pointer;
+        }
+        .copy-btn:hover { color: var(--accent); background: rgba(255,255,255,0.1); }
+
+        /* Workflow 5: Live Stream Styles */
+        .chat-feed {
+            background: rgba(2, 6, 23, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            height: 400px;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 24px;
+            scroll-behavior: smooth;
+        }
+
+        .chat-msg {
+            padding: 10px 16px;
+            border-radius: 12px;
+            max-width: 90%;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            animation: slideIn 0.2s ease-out;
+            position: relative;
+        }
+
+        .msg-system { background: rgba(99, 102, 241, 0.1); border-left: 3px solid var(--primary); color: var(--text-dim); }
+        .msg-data { background: rgba(34, 211, 238, 0.1); border-left: 3px solid var(--accent); color: var(--text-main); }
+        .msg-error { background: rgba(239, 68, 68, 0.1); border-left: 3px solid var(--error); color: #fca5a5; }
+
+        .msg-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            margin-bottom: 4px;
+            font-weight: 700;
+            text-transform: uppercase;
+            opacity: 0.7;
+        }
+
+        .ws-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 800;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-dim);
+        }
+        .ws-active .status-dot {
+            background: var(--success);
+            box-shadow: 0 0 10px var(--success);
+            animation: pulse 2s infinite;
+        }
+        .ws-inactive .status-dot { background: var(--error); }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.5; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Auditor Table */
+        .auditor-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            margin-bottom: 24px;
+            background: rgba(15, 23, 42, 0.4);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .auditor-table th, .auditor-table td {
+            text-align: left;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        .auditor-table th { background: rgba(255, 255, 255, 0.05); color: var(--text-dim); text-transform: uppercase; font-size: 0.7rem; }
+        .access-granted { color: var(--success); font-weight: 700; }
+        .access-denied { color: var(--error); font-weight: 700; }
+
+        .live-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .logic-guide {
+            background: rgba(99, 102, 241, 0.05);
+            border: 1px dashed var(--primary);
+            padding: 16px;
+            border-radius: 12px;
+            margin-top: 20px;
+            font-size: 0.85rem;
+        }
+        .logic-guide b { color: var(--accent); }
+        .logic-step { margin-bottom: 8px; display: flex; gap: 10px; }
+        .logic-icon { color: var(--primary); }
+
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Fira+Code&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>HealthMate Group Test</h1>
+        <p class="subtitle">A specialized E2E workflow tester for group data sharing scenarios.</p>
+    </header>
+
+    <!-- Global Config -->
+    <div class="config-bar">
+        <div class="form-group">
+            <label>Nginx Gateway</label>
+            <input type="text" id="baseUrl" value="http://localhost:8080" placeholder="http://localhost:8080">
+        </div>
+        <div class="form-group">
+            <label>Bearer Token</label>
+            <input type="text" id="accessToken" placeholder="Login or paste JWT here">
+        </div>
+        <div class="form-group">
+            <button class="btn-primary" onclick="saveConfig()">Save Settings</button>
+        </div>
+    </div>
+
+    <div class="workflow-stack">
+        
+        <!-- Workflow 0: Authentication -->
+        <div class="workflow-card">
+            <div class="card-header" onclick="toggleCard('auth-body')">
+                <div class="card-title">
+                    <div class="step-num">0</div>
+                    <span>Initial Login</span>
+                </div>
+                <button class="btn-outline" style="padding: 4px 12px; font-size: 0.75rem;">Expand/Collapse</button>
+            </div>
+            <div class="card-body hidden" id="auth-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>User Email</label>
+                        <input type="text" id="loginEmail" placeholder="user@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="loginPassword" placeholder="••••••••">
+                    </div>
+                </div>
+                <button class="btn-primary" onclick="executeLogin()">Execute Login</button>
+                <div id="res-auth" class="response-area"></div>
+            </div>
+        </div>
+
+        <!-- Workflow 1: Create Group -->
+        <div class="workflow-card">
+            <div class="card-header" onclick="toggleCard('create-body')">
+                <div class="card-title">
+                    <div class="step-num">1</div>
+                    <span>Create a New Group</span>
+                </div>
+            </div>
+            <div class="card-body" id="create-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Group Name</label>
+                        <input type="text" id="groupName" placeholder="My Family Circle">
+                    </div>
+                    <div class="form-group">
+                        <label>Description (Optional)</label>
+                        <input type="text" id="groupDesc" placeholder="Monitoring vitals for the whole family">
+                    </div>
+                </div>
+                <button class="btn-primary" onclick="executeCreateGroup()">Create Group</button>
+                <div id="res-create" class="response-area"></div>
+            </div>
+        </div>
+
+        <!-- Workflow 2: Manage Members -->
+        <div class="workflow-card">
+            <div class="card-header" onclick="toggleCard('member-body')">
+                <div class="card-title">
+                    <div class="step-num">2</div>
+                    <span>Manage Group Members</span>
+                </div>
+            </div>
+            <div class="card-body" id="member-body">
+                <div class="form-group full-width" style="margin-bottom: 32px;">
+                    <label>Selected Group ID</label>
+                    <div class="flex">
+                        <input type="text" id="memberGroupId" placeholder="Enter Group UUID" style="flex: 1">
+                        <button class="btn-outline" onclick="fetchMembers()">Refresh Member List</button>
+                    </div>
+                </div>
+
+                <div class="badge-invite">
+                    <label style="color: var(--accent); margin-bottom: 12px; display: block;">Invite New Person</label>
+                    <div class="flex">
+                        <input type="text" id="inviteEmail" placeholder="colleague@example.com" style="flex: 1">
+                        <button class="btn-primary" onclick="executeInvite()">Send invitation</button>
+                    </div>
+                </div>
+
+                <div class="mt-8">
+                    <label style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+                        <span>My Group Invitations</span>
+                        <button class="copy-btn" onclick="fetchInvitations()">Refresh List</button>
+                    </label>
+                    <div id="invitationList" class="perm-grid" style="display: flex; flex-direction: column; gap: 10px;">
+                        <p style="color: var(--text-dim); text-align: center; font-style: italic;">No pending invitations found.</p>
+                    </div>
+                </div>
+
+                <div class="mt-8">
+                    <label style="margin-bottom: 16px; display: block;">Current Members in Group</label>
+                    <div id="memberList">
+                        <p style="color: var(--text-dim); text-align: center; font-style: italic;">No group selected or loaded.</p>
+                    </div>
+                </div>
+                
+                <div id="res-members" class="response-area"></div>
+            </div>
+        </div>
+
+        <!-- Workflow 3: Data Sharing -->
+        <div class="workflow-card">
+            <div class="card-header" onclick="toggleCard('perm-body')">
+                <div class="card-title">
+                    <div class="step-num">3</div>
+                    <span>Set Sharing Permissions</span>
+                </div>
+            </div>
+            <div class="card-body" id="perm-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Target Group ID</label>
+                        <input type="text" id="shareGroupId" placeholder="Paste Group ID here">
+                    </div>
+                    <div class="form-group">
+                        <label>Target Member (Optional)</label>
+                        <select id="shareMemberId">
+                            <option value="">[EVERYONE] Group Rule</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <label style="margin-bottom: 12px; display: block;">Metric Types to Broadcast</label>
+                <div class="perm-grid" id="metricTypesList">
+                    <!-- Loaded via API -->
+                    <div class="perm-item"><input type="checkbox" value="heart_rate"> Heart Rate</div>
+                    <div class="perm-item"><input type="checkbox" value="steps_count"> Steps Count</div>
+                    <div class="perm-item"><input type="checkbox" value="spo2"> Oxygen (SpO2)</div>
+                </div>
+
+                <div class="mt-8 flex">
+                    <button class="btn-primary" onclick="executeUpdatePermissions()">Save Sharing Rules</button>
+                    <button class="btn-outline" onclick="fetchMyPermissions()">Load Current Rules</button>
+                    <button class="btn-outline" onclick="loadGroupMembersForSharing()">Refresh Members</button>
+                    <button class="btn-outline" style="color:var(--error); border-color:rgba(239,68,68,0.2)" onclick="executeResetPermissions()">Reset to Group Default</button>
+                </div>
+                <div class="logic-guide">
+                    <div style="font-weight: 800; margin-bottom: 12px; color: var(--text-main); font-size: 0.9rem;">
+                        💡 Logic Guide: "Group Rule as Base"
+                    </div>
+                    <div class="logic-step">
+                        <span class="logic-icon">1.</span>
+                        <span><b>Base Rule:</b> Select <b>[EVERYONE]</b> and check Heart Rate. Now <i>everyone</i> in the group can see your HR.</span>
+                    </div>
+                    <div class="logic-step">
+                        <span class="logic-icon">2.</span>
+                        <span><b>Specific Filter:</b> Select <b>User A</b> and check <i>NOTHING</i>. Now User A is <i>blocked</i> from everything, while others still see HR.</span>
+                    </div>
+                    <div class="logic-step">
+                        <span class="logic-icon">3.</span>
+                        <span><b>Granular Share:</b> Select <b>User B</b> and check <i>only</i> SpO2. User B will see <i>only</i> SpO2, regardless of others.</span>
+                    </div>
+                </div>
+
+                <div id="res-sharing" class="response-area"></div>
+            </div>
+        </div>
+
+        <!-- Workflow 4: View Data Hub -->
+        <div class="workflow-card">
+            <div class="card-header" onclick="toggleCard('view-body')">
+                <div class="card-title">
+                    <div class="step-num">4</div>
+                    <span>Data Viewer Hub</span>
+                </div>
+            </div>
+            <div class="card-body" id="view-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Target User ID</label>
+                        <input type="text" id="viewUserId" placeholder="User UUID">
+                    </div>
+                    <div class="form-group">
+                        <label>Metric Metric</label>
+                        <select id="viewMetricType">
+                            <option value="heart_rate">Heart Rate (bpm)</option>
+                            <option value="steps_count">Steps Count</option>
+                            <option value="spo2">Blood Oxygen (SpO2)</option>
+                            <option value="blood_pressure">Blood Pressure</option>
+                            <option value="calories_burned">Calories Burned</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn-primary" onclick="executeViewHistory()">Query Last 24h Data</button>
+                <div id="res-view" class="response-area"></div>
+            </div>
+        </div>
+
+        <!-- Workflow 5: Group Live Stream -->
+        <div class="workflow-card">
+            <div class="card-header" onclick="toggleCard('live-body')">
+                <div class="card-title">
+                    <div class="step-num">5</div>
+                    <span>Group Live Stream & Privacy Auditor</span>
+                </div>
+                <div id="wsStatusBadge" class="ws-status ws-inactive">
+                    <div class="status-dot"></div>
+                    <span id="wsStatusText">DISCONNECTED</span>
+                </div>
+            </div>
+            <div class="card-body" id="live-body">
+                <div class="live-controls">
+                    <button class="btn-primary" id="btnConnect" onclick="connectWS()">Connect Live Feed</button>
+                    <button class="btn-outline" id="btnAutoSub" onclick="autoSubscribeGroup()">Audit & Sub Members</button>
+                </div>
+
+                <div class="mt-8">
+                    <label style="margin-bottom: 12px; display: block;">Privacy Auditor (Access Matrix)</label>
+                    <table class="auditor-table">
+                        <thead>
+                            <tr>
+                                <th>Member ID</th>
+                                <th>Heart Rate</th>
+                                <th>Steps</th>
+                                <th>SpO2</th>
+                                <th>BP</th>
+                            </tr>
+                        </thead>
+                        <tbody id="privacyMatrix">
+                            <tr><td colspan="5" style="text-align:center; padding:20px; color:var(--text-dim);">No audit data. Click 'Audit & Sub Members'.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <label style="margin-bottom: 12px; display: block;">Live Health Stream</label>
+                <div id="liveFeed" class="chat-feed">
+                    <div class="chat-msg msg-system">
+                        <div class="msg-header"><span>System</span></div>
+                        Welcome to the Group Live Stream. Connect to start seeing data.
+                    </div>
+                </div>
+
+                <div class="badge-invite">
+                    <label style="color: var(--accent); margin-bottom: 12px; display: block;">Quick Data Push (Simulate Self)</label>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Metric</label>
+                            <select id="pushMetricType">
+                                <option value="heart_rate">Heart Rate</option>
+                                <option value="steps_count">Steps Count</option>
+                                <option value="spo2">SpO2</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Value</label>
+                            <input type="number" id="pushMetricValue" value="72">
+                        </div>
+                    </div>
+                    <button class="btn-primary mt-8" onclick="simulatePush()">Push My Data to Group</button>
+                </div>
+        <!-- Workflow 6: Health Thresholds -->
+        <div class="workflow-card">
+            <div class="card-header" onclick="toggleCard('threshold-body'); if(!state.thresholds) fetchThresholds();">
+                <div class="card-title">
+                    <div class="step-num">6</div>
+                    <span>Health Alert Thresholds</span>
+                </div>
+            </div>
+            <div class="card-body hidden" id="threshold-body">
+                <div class="flex" style="margin-bottom: 24px;">
+                    <button class="btn-primary" onclick="fetchThresholds()">Refresh All Thresholds</button>
+                </div>
+
+                <div id="create-threshold-form" class="badge-invite" style="margin-bottom: 32px;">
+                    <label style="color: var(--accent); margin-bottom: 16px; display: block; font-weight: 800;">Threshold Editor</label>
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label>Metric Type</label>
+                            <select id="newThresholdMetric" style="width:100%; background:var(--bg-card); color:white; border:1px solid var(--border); border-radius:8px; padding:10px;" onchange="syncThresholdForm()">
+                                <option value="">-- Load Thresholds First --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Min Value</label>
+                            <input type="number" id="newThresholdMin" placeholder="No Limit" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label>Max Value</label>
+                            <input type="number" id="newThresholdMax" placeholder="No Limit" step="0.1">
+                        </div>
+                        <div class="form-group" style="display: flex; align-items: center; gap: 8px; margin-top: 10px;">
+                            <label style="margin:0">Enabled</label>
+                            <input type="checkbox" id="newThresholdEnabled" checked style="width:auto">
+                        </div>
+                    </div>
+                    <button id="btnSaveThreshold" class="btn-primary mt-8" style="width:100%" onclick="executeSaveThreshold()">Save Threshold</button>
+                    <p style="font-size: 0.7rem; color: var(--text-dim); margin-top: 12px; text-align: center;">
+                        Note: This will create a specific rule for you, overriding system defaults.
+                    </p>
+                </div>
+
+                <label style="margin-bottom: 16px; display: block;">Active Thresholds & Defaults</label>
+                <div id="thresholdList" class="flex" style="flex-direction: column; gap: 12px;">
+                    <p style="color: var(--text-dim); text-align: center; font-style: italic;">No thresholds loaded. Click Refresh.</p>
+                </div>
+                <div id="res-threshold" class="response-area"></div>
+            </div>
+        </div>
+
+        <!-- Workflow 7: Medication Reminders -->
+        <div class="workflow-card">
+            <div class="card-header" onclick="toggleCard('med-body')">
+                <div class="card-title">
+                    <div class="step-num">7</div>
+                    <span>Medication Reminders</span>
+                </div>
+            </div>
+            <div class="card-body hidden" id="med-body">
+                <div class="flex" style="margin-bottom: 24px;">
+                    <button class="btn-primary" onclick="fetchMedications()">List Medications</button>
+                    <button class="btn-outline" onclick="toggleCard('create-med-form')">Add New Medication</button>
+                </div>
+
+                <div id="create-med-form" class="badge-invite hidden" style="margin-bottom: 32px;">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Medication Name</label>
+                            <input type="text" id="medName" placeholder="Paracetamol">
+                        </div>
+                        <div class="form-group">
+                            <label>Dosage</label>
+                            <input type="text" id="medDosage" placeholder="500mg">
+                        </div>
+                        <div class="form-group full-width">
+                            <label>Instructions</label>
+                            <input type="text" id="medInstructions" placeholder="After meals">
+                        </div>
+                        <div class="form-group">
+                            <label>Reminder Times (comma separated)</label>
+                            <input type="text" id="medTimes" placeholder="08:00, 20:00">
+                        </div>
+                        <div class="form-group">
+                            <label>Frequency (JSON)</label>
+                            <input type="text" id="medFreq" value='{"type": "daily"}'>
+                        </div>
+                    </div>
+                    <button class="btn-primary mt-8" onclick="executeCreateMedication()">Create Medication</button>
+                </div>
+
+                <div id="medicationList">
+                    <p style="color: var(--text-dim); text-align: center; font-style: italic;">No medications loaded.</p>
+                </div>
+                <div id="res-med" class="response-area"></div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // --- System State ---
+    const state = {
+        baseUrl: localStorage.getItem('hm_baseUrl') || 'http://localhost:8080',
+        token: localStorage.getItem('hm_accessToken') || '',
+        userId: localStorage.getItem('hm_userId') || '',
+        ws: null,
+        members: []
+    };
+
+    // --- Core Methods ---
+    function saveConfig() {
+        state.baseUrl = document.getElementById('baseUrl').value.trim();
+        state.token = document.getElementById('accessToken').value.trim();
+        localStorage.setItem('hm_baseUrl', state.baseUrl);
+        localStorage.setItem('hm_accessToken', state.token);
+        
+        // Try to extract userId from JWT if possible
+        if (state.token) {
+            try {
+                const parts = state.token.split('.');
+                if (parts.length === 3) {
+                    const payload = JSON.parse(atob(parts[1]));
+                    state.userId = payload.sub || payload.id || payload.uid || payload.user_id || '';
+                    localStorage.setItem('hm_userId', state.userId);
+                }
+            } catch (e) {
+                console.error("Token parse error:", e);
+            }
+        }
+
+        if (state.token) {
+            fetchMetricTypes();
+            if (state.userId) fetchThresholds();
+        }
+        alert('Configuration saved. Detected UserID: ' + (state.userId || 'Unknown (Login suggested)'));
+    }
+
+    function loadConfig() {
+        document.getElementById('baseUrl').value = state.baseUrl;
+        document.getElementById('accessToken').value = state.token;
+        if (state.token) {
+            fetchMetricTypes();
+            // Attempt to extract ID if missing
+            if (!state.userId) {
+                try {
+                    const payload = JSON.parse(atob(state.token.split('.')[1]));
+                    state.userId = payload.sub || payload.id || payload.uid || payload.user_id || '';
+                } catch(e){}
+            }
+            if (state.userId) fetchThresholds();
+        }
+    }
+
+    async function apiRequest(method, path, body = null) {
+        const cleanBase = state.baseUrl.endsWith('/') ? state.baseUrl.slice(0, -1) : state.baseUrl;
+        const cleanPath = path.startsWith('/') ? path : '/' + path;
+        const url = `${cleanBase}${cleanPath}`;
+        
+        const headers = {
+            'Content-Type': 'application/json',
+            'Authorization': state.token ? `Bearer ${state.token}` : ''
+        };
+
+        try {
+            const options = { method, headers };
+            if (body) options.body = JSON.stringify(body);
+            
+            const response = await fetch(url, options);
+            
+            if (response.status === 204) {
+                return { ok: true, status: 204, data: null };
+            }
+
+            const text = await response.text();
+            let data;
+            try {
+                data = text ? JSON.parse(text) : {};
+            } catch (jsonErr) {
+                return { ok: response.ok, status: response.status, data: { error: "Invalid JSON response", body: text } };
+            }
+
+            return { ok: response.ok, status: response.status, data };
+        } catch (e) {
+            return { ok: false, status: 'Network Error', data: { error: e.message } };
+        }
+    }
+
+    function renderResponse(containerId, result) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = `
+            <div class="response-box">
+                <div class="status-header">
+                    <span class="status-badge ${result.ok ? 'status-ok' : 'status-err'}">
+                        HTTP ${result.status}
+                    </span>
+                    <span style="color:var(--text-dim); font-size:0.7rem;">Time: ${new Date().toLocaleTimeString()}</span>
+                </div>
+                <pre>${JSON.stringify(result.data, null, 2)}</pre>
+            </div>
+        `;
+    }
+
+    // --- Actions ---
+
+    async function executeLogin() {
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+        const result = await apiRequest('POST', '/auth/app', { email, password });
+        renderResponse('res-auth', result);
+        
+        if (result.ok && result.data.access_token) {
+            state.token = result.data.access_token;
+            state.userId = result.data.user?.id || '';
+            document.getElementById('accessToken').value = state.token;
+            localStorage.setItem('hm_accessToken', state.token);
+            localStorage.setItem('hm_userId', state.userId);
+            fetchMetricTypes();
+            fetchThresholds(); // Auto-fetch thresholds after login
+        }
+    }
+
+    async function executeCreateGroup() {
+        const name = document.getElementById('groupName').value;
+        const description = document.getElementById('groupDesc').value;
+        const result = await apiRequest('POST', '/groups', { name, description });
+        renderResponse('res-create', result);
+
+        if (result.ok && result.data.id) {
+            const gid = result.data.id;
+            document.getElementById('memberGroupId').value = gid;
+            document.getElementById('shareGroupId').value = gid;
+            // Highlight these inputs briefly
+            [document.getElementById('memberGroupId'), document.getElementById('shareGroupId')].forEach(el => {
+                el.style.borderColor = 'var(--accent)';
+                setTimeout(() => el.style.borderColor = '', 2000);
+            });
+        }
+    }
+
+    async function fetchMembers() {
+        const gid = document.getElementById('memberGroupId').value;
+        if (!gid) return alert('Please enter a Group ID first.');
+        
+        const result = await apiRequest('GET', `/groups/${gid}/members`);
+        const listContainer = document.getElementById('memberList');
+        
+        if (result.ok && Array.isArray(result.data)) {
+            listContainer.innerHTML = result.data.map(m => `
+                <div class="member-item">
+                    <div class="member-info">
+                        <h4>${m.user_id}</h4>
+                        <p>${m.role.toUpperCase()} • Status: <span style="color:${m.status === 'accepted' ? 'var(--success)' : 'var(--accent)'}">${m.status}</span></p>
+                    </div>
+                    <div class="flex">
+                        <span class="copy-btn" onclick="copyToClipboard('${m.user_id}')">ID</span>
+                        <button class="copy-btn" style="color:var(--error); border:1px solid rgba(239,68,68,0.2)" onclick="executeKick('${m.user_id}')">Remove</button>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            listContainer.innerHTML = `<p style="color:var(--error)">Error: ${result.data.error || 'Could not fetch members'}</p>`;
+        }
+    }
+
+    async function executeInvite() {
+        const gid = document.getElementById('memberGroupId').value;
+        const email = document.getElementById('inviteEmail').value;
+        const result = await apiRequest('POST', `/groups/${gid}/members`, { email });
+        renderResponse('res-members', result);
+        if (result.ok) fetchMembers();
+    }
+
+    async function executeKick(uid) {
+        if(!confirm('Kick this user?')) return;
+        const gid = document.getElementById('memberGroupId').value;
+        const result = await apiRequest('DELETE', `/groups/${gid}/members/${uid}`);
+        renderResponse('res-members', result);
+        if (result.ok) fetchMembers();
+    }
+
+    async function fetchInvitations() {
+        const result = await apiRequest('GET', '/groups/invitations');
+        const listContainer = document.getElementById('invitationList');
+        
+        if (result.ok && Array.isArray(result.data)) {
+            if (result.data.length === 0) {
+                listContainer.innerHTML = '<p style="color: var(--text-dim); text-align: center; font-style: italic;">No pending invitations.</p>';
+                return;
+            }
+            listContainer.innerHTML = result.data.map(inv => `
+                <div class="member-item">
+                    <div class="member-info">
+                        <h4>Group: ${inv.group?.name || 'Unknown'}</h4>
+                        <p>Invited by: ${inv.inviter?.email} • ID: ${inv.group.id}</p>
+                    </div>
+                    <div class="flex">
+                        <button class="btn-primary" style="padding: 6px 12px; font-size: 0.75rem;" onclick="executeAcceptInvitation('${inv.group.id}')">Accept</button>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            listContainer.innerHTML = `<p style="color:var(--error)">Error fetching invitations.</p>`;
+        }
+    }
+
+    async function executeAcceptInvitation(gid) {
+        const result = await apiRequest('PUT', `/groups/${gid}/members/me`, { status: 'accepted' });
+        renderResponse('res-members', result);
+        if (result.ok) {
+            alert('Invitation accepted!');
+            fetchInvitations();
+            document.getElementById('memberGroupId').value = gid;
+            fetchMembers();
+        }
+    }
+
+    async function fetchMetricTypes() {
+        const result = await apiRequest('GET', '/groups/metric-types');
+        const listData = Array.isArray(result.data) ? result.data : (result.data && Array.isArray(result.data.data) ? result.data.data : []);
+        
+        if (result.ok && listData.length > 0) {
+            document.getElementById('metricTypesList').innerHTML = listData.map(type => `
+                <div class="perm-item" onclick="this.querySelector('input').click(); event.stopPropagation();">
+                    <input type="checkbox" value="${type}" onclick="event.stopPropagation();">
+                    <span>${type.replace('_', ' ')}</span>
+                </div>
+            `).join('');
+        }
+    }
+
+    async function fetchMyPermissions() {
+        const gid = document.getElementById('shareGroupId').value;
+        const targetId = document.getElementById('shareMemberId').value;
+        if (!gid) return alert('Enter Group ID');
+        
+        let path = `/groups/${gid}/permissions`;
+        if (targetId) path += `?target_user_id=${targetId}`;
+
+        const result = await apiRequest('GET', path);
+        
+        if (!result.ok) {
+            renderResponse('res-sharing', result);
+            return;
+        }
+
+        const data = result.data;
+        const globalMetrics = (data.global || []).filter(m => m !== 'access_control');
+        const specificMetrics = (data.specific && data.specific.length > 0) 
+            ? data.specific[0].metrics.filter(m => m !== 'access_control') 
+            : [];
+        
+        // Sync Checkboxes (Show effective sharing if targetId is set, else just global)
+        const enabled = targetId ? [...new Set([...globalMetrics, ...specificMetrics])] : globalMetrics;
+        
+        document.querySelectorAll('#metricTypesList input').forEach(cb => {
+            const m = cb.value;
+            cb.checked = enabled.includes(m);
+            
+            // If editing a specific member, DISABLE checkboxes for metrics NOT in Global Base
+            if (targetId) {
+                cb.disabled = !globalMetrics.includes(m);
+                if (cb.disabled) {
+                    cb.parentElement.style.opacity = '0.4';
+                    cb.parentElement.title = 'Enable in Group Rule (Global) first';
+                } else {
+                    cb.parentElement.style.opacity = '1';
+                    cb.parentElement.title = '';
+                }
+            } else {
+                cb.disabled = false;
+                cb.parentElement.style.opacity = '1';
+                cb.parentElement.title = '';
+            }
+        });
+
+        // Render Clarity View
+        renderPermissionsSummary('res-sharing', data);
+    }
+
+    function renderPermissionsSummary(containerId, data) {
+        const container = document.getElementById(containerId);
+        let html = `
+            <div class="response-box" style="margin-top:20px; border-top: 1px solid var(--border); padding-top:20px;">
+                <div style="font-weight:800; color:var(--accent); margin-bottom:16px; display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:1.2rem;">🔒</span> Shared by ME in this Group
+                </div>
+                
+                <div style="margin-bottom:20px;">
+                    <h5 style="color:var(--text-main); margin-bottom:8px; font-size:0.8rem; text-transform:uppercase; letter-spacing:1px;">
+                        🟢 Global Rules (Base)
+                    </h5>
+                    <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                        ${data.global.filter(m => m !== 'access_control').length > 0 
+                            ? data.global.filter(m => m !== 'access_control').map(m => `<span class="status-badge status-ok">${m.replace('_', ' ')}</span>`).join('')
+                            : '<span style="color:var(--text-dim); font-style:italic; font-size:0.8rem;">No global sharing enabled</span>'
+                        }
+                    </div>
+                </div>
+
+                <div>
+                    <h5 style="color:var(--text-main); margin-bottom:8px; font-size:0.8rem; text-transform:uppercase; letter-spacing:1px;">
+                        🛡️ Specific Filters (Per User)
+                    </h5>
+                    ${data.specific.length > 0 && data.specific.some(s => s.metrics.some(m => m !== 'access_control'))
+                        ? data.specific.map(s => {
+                            const filteredMetrics = s.metrics.filter(m => m !== 'access_control');
+                            if (filteredMetrics.length === 0 && s.metrics.includes('access_control')) {
+                                return `
+                                    <div style="background:rgba(239,68,68,0.02); border:1px solid rgba(239,68,68,0.2); border-radius:12px; padding:12px; margin-bottom:8px;">
+                                        <div style="font-size:0.7rem; color:var(--error); margin-bottom:4px; font-family:monospace;">User: ${s.user_id}</div>
+                                        <div style="color:var(--error); font-size:0.7rem; font-weight:700;">🚫 BLOCKED (Explicitly zero permissions)</div>
+                                    </div>
+                                `;
+                            }
+                            return `
+                                <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom:8px;">
+                                    <div style="font-size:0.7rem; color:var(--accent); margin-bottom:8px; font-family:monospace;">User: ${s.user_id}</div>
+                                    <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                                        ${filteredMetrics.map(m => `<span class="status-badge" style="background:rgba(99,102,241,0.1); color:var(--primary); font-size:0.6rem;">${m.replace('_', ' ')}</span>`).join('')}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')
+                        : '<p style="color:var(--text-dim); font-size:0.8rem; font-style:italic;">No specific user filters currently set</p>'
+                    }
+                </div>
+                
+                <details style="margin-top:16px;">
+                    <summary style="font-size:0.7rem; color:var(--text-dim); cursor:pointer;">View Raw JSON</summary>
+                    <pre style="font-size:0.7rem; margin-top:8px;">${JSON.stringify(data, null, 2)}</pre>
+                </details>
+            </div>
+        `;
+        container.innerHTML = html;
+    }
+
+    async function executeUpdatePermissions() {
+        const gid = document.getElementById('shareGroupId').value;
+        const targetId = document.getElementById('shareMemberId').value;
+        if (!gid) return alert('Enter Group ID');
+
+        const checked = Array.from(document.querySelectorAll('#metricTypesList input:checked')).map(cb => cb.value);
+        
+        const body = { metric_types: checked };
+        if (targetId) body.target_user_id = targetId;
+
+        const result = await apiRequest('PUT', `/groups/${gid}/permissions`, body);
+        renderResponse('res-sharing', result);
+        if (result.ok) fetchMyPermissions();
+    }
+
+    async function executeResetPermissions() {
+        const gid = document.getElementById('shareGroupId').value;
+        const targetId = document.getElementById('shareMemberId').value;
+        if (!gid) return alert('Enter Group ID');
+        if (!targetId) return alert('Select a specific Member to reset first.');
+
+        if (!confirm(`Are you sure you want to RESET User ${targetId.substring(0,8)} to Group Defaults?`)) return;
+
+        // Sending null body or omit metric_types would work depending on server implementation
+        // But let's use a specific DELETE call if we have one, or PUT with null
+        const result = await apiRequest('PUT', `/groups/${gid}/permissions`, { 
+            target_user_id: targetId,
+            metric_types: null // This will trigger the true reset logic in permission_service.go
+        });
+        
+        renderResponse('res-sharing', result);
+        if (result.ok) {
+            alert('User reset to group default.');
+            fetchMyPermissions();
+        }
+    }
+
+    async function loadGroupMembersForSharing() {
+        const gid = document.getElementById('shareGroupId').value;
+        if (!gid) return alert('Enter Group ID first');
+
+        const result = await apiRequest('GET', `/groups/${gid}/members`);
+        if (result.ok) {
+            const select = document.getElementById('shareMemberId');
+            select.innerHTML = '<option value="">[EVERYONE] Group Rule</option>';
+            result.data.forEach(m => {
+                if (m.user_id !== state.userId) {
+                    const opt = document.createElement('option');
+                    opt.value = m.user_id;
+                    opt.textContent = `${m.user?.first_name || 'User'} ${m.user?.last_name || m.user_id.slice(0,5)} (${m.role})`;
+                    select.appendChild(opt);
+                }
+            });
+            alert('Members loaded into dropdown');
+        } else {
+            renderResponse('res-sharing', result);
+        }
+    }
+
+    async function executeViewHistory() {
+        const uid = document.getElementById('viewUserId').value;
+        const type = document.getElementById('viewMetricType').value;
+        if (!uid) return alert('Enter User ID');
+        
+        const result = await apiRequest('GET', `/metrics/charts?user_id=${uid}&metric_type=${type}&range=24h`);
+        renderResponse('res-view', result);
+    }
+
+    // --- Workflow 5: Live Stream Logic ---
+
+    function connectWS() {
+        if (state.ws) state.ws.close();
+        
+        const wsUrl = state.baseUrl.replace('http', 'ws') + `/ws?token=${state.token}`;
+        addFeedMessage('System', `Connecting to ${wsUrl}...`);
+        
+        state.ws = new WebSocket(wsUrl);
+        
+        state.ws.onopen = () => {
+            document.getElementById('wsStatusBadge').className = 'ws-status ws-active';
+            document.getElementById('wsStatusText').innerText = 'ACTIVE';
+            document.getElementById('btnConnect').innerText = 'Disconnect';
+            document.getElementById('btnConnect').onclick = disconnectWS;
+            addFeedMessage('System', 'Connected! Live feed is active.');
+        };
+        
+        state.ws.onclose = () => {
+            document.getElementById('wsStatusBadge').className = 'ws-status ws-inactive';
+            document.getElementById('wsStatusText').innerText = 'DISCONNECTED';
+            document.getElementById('btnConnect').innerText = 'Connect Live Feed';
+            document.getElementById('btnConnect').onclick = connectWS;
+            addFeedMessage('System', 'Disconnected from server.');
+        };
+        
+        state.ws.onerror = (e) => {
+            addFeedMessage('Error', 'WebSocket error occurred.');
+            console.error(e);
+        };
+        
+        state.ws.onmessage = (event) => {
+            try {
+                const msg = JSON.parse(event.data);
+                handleWSMessage(msg);
+            } catch (e) {
+                console.error('Failed to parse WS message', e);
+            }
+        };
+    }
+
+    function disconnectWS() {
+        if (state.ws) state.ws.close();
+    }
+
+    function handleWSMessage(msg) {
+        if (msg.type === 'metric') {
+            const data = msg.payload;
+            addFeedMessage('Data', `${data.user_id.substring(0,8)}: ${data.metric_type} = ${data.value}`, 'msg-data');
+            updateAuditorCell(data.user_id, data.metric_type, true);
+        } else if (msg.type === 'error') {
+            addFeedMessage('Error', msg.payload, 'msg-error');
+            // Check if it's a permission error to update auditor
+            if (msg.payload.toLowerCase().includes('permission') || msg.payload.toLowerCase().includes('denied')) {
+                // We don't necessarily know which user/metric caused it unless the msg contains it
+                // Usually it follows a subscription attempt
+            }
+        } else if (msg.type === 'success') {
+            addFeedMessage('System', msg.payload, 'msg-system');
+        }
+    }
+
+    function addFeedMessage(header, text, className = 'msg-system') {
+        const feed = document.getElementById('liveFeed');
+        const msg = document.createElement('div');
+        msg.className = `chat-msg ${className}`;
+        msg.innerHTML = `
+            <div class="msg-header">
+                <span>${header}</span>
+                <span>${new Date().toLocaleTimeString()}</span>
+            </div>
+            ${text}
+        `;
+        feed.appendChild(msg);
+        feed.scrollTop = feed.scrollHeight;
+    }
+
+    async function autoSubscribeGroup() {
+        const gid = document.getElementById('memberGroupId').value;
+        if (!gid) return alert('Enter Group ID in Step 2 first.');
+        if (!state.ws || state.ws.readyState !== WebSocket.OPEN) return alert('Connect WebSocket first.');
+
+        addFeedMessage('System', 'Fetching members for audit...');
+        const result = await apiRequest('GET', `/groups/${gid}/members`);
+        
+        if (!result.ok) return addFeedMessage('Error', 'Could not fetch members for audit.');
+        
+        const members = result.data;
+        state.members = members;
+        const metrics = ['heart_rate', 'steps_count', 'spo2', 'blood_pressure'];
+        
+        // Initialize Matrix
+        const matrixBody = document.getElementById('privacyMatrix');
+        matrixBody.innerHTML = '';
+        
+        members.forEach(m => {
+            const row = document.createElement('tr');
+            row.id = `row-${m.user_id}`;
+            row.innerHTML = `
+                <td>${m.user_id.substring(0,8)}...</td>
+                <td id="cell-${m.user_id}-heart_rate" class="access-denied">Locked</td>
+                <td id="cell-${m.user_id}-steps_count" class="access-denied">Locked</td>
+                <td id="cell-${m.user_id}-spo2" class="access-denied">Locked</td>
+                <td id="cell-${m.user_id}-blood_pressure" class="access-denied">Locked</td>
+            `;
+            matrixBody.appendChild(row);
+            
+            // Attempt to subscribe to everything to test permissions
+            metrics.forEach(metric => {
+                state.ws.send(JSON.stringify({
+                    action: 'subscribe',
+                    items: [{ target_user_id: m.user_id, metric_type: metric, group_id: gid }]
+                }));
+            });
+        });
+
+        // Add a slight delay then check for successes via WS messages
+        addFeedMessage('System', 'Audit complete. Watching for incoming data/errors...');
+    }
+
+    function updateAuditorCell(uid, metric, success) {
+        const cell = document.getElementById(`cell-${uid}-${metric}`);
+        if (cell) {
+            cell.className = success ? 'access-granted' : 'access-denied';
+            cell.innerText = success ? 'GRANTED' : 'DENIED';
+        }
+    }
+
+    function simulatePush() {
+        if (!state.ws || state.ws.readyState !== WebSocket.OPEN) return alert('Connect WebSocket first.');
+        if (!state.userId) return alert('UserID unknown. Please Save Settings or Login again.');
+        
+        const type = document.getElementById('pushMetricType').value;
+        const val = parseFloat(document.getElementById('pushMetricValue').value);
+        
+        const msg = {
+            user_id: state.userId,
+            metric_type: type,
+            value: val,
+            timestamp: new Date().toISOString()
+        };
+        
+        state.ws.send(JSON.stringify(msg));
+        addFeedMessage('Self', `Pushing real data: ${type} = ${val}`, 'msg-system');
+    }
+
+    // --- Workflow 6: Thresholds ---
+    async function fetchThresholds() {
+        if (!state.userId) {
+            const list = document.getElementById('thresholdList');
+            if (list) list.innerHTML = '<p style="color:var(--error); text-align:center;">UserID missing. Please Login or Save Config with token.</p>';
+            return;
+        }
+        
+        console.log("Fetching thresholds for:", state.userId);
+        const result = await apiRequest('GET', `/metrics/thresholds?user_id=${state.userId}`);
+        renderResponse('res-threshold', result);
+
+        // Handle both direct array and { data: [] } wrapper
+        const listData = Array.isArray(result.data) ? result.data : (result.data && Array.isArray(result.data.data) ? result.data.data : null);
+
+        if (result.ok && listData) {
+            state.thresholds = listData;
+            console.log("Thresholds loaded:", listData.length);
+            
+            // Populate Metric Selector dropdown
+            const dropdown = document.getElementById('newThresholdMetric');
+            if (!dropdown) return;
+
+            const currentVal = dropdown.value;
+            dropdown.innerHTML = '<option value="">-- Select a Metric to Edit --</option>' + listData.map(t => `
+                <option value="${t.metric_id}" ${t.metric_id === currentVal ? 'selected' : ''}>${t.metric_name}</option>
+            `).join('');
+
+            const list = document.getElementById('thresholdList');
+            list.innerHTML = listData.map(t => `
+                <div class="member-item" style="display: block; width: 100%;">
+                    <div class="flex" style="justify-content: space-between; margin-bottom: 8px;">
+                        <h4 style="color:var(--accent)">${t.metric_name}</h4>
+                        <div class="flex">
+                            <span class="status-badge" style="background:rgba(255,255,255,0.05); font-size:0.6rem;">${t.metric_id.substring(0,8)}</span>
+                            <span class="status-badge ${t.is_enabled ? 'status-ok' : 'status-err'}">${t.is_enabled ? 'Active' : 'Muted'}</span>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 0.8rem; color: var(--text-dim);">
+                        <div>Min: <b style="color:white">${t.min_value !== null ? t.min_value : 'N/A'}</b></div>
+                        <div>Max: <b style="color:white">${t.max_value !== null ? t.max_value : 'N/A'}</b></div>
+                    </div>
+                    <button class="btn-outline" style="margin-top:12px; width:100%; border-radius:8px; padding: 4px; font-size: 0.75rem" 
+                        onclick="selectMetricToEdit('${t.metric_id}')">Edit This Type</button>
+                </div>
+            `).join('');
+            
+            if (currentVal) syncThresholdForm();
+        } else if (result.ok) {
+            console.warn("API returned OK but no listData found in:", result.data);
+        }
+    }
+
+    function selectMetricToEdit(metricId) {
+        document.getElementById('newThresholdMetric').value = metricId;
+        syncThresholdForm();
+        // Scroll to form
+        document.getElementById('create-threshold-form').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function syncThresholdForm() {
+        const metricId = document.getElementById('newThresholdMetric').value;
+        if (!metricId || !state.thresholds) return;
+        
+        const t = state.thresholds.find(item => item.metric_id === metricId);
+        if (t) {
+            document.getElementById('newThresholdMin').value = t.min_value || '';
+            document.getElementById('newThresholdMax').value = t.max_value || '';
+            document.getElementById('newThresholdEnabled').checked = t.is_enabled;
+            document.getElementById('btnSaveThreshold').innerText = 'Save ' + t.metric_name + ' Threshold';
+        }
+    }
+
+    async function executeSaveThreshold() {
+        if (!state.userId) return alert('UserID unknown. Login first.');
+        const metricId = document.getElementById('newThresholdMetric').value;
+        if (!metricId) return alert('Please select a metric first.');
+
+        const minVal = document.getElementById('newThresholdMin').value;
+        const maxVal = document.getElementById('newThresholdMax').value;
+        const isEnabled = document.getElementById('newThresholdEnabled').checked;
+
+        const body = {
+            user_id: state.userId,
+            metric_id: metricId,
+            min_value: minVal === "" ? null : parseFloat(minVal),
+            max_value: maxVal === "" ? null : parseFloat(maxVal),
+            is_enabled: isEnabled
+        };
+
+        const result = await apiRequest('POST', `/metrics/thresholds`, body);
+        renderResponse('res-threshold', result);
+        if (result.ok) {
+            alert('Threshold saved successfully (Logic: Upsert)');
+            fetchThresholds();
+        }
+    }
+
+    // Deprecated combined into executeSaveThreshold but kept mapping for compatibility if needed
+    async function executeUpdateThreshold(metricId) {
+        selectMetricToEdit(metricId);
+        executeSaveThreshold();
+    }
+
+    // --- Workflow 7: Medications ---
+    async function fetchMedications() {
+        const result = await apiRequest('GET', '/medications');
+        renderResponse('res-med', result);
+
+        if (result.ok && Array.isArray(result.data)) {
+            const list = document.getElementById('medicationList');
+            if (result.data.length === 0) {
+                list.innerHTML = '<p style="color: var(--text-dim); text-align: center; font-style: italic;">No medications found.</p>';
+                return;
+            }
+
+            list.innerHTML = result.data.map(m => `
+                <div class="member-item" style="display: block; margin-bottom: 16px; border-left: 4px solid var(--primary);">
+                    <div class="flex" style="justify-content: space-between; margin-bottom: 12px;">
+                        <div>
+                            <h3 style="color:white; margin:0">${m.name}</h3>
+                            <p style="color:var(--text-dim); font-size:0.8rem;">${m.dosage} • ${m.instructions}</p>
+                        </div>
+                        <button class="btn-outline" style="color:var(--error); border-color:rgba(239,68,68,0.2)" onclick="executeDeleteMedication('${m.id}')">Delete</button>
+                    </div>
+                    <div style="background: rgba(0,0,0,0.2); border-radius: 12px; padding: 12px;">
+                        <label style="font-size:0.7rem; color:var(--accent)">Reminders</label>
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">
+                            ${m.reminders.map(r => `
+                                <div class="flex" style="background:rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 8px; border: 1px solid ${r.last_taken ? 'var(--success)' : 'var(--border)'}">
+                                    <span style="font-weight:700; color:${r.last_taken ? 'var(--success)' : 'white'}">${r.time}</span>
+                                    <button class="copy-btn" onclick="executeTakeMedication('${m.id}', '${r.id}')">
+                                        ${r.last_taken ? 'Taken ✓' : 'Take Now'}
+                                    </button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+    }
+
+    async function executeCreateMedication() {
+        const name = document.getElementById('medName').value;
+        const dosage = document.getElementById('medDosage').value;
+        const instructions = document.getElementById('medInstructions').value;
+        const timesStr = document.getElementById('medTimes').value;
+        const freq = JSON.parse(document.getElementById('medFreq').value);
+
+        const reminders = timesStr.split(',').map(t => ({
+            time: t.trim(),
+            is_enabled: true
+        }));
+
+        const body = {
+            name,
+            dosage,
+            instructions,
+            frequency: freq,
+            start_date: new Date().toISOString(),
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            reminders
+        };
+
+        const result = await apiRequest('POST', '/medications', body);
+        renderResponse('res-med', result);
+        if (result.ok) {
+            document.getElementById('create-med-form').classList.add('hidden');
+            fetchMedications();
+        }
+    }
+
+    async function executeDeleteMedication(id) {
+        if (!confirm('Are you sure you want to delete this medication?')) return;
+        const result = await apiRequest('DELETE', `/medications/${id}`);
+        renderResponse('res-med', result);
+        if (result.ok) fetchMedications();
+    }
+
+    async function executeTakeMedication(medId, reminderId) {
+        const result = await apiRequest('POST', `/medications/${medId}/reminders/${reminderId}/take`);
+        renderResponse('res-med', result);
+        if (result.ok) fetchMedications();
+    }
+
+    // --- Helpers ---
+    function toggleCard(id) {
+        const el = document.getElementById(id);
+        el.classList.toggle('hidden');
+    }
+
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text);
+        // Minimal visual feedback
+        const toast = document.createElement('div');
+        toast.style = "position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--primary); color:white; padding:8px 16px; border-radius:8px; font-size:0.8rem; z-index:1000;";
+        toast.innerText = `Copied: ${text.substring(0,8)}...`;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2000);
+        
+        // Also auto-fill data view
+        document.getElementById('viewUserId').value = text;
+    }
+
+    window.onload = loadConfig;
+</script>
+
+</body>
+</html>

@@ -9,8 +9,10 @@ from app.fallback import call_fallback_ocr, call_ocr_space
 from app.preprocess import deskew, ensure_min_ocr_size, preprocess_image
 from paddleocr import PaddleOCR
 from app.postprocess import post_process_items
+from prometheus_fastapi_instrumentator import Instrumentator
 
 app = FastAPI(title="healthmate-ocr-service", version="1.0.0")
+Instrumentator().instrument(app).expose(app, endpoint="/prometheus-metrics")
 
 
 @app.get("/health")

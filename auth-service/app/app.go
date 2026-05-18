@@ -71,7 +71,7 @@ func NewHTTPServer(deps *Dependencies) *HTTPServer {
 	router.Use(middleware.PrometheusMiddleware())
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
+	router.GET("/prometheus-metrics", gin.WrapH(promhttp.Handler()))
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "UP"})
 	})

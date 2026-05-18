@@ -171,6 +171,35 @@ services:
     networks:
       - backend
 
+  prometheus:
+    image: prom/prometheus:v3.6.0
+    container_name: DACN-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - backend
+    restart: always
+
+  grafana:
+    image: grafana/grafana:12.1.0
+    container_name: DACN-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    networks:
+      - backend
+    restart: always
+    depends_on:
+      - prometheus
+
 networks:
   backend:
     driver: bridge
@@ -179,6 +208,12 @@ volumes:
   timescaledbdata:
     driver: local
   redisdata:
+    driver: local
+  redpanda_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
     driver: local
   zookeeper_data:
     driver: local

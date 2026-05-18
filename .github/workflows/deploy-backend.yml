@@ -2,7 +2,7 @@ name: Deploy Backend
 
 on:
   workflow_run:
-    workflows: ['ci-backend']
+    workflows: ['CI Backend']
     types:
       - completed
 

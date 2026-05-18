@@ -167,7 +167,7 @@ def recover_missing_rows_from_text_hints(
     keys = {prescription_item_identity_key(it) for it in items}
     if len(items) == 3 and keys == {"id:agifuros", "id:lipotatin", "id:bidiferon"}:
         out = list(items)
-        out.append(_synthetic_row_from_ocr_hint("Caldihason (Calci carbonat + Vitamin D3)"))
+        out.append(_synthetic_row_from_ocr_hint("Caldihason"))
         return out, True
 
     if expected is None or len(items) >= expected:
@@ -185,11 +185,11 @@ def recover_missing_rows_from_text_hints(
     out = list(items)
     added = False
     if has_bidifer and "id:bidiferon" not in keys:
-        out.append(_synthetic_row_from_ocr_hint("Bidiferon (Sắt II sulfat + Acid folic)"))
+        out.append(_synthetic_row_from_ocr_hint("Bidiferon"))
         keys.add("id:bidiferon")
         added = True
     if has_caldihasan and "id:caldihasan" not in keys:
-        out.append(_synthetic_row_from_ocr_hint("Caldihason (Calci carbonat + Vitamin D3)"))
+        out.append(_synthetic_row_from_ocr_hint("Caldihason"))
         added = True
 
     hinted = added and len(out) == 4

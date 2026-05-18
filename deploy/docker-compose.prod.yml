@@ -18,7 +18,7 @@ services:
         max-file: "3"
 
   api-gateway:
-    image: brookvita3/healthmate-api-gateway:prod
+    image: brookvita3/healthmate-api-gateway:local
     container_name: healthmate-api-gateway
     env_file:
       - ./env/product/api-gateway.env
@@ -38,7 +38,7 @@ services:
         max-file: "3"
 
   auth-service:
-    image: brookvita3/healthmate-auth-service:prod
+    image: brookvita3/healthmate-auth-service:local
     container_name: healthmate-auth-service
     env_file:
       - ./env/product/auth-service.env
@@ -59,7 +59,7 @@ services:
         max-file: "3"
 
   realtime-service:
-    image: brookvita3/healthmate-realtime-service:prod
+    image: brookvita3/healthmate-realtime-service:local
     container_name: healthmate-realtime-service
     env_file:
       - ./env/product/realtime-service.env
@@ -80,7 +80,7 @@ services:
         max-file: "3"
 
   storage-service:
-    image: brookvita3/healthmate-storage-service:prod
+    image: brookvita3/healthmate-storage-service:local
     container_name: healthmate-storage-service
     env_file:
       - ./env/product/storage-service.env
@@ -101,7 +101,7 @@ services:
         max-file: "3"
 
   ocr-service:
-    image: brookvita3/healthmate-ocr-service:prod
+    image: brookvita3/healthmate-ocr-service:local
     container_name: healthmate-ocr-service
     env_file:
       - ./env/product/ocr-service.env
@@ -119,6 +119,35 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+
+  prometheus:
+    image: prom/prometheus:v3.6.0
+    container_name: healthmate-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../observability/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - backend
+    restart: always
+
+  grafana:
+    image: grafana/grafana:12.1.0
+    container_name: healthmate-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ../observability/grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    networks:
+      - backend
+    restart: always
+    depends_on:
+      - prometheus
 
   redpanda:
     image: redpandadata/redpanda:v25.1.4
@@ -151,3 +180,5 @@ networks:
 
 volumes:
   redpanda_data:
+  prometheus_data:
+  grafana_data:

@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HealthMate OCR API Tester</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary: #6366f1;
+        --primary-hover: #4f46e5;
+        --bg-dark: #0f172a;
+        --bg-card: #1e293b;
+        --text-main: #f8fafc;
+        --text-muted: #94a3b8;
+        --border: #334155;
+        --success: #10b981;
+        --error: #ef4444;
+        --warning: #f59e0b;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: var(--bg-dark);
+        color: var(--text-main);
+        line-height: 1.5;
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        padding: 2rem;
+      }
+
+      .container {
+        width: 100%;
+        max-width: 900px;
+        animation: fadeIn 0.5s ease-out;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      header {
+        margin-bottom: 2rem;
+        text-align: center;
+      }
+
+      h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        background: linear-gradient(to right, #818cf8, #c084fc);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.5rem;
+      }
+
+      p.subtitle {
+        color: var(--text-muted);
+        font-size: 1.1rem;
+      }
+
+      .card {
+        background-color: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 1rem;
+        padding: 2rem;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        margin-bottom: 2rem;
+      }
+
+      .form-group {
+        margin-bottom: 1.5rem;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: #cbd5e1;
+      }
+
+      input[type='text'],
+      input[type='file'],
+      select {
+        width: 100%;
+        background-color: var(--bg-dark);
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        padding: 0.75rem 1rem;
+        color: var(--text-main);
+        font-size: 1rem;
+        transition: all 0.2s;
+      }
+
+      input:focus,
+      select:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+      }
+
+      .input-hint {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        margin-top: 0.4rem;
+      }
+
+      .btn-group {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+      }
+
+      button {
+        flex: 1;
+        padding: 0.875rem 1.5rem;
+        border-radius: 0.6rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+      }
+
+      .btn-primary {
+        background-color: var(--primary);
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background-color: var(--primary-hover);
+        transform: translateY(-1px);
+      }
+
+      .btn-secondary {
+        background-color: transparent;
+        border: 1px solid var(--border);
+        color: var(--text-main);
+      }
+
+      .btn-secondary:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+      }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none !important;
+      }
+
+      #results-section {
+        display: none;
+      }
+
+      .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+      }
+
+      .status-success {
+        background-color: rgba(16, 185, 129, 0.1);
+        color: var(--success);
+        border: 1px solid rgba(16, 185, 129, 0.2);
+      }
+      .status-error {
+        background-color: rgba(239, 68, 68, 0.1);
+        color: var(--error);
+        border: 1px solid rgba(239, 68, 68, 0.2);
+      }
+
+      pre {
+        background-color: #020617;
+        padding: 1.5rem;
+        border-radius: 0.75rem;
+        overflow-x: auto;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.9rem;
+        border: 1px solid var(--border);
+        color: #e2e8f0;
+      }
+
+      .image-preview {
+        max-width: 100%;
+        max-height: 300px;
+        object-fit: contain;
+        margin-top: 1rem;
+        border-radius: 0.5rem;
+        display: none;
+        border: 1px solid var(--border);
+      }
+
+      .loader {
+        width: 20px;
+        height: 20px;
+        border: 3px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top-color: white;
+        animation: spin 0.8s linear infinite;
+        display: none;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .cors-info {
+        background: rgba(99, 102, 241, 0.05);
+        border-left: 4px solid var(--primary);
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        border-radius: 0 0.5rem 0.5rem 0;
+      }
+
+      .cors-info code {
+        color: #818cf8;
+        background: rgba(0, 0, 0, 0.2);
+        padding: 0.1rem 0.3rem;
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>HealthMate OCR Tester</h1>
+        <p class="subtitle">
+          Test your Prescription OCR API and check for CORS issues
+        </p>
+      </header>
+
+      <div class="card">
+        <div class="cors-info">
+          <strong>💡 Tip:</strong> If you get a
+          <code>TypeError: Failed to fetch</code>, it usually means a
+          <strong>CORS error</strong> or the server is down. Check browser
+          console for details.
+        </div>
+
+        <div class="form-group">
+          <label for="base-url">API Base URL</label>
+          <select id="base-url-select" onchange="updateUrl()">
+            <option value="http://localhost:8080">
+              Nginx (Port 8080 - Preferred)
+            </option>
+            <option value="http://localhost:5002">
+              API Gateway (Port 5002)
+            </option>
+            <option value="http://localhost:8010">
+              OCR Service Direct (Port 8010)
+            </option>
+            <option value="custom">Custom URL...</option>
+          </select>
+          <input
+            type="text"
+            id="api-url"
+            value="http://localhost:8080/ocr/prescriptions/parse"
+            style="margin-top: 0.5rem"
+          />
+          <p class="input-hint">Default path: /ocr/prescriptions/parse</p>
+        </div>
+
+        <div class="form-group">
+          <label for="token">Bearer Token (JWT)</label>
+          <input
+            type="text"
+            id="token"
+            placeholder="Paste access_token here..."
+            value=""
+          />
+          <p class="input-hint">Required for Nginx and Gateway requests.</p>
+        </div>
+
+        <div class="form-group">
+          <label for="file-input">Prescription Image</label>
+          <input
+            type="file"
+            id="file-input"
+            accept="image/*"
+            onchange="previewImage(event)"
+          />
+          <img id="preview" class="image-preview" alt="Preview" />
+        </div>
+
+        <div class="btn-group">
+          <button id="test-btn" class="btn-primary" onclick="runOcr()">
+            <span class="loader" id="loader"></span>
+            <span id="btn-text">Test OCR API</span>
+          </button>
+          <button class="btn-secondary" onclick="clearResults()">Clear</button>
+        </div>
+      </div>
+
+      <div id="results-section" class="card">
+        <div id="status-container"></div>
+        <label>Response Body:</label>
+        <pre id="response-output"></pre>
+      </div>
+    </div>
+
+    <script>
+      function updateUrl() {
+        const select = document.getElementById('base-url-select');
+        const input = document.getElementById('api-url');
+        if (select.value === 'custom') {
+          input.focus();
+        } else {
+          input.value = select.value + '/ocr/prescriptions/parse';
+        }
+      }
+
+      function previewImage(event) {
+        const preview = document.getElementById('preview');
+        const file = event.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function (e) {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+          };
+          reader.readAsDataURL(file);
+        }
+      }
+
+      function clearResults() {
+        document.getElementById('results-section').style.display = 'none';
+        document.getElementById('response-output').textContent = '';
+        document.getElementById('status-container').innerHTML = '';
+      }
+
+      async function runOcr() {
+        const url = document.getElementById('api-url').value;
+        const token = document.getElementById('token').value;
+        const fileInput = document.getElementById('file-input');
+        const btn = document.getElementById('test-btn');
+        const loader = document.getElementById('loader');
+        const btnText = document.getElementById('btn-text');
+        const resultsSection = document.getElementById('results-section');
+        const statusContainer = document.getElementById('status-container');
+        const responseOutput = document.getElementById('response-output');
+
+        if (!fileInput.files[0]) {
+          alert('Please select an image file first.');
+          return;
+        }
+
+        // UI State: Loading
+        btn.disabled = true;
+        loader.style.display = 'inline-block';
+        btnText.textContent = 'Processing...';
+        resultsSection.style.display = 'block';
+        statusContainer.innerHTML = '';
+        responseOutput.textContent = 'Waiting for response...';
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        const headers = {};
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const startTime = performance.now();
+
+        try {
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: headers,
+            body: formData,
+          });
+
+          const endTime = performance.now();
+          const duration = ((endTime - startTime) / 1000).toFixed(2);
+
+          const statusText = `Status: ${response.status} ${response.statusText} (${duration}s)`;
+          const isOk = response.ok;
+
+          statusContainer.innerHTML = `<span class="status-badge ${isOk ? 'status-success' : 'status-error'}">${statusText}</span>`;
+
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const data = await response.json();
+            responseOutput.textContent = JSON.stringify(data, null, 2);
+          } else {
+            const text = await response.text();
+            responseOutput.textContent = text || 'Empty response';
+          }
+        } catch (error) {
+          console.error('Fetch error:', error);
+          statusContainer.innerHTML = `<span class="status-badge status-error">Network Error / CORS Issue</span>`;
+          responseOutput.textContent = `Error details:\n${error.message}\n\nPotential causes:\n1. CORS (Cross-Origin Resource Sharing) blocked the request.\n2. The service at ${url} is not running.\n3. Network connectivity issues.`;
+        } finally {
+          btn.disabled = false;
+          loader.style.display = 'none';
+          btnText.textContent = 'Test OCR API';
+        }
+      }
+    </script>
+  </body>
+</html>

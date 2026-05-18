@@ -17,3 +17,9 @@ ocr-service/app/__pycache__/
 deploy/env/
 observability/
 nginx/
+
+# ignore tất cả file markdown
+*.md
+
+# nhưng không ignore README.md
+!README.md

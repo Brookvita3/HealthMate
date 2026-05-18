@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "PowerShell(Set-Location D:\\HealthMate\\auth-service*)",
-      "PowerShell(Set-Location D:\\HealthMate\\storage-service*)"
-    ]
-  }
-}

@@ -75,8 +75,11 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          envs: IMAGE_TAG
           script: |
             cd ~/HealthMate/deploy
+
+            echo "Using IMAGE_TAG=$IMAGE_TAG"
 
             sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
 

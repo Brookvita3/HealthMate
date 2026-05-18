@@ -17,6 +17,7 @@ on:
       - 'auth-service/**'
       - 'realtime-service/**'
       - 'storage-service/**'
+      - '.github/workflows/**'
 
 jobs:
   test-api-gateway:

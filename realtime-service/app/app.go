@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"realtime-service/config"
+	"strconv"
 	"time"
 
 	"realtime-service/internal/auth"
@@ -16,10 +17,63 @@ import (
 	"realtime-service/internal/realtime"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	httpSwagger "github.com/swaggo/http-swagger"
 
 	_ "realtime-service/docs"
 )
+
+var (
+	rtRequestsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "http_requests_total",
+			Help: "Total number of HTTP requests",
+		},
+		[]string{"method", "path", "status"},
+	)
+	rtRequestDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "http_request_duration_seconds",
+			Help:    "HTTP request latency in seconds",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"method", "path", "status"},
+	)
+	wsConnectionsActive = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "ws_connections_active",
+		Help: "Number of active WebSocket connections",
+	})
+)
+
+func init() {
+	prometheus.MustRegister(rtRequestsTotal, rtRequestDuration, wsConnectionsActive)
+}
+
+type statusResponseWriter struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+func (w *statusResponseWriter) WriteHeader(code int) {
+	w.statusCode = code
+	w.ResponseWriter.WriteHeader(code)
+}
+
+func prometheusMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/prometheus-metrics" {
+			next.ServeHTTP(w, r)
+			return
+		}
+		start := time.Now()
+		sw := &statusResponseWriter{ResponseWriter: w, statusCode: http.StatusOK}
+		next.ServeHTTP(sw, r)
+		duration := time.Since(start).Seconds()
+		rtRequestsTotal.WithLabelValues(r.Method, r.URL.Path, strconv.Itoa(sw.statusCode)).Inc()
+		rtRequestDuration.WithLabelValues(r.Method, r.URL.Path, strconv.Itoa(sw.statusCode)).Observe(duration)
+	})
+}
 
 type Dependencies struct {
 	Config         *config.Config
@@ -86,6 +140,7 @@ func NewHttpServer(deps *Dependencies, hub *realtime.Hub) *http.Server {
 	mux := http.NewServeMux()
 	mux.Handle("/ws", wsHandler)
 	mux.Handle("/swagger/", httpSwagger.Handler())
+	mux.Handle("/prometheus-metrics", promhttp.Handler())
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status":"UP"}`))
@@ -104,7 +159,7 @@ func NewHttpServer(deps *Dependencies, hub *realtime.Hub) *http.Server {
 
 	httpServer := &http.Server{
 		Addr:    ":" + deps.Config.HTTPPort,
-		Handler: mux,
+		Handler: prometheusMiddleware(mux),
 	}
 	return httpServer
 }

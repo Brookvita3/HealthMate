@@ -15,3 +15,5 @@ ocr-service/scripts/__pycache__/
 ocr-service/app/__pycache__/
 
 deploy/env/
+observability/
+nginx/

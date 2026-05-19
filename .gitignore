@@ -14,12 +14,14 @@ ocr-service/run_ocr_batch_test.py
 ocr-service/scripts/__pycache__/
 ocr-service/app/__pycache__/
 
+# ignore other folders
 deploy/env/
 observability/
 nginx/
+scripts/
 
-# ignore tất cả file markdown
+# ignore other files markdown
 *.md
 
-# nhưng không ignore README.md
+# but ignore README.md
 !README.md

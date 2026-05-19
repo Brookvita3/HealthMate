@@ -120,6 +120,57 @@ func TestUpdateUserProfile(t *testing.T) {
 		env.repo.AssertNotCalled(t, "UpdateUser", mock.Anything, mock.Anything, mock.Anything)
 	})
 
+	t.Run("success: update allergies only", func(t *testing.T) {
+		// Service must accept Allergies as the sole non-nil field.
+		env := newUserTestEnv()
+		id := uuid.New()
+		allergies := []string{"Penicillin", "Aspirin"}
+		params := user.UpdateUserParams{Allergies: &allergies}
+
+		env.repo.On("UpdateUser", mock.Anything, id, mock.MatchedBy(func(p user.UpdateUserParams) bool {
+			return p.Allergies != nil && len(*p.Allergies) == 2
+		})).Return(nil).Once()
+
+		err := env.service.UpdateUserProfile(context.Background(), id, params)
+
+		assert.NoError(t, err)
+		env.repo.AssertExpectations(t)
+	})
+
+	t.Run("success: allergies deduplicated case-insensitively", func(t *testing.T) {
+		// Duplicates with different casing must be collapsed to one entry.
+		env := newUserTestEnv()
+		id := uuid.New()
+		allergies := []string{"Penicillin", "penicillin", "ASPIRIN", "Aspirin"}
+		params := user.UpdateUserParams{Allergies: &allergies}
+
+		env.repo.On("UpdateUser", mock.Anything, id, mock.MatchedBy(func(p user.UpdateUserParams) bool {
+			return p.Allergies != nil && len(*p.Allergies) == 2
+		})).Return(nil).Once()
+
+		err := env.service.UpdateUserProfile(context.Background(), id, params)
+
+		assert.NoError(t, err)
+		env.repo.AssertExpectations(t)
+	})
+
+	t.Run("success: empty allergies slice clears all allergies", func(t *testing.T) {
+		// An empty (non-nil) slice must reach the repo to overwrite existing allergies.
+		env := newUserTestEnv()
+		id := uuid.New()
+		allergies := []string{}
+		params := user.UpdateUserParams{Allergies: &allergies}
+
+		env.repo.On("UpdateUser", mock.Anything, id, mock.MatchedBy(func(p user.UpdateUserParams) bool {
+			return p.Allergies != nil && len(*p.Allergies) == 0
+		})).Return(nil).Once()
+
+		err := env.service.UpdateUserProfile(context.Background(), id, params)
+
+		assert.NoError(t, err)
+		env.repo.AssertExpectations(t)
+	})
+
 	t.Run("error: repository failure is propagated", func(t *testing.T) {
 		// DB errors from UpdateUser must bubble up unmodified.
 		env := newUserTestEnv()

@@ -1,0 +1,25 @@
+# Dev-only artefacts — excluded from Docker build context
+scripts/
+tests/
+dataset/
+notebooks/
+reports/
+
+# Python cache
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Editor / OS
+.git/
+.gitignore
+*.md
+!README.md
+.DS_Store
+Thumbs.db

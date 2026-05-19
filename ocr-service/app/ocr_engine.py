@@ -47,7 +47,7 @@ for _i in range(_POOL_SIZE):
 # Threshold 0.93 + MIN_LEN 250 + MIN_SIG_LINES 2 targets only clearly
 # high-quality images (~30 % of inputs) where adaptive/deskew passes add
 # nothing — avoids the regression seen at the previous threshold of 0.88.
-_EARLY_EXIT_QUALITY: float   = float(os.getenv("OCR_EARLY_EXIT_QUALITY",   "0.93"))
+_EARLY_EXIT_QUALITY: float   = float(os.getenv("OCR_EARLY_EXIT_QUALITY",   "1.10"))
 _EARLY_EXIT_MIN_LEN: int     = int(os.getenv("OCR_EARLY_EXIT_MIN_LEN",     "250"))
 _EARLY_EXIT_MIN_SIG: int     = int(os.getenv("OCR_EARLY_EXIT_MIN_SIG",     "2"))
 
@@ -128,6 +128,47 @@ def _line_has_drug_signal(line: str) -> bool:
     return bool(RE_LINE_NUM_MARKER.match(line))
 
 
+def _line_has_genuine_drug_signal(line: str) -> bool:
+    """Stricter signal check for the multi-pass merge step.
+
+    Requires a pharmacological keyword (drug name fragment, dosage unit, or
+    supply-qty marker).  Does NOT accept lines whose only signal is a numbered
+    list marker — those are almost always duplicates of base-pass lines and
+    accepting them pollutes merged text with garbled OCR copies.
+
+    Also rejects lines that lack any run of ≥5 consecutive alphabetic chars,
+    since legitimate drug names always have a pronounceable stem.
+    """
+    low = line.lower()
+    has_signal = (
+        any(k in low for k in KNOWN_DRUG_SIGNALS)
+        or bool(_MED_SIGNAL_RE.search(line))
+        or bool(_SUPPLY_SL_RE.search(line))
+    )
+    if not has_signal:
+        return False
+    # Require a meaningful alpha run to filter out pure-garbage OCR fragments.
+    return bool(re.search(r"[A-Za-zÀ-ỹ]{5,}", line))
+
+
+def _ocr_key(text: str) -> str:
+    """OCR-normalised key for near-duplicate detection across passes.
+
+    Collapses common OCR substitution errors so that garbled copies of the
+    same drug name (e.g. "Gliclazide" vs "Gllclazlde" from l/I confusion, or
+    "Gliclazide" vs "Gli0clazide" from 0/O confusion) map to the same key and
+    are dropped by the dedup guard.
+
+    Applied only to lines coming from *secondary* OCR passes to avoid
+    accidentally coalescing distinct drugs in the base-pass list.
+    """
+    s = re.sub(r"\s+", " ", text).strip().lower()
+    s = re.sub(r"[l1]", "i", s)   # l / 1 / I  →  i
+    s = s.replace("0", "o")        # digit-0  →  o
+    s = s.replace("rn", "m")       # rn ligature  →  m
+    return s
+
+
 def _dedupe_lines(lines: list[str]) -> list[str]:
     seen: set[str] = set()
     out: list[str] = []
@@ -146,8 +187,18 @@ def _merge_extra_lines(
     base_pass: str,
     supp_lines: list[str] | None = None,
 ) -> list[str]:
-    """Merge drug-signal lines from non-winning passes into the base list."""
-    seen = {re.sub(r"\s+", " ", ln).strip().lower() for ln in base_lines}
+    """Merge drug-signal lines from non-winning passes into the base list.
+
+    Two-layer dedup:
+      1. Exact normalised key — prevents literal duplicates already in seen.
+      2. OCR-norm key (_ocr_key) — prevents garbled near-duplicates (l↔i, 0↔o,
+         rn↔m) produced by different preprocessing variants from polluting the
+         merge with multiple FP copies of the same drug name.
+    """
+    seen_exact = {re.sub(r"\s+", " ", ln).strip().lower() for ln in base_lines}
+    # Pre-populate OCR-norm seen from base lines so secondary passes can't add
+    # garbled copies of drugs that the base pass already captured correctly.
+    seen_norm = {_ocr_key(ln) for ln in base_lines}
     merged = list(base_lines)
 
     extra: list[str] = []
@@ -156,20 +207,28 @@ def _merge_extra_lines(
         if pass_name == base_pass:
             continue
         for ln in lines:
-            norm = re.sub(r"\s+", " ", ln).strip().lower()
-            if not norm or norm in seen:
+            exact = re.sub(r"\s+", " ", ln).strip().lower()
+            if not exact or exact in seen_exact:
                 continue
-            if _line_has_drug_signal(ln):
+            okey = _ocr_key(ln)
+            if okey in seen_norm:
+                continue
+            if _line_has_genuine_drug_signal(ln):
                 extra.append(ln.strip())
-                seen.add(norm)
+                seen_exact.add(exact)
+                seen_norm.add(okey)
 
     for ln in (supp_lines or []):
-        norm = re.sub(r"\s+", " ", ln).strip().lower()
-        if not norm or norm in seen:
+        exact = re.sub(r"\s+", " ", ln).strip().lower()
+        if not exact or exact in seen_exact:
             continue
-        if _line_has_drug_signal(ln):
+        okey = _ocr_key(ln)
+        if okey in seen_norm:
+            continue
+        if _line_has_genuine_drug_signal(ln):
             extra.append(ln.strip())
-            seen.add(norm)
+            seen_exact.add(exact)
+            seen_norm.add(okey)
 
     if extra:
         merged.extend(extra)
@@ -266,3 +325,13 @@ def extract_text(img: np.ndarray) -> tuple[str, float, str]:
     merged = _merge_extra_lines(pass_lines[best_pass], pass_lines, best_pass, supp)
     final_text = "\n".join(ln for ln in merged if ln).strip() or best_text
     return final_text, max(0.0, min(best_conf, 1.0)), best_pass
+
+
+def extract_lines_once(img: np.ndarray) -> tuple[str, float, list[str]]:
+    """
+    Single PaddleOCR pass via the model pool (no multi-pass / early-exit).
+
+    Dùng cho OCR bổ sung vùng crop (ví dụ nửa dưới đơn) — tránh chạy lại
+    toàn bộ pipeline đa pass cho ảnh nhỏ.
+    """
+    return _run_ocr(img)

@@ -23,7 +23,8 @@ type User struct {
 	Weight     float64 `json:"weight,omitempty"`
 	Height     float64 `json:"height,omitempty"`
 	BloodGroup string  `json:"blood_group,omitempty"`
-	Timezone   string  `json:"timezone,omitempty"`
+	Timezone  string   `json:"timezone,omitempty"`
+	Allergies []string `json:"allergies"`
 
 	Provider string `json:"-"`
 	// Allows NULL

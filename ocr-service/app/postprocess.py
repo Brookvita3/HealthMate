@@ -1,6 +1,7 @@
 import re
 from typing import Any
 from app.allergy_hints import get_allergy_hints
+from app.constants import KNOWN_DRUG_SIGNALS
 from app.drug_dictionary import normalize_name_with_dictionary_meta
 
 _med_name_typo_fixes: list[tuple[re.Pattern[str], str]] = [
@@ -9,11 +10,53 @@ _med_name_typo_fixes: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"\baugmentln\b", re.I), "Augmentin"),
     (re.compile(r"\bacemuc\b", re.I), "Acemuc"),
     (re.compile(r"\bpropanolol\b", re.I), "Propranolol"),
-    (re.compile(r"\bva?g\s*[-_ ]*\d*\s*sta?t\b", re.I), "Vagastat"),
-    (re.compile(r"\bpanto\w*pantoc\w*\b", re.I), "Pantoc"),
-    (re.compile(r"\bpantopra\w*\b", re.I), "Pantoprazol"),
+    (re.compile(r"\bvag[a3e]?sta[ti7]?\b", re.I), "Sucralfat"),
+    (re.compile(r"\bpanto[a-z0-9]{0,15}pantoc[a-z0-9]{0,15}\b", re.I), "Pantoprazole"),
+    (re.compile(r"\bpantopra\w*\b", re.I), "Pantoprazole"),
+    (re.compile(r"\bpantoc\b|\bpantoloc\b|\bpantozol\b|\bpantac\b", re.I), "Pantoprazole"),
     (re.compile(r"\bsu?x?ra?l?a?t?\b", re.I), "Sucralfat"),
+    # PPI generic names: VN spelling drops trailing 'e' but labels use international INN
+    (re.compile(r"\besomeprazol(?!e)\b", re.I), "Esomeprazole"),
+    (re.compile(r"\bomeprazol(?!e)\b", re.I), "Omeprazole"),
+    (re.compile(r"\blansoprazol(?!e)\b", re.I), "Lansoprazole"),
+    (re.compile(r"\brabeprazol(?!e)\b", re.I), "Rabeprazole"),
 ]
+
+
+# ---------------------------------------------------------------------------
+# Generic-from-parentheses extraction
+# ---------------------------------------------------------------------------
+
+# Matches full parenthesised block: (content)
+_PAREN_FULL_RE = re.compile(r"\(([A-Za-zÀ-ỹ][^)]{5,60})\)")
+# Matches partial: content ending with ')' after digit/space (OCR-dropped opening paren)
+_PAREN_PARTIAL_RE = re.compile(r"(?:^|\d|\s)([A-Za-zÀ-ỹ][A-Za-zÀ-ỹ]{4,30})\)")
+
+
+def _extract_paren_generic(text: str) -> str | None:
+    """Return a generic drug name from parenthesised content, or None.
+
+    Tries two strategies:
+      1. Full parens  (GENERIC NAME) — all-caps or has a known drug signal.
+      2. Partial paren GenericName)  — OCR dropped the opening '('; must have a signal.
+    """
+    # Strategy 1: full parentheses
+    for m in _PAREN_FULL_RE.finditer(text):
+        content = m.group(1).strip()
+        alpha_len = sum(1 for c in content if c.isalpha())
+        if alpha_len < 5:
+            continue
+        c_lower = content.lower()
+        has_signal = any(k in c_lower for k in KNOWN_DRUG_SIGNALS)
+        is_all_caps = sum(1 for c in content if c.isupper()) >= alpha_len * 0.7
+        if has_signal or is_all_caps:
+            return content
+    # Strategy 2: partial paren (OCR-dropped opening)
+    for m in _PAREN_PARTIAL_RE.finditer(text):
+        content = m.group(1).strip()
+        if any(k in content.lower() for k in KNOWN_DRUG_SIGNALS):
+            return content
+    return None
 
 
 _med_name_cut_markers = re.compile(
@@ -27,6 +70,12 @@ _med_name_cut_markers = re.compile(
 _QG_GLUED = re.compile(r"[A-Za-zÀ-ỹ]\s*\)\s*[A-Za-zÀ-ỹ]")
 # Symbols that inflate punctuation density.
 _QG_SYMBOLS = re.compile(r"[|()/\\]")
+# Names that start with a Vietnamese schedule/dosage keyword (e.g. "ngày U ng").
+_QG_SCHEDULE_START = re.compile(
+    r"^\s*(?:ng[aà]y|u[oố]ng|m[oỗ]i\s*l[aầ]n|s[aá]ng|tr[ưu]a|chi[eề]u|t[oố]i|c[aá]ch\s*d[uù]ng)\b",
+    re.I,
+)
+_QG_ALPHA_ONLY = re.compile(r"[^a-zà-ỹ]", re.I)
 
 
 def _score_name_quality(name: str) -> tuple[bool, str]:
@@ -41,6 +90,15 @@ def _score_name_quality(name: str) -> tuple[bool, str]:
     if not name:
         return True, "empty"
     s = name.strip()
+    if _QG_SCHEDULE_START.match(s):
+        # Only reject if there's no long non-schedule token (>5 alpha chars).
+        # Labels like "Toi Trua Celecoxib" contain a real drug name — keep them.
+        tokens = s.split()
+        has_drug_token = any(
+            len(_QG_ALPHA_ONLY.sub("", t)) > 5 for t in tokens
+        )
+        if not has_drug_token:
+            return True, "schedule_noise"
     if re.search(r"\(\s*$", s):
         return True, "dangling_bracket"
     if _QG_GLUED.search(s):
@@ -83,7 +141,16 @@ def _truncate_name_noise(text: str) -> str:
 
     dose_match = re.search(r"\b\d+(?:[.,]\d+)?\s*(?:mg|mcg|g|ml)\b", text, flags=re.I)
     if dose_match and dose_match.start() > 3:
-        text = text[: dose_match.start()].strip()
+        brand_part = text[: dose_match.start()].strip()
+        # When the brand has no known drug signal, prefer generic name from parentheses
+        # (e.g. "Megistan 300mg (URSODEOXYCHOLIC ACID)" → "URSODEOXYCHOLIC ACID")
+        brand_has_signal = any(k in brand_part.lower() for k in KNOWN_DRUG_SIGNALS)
+        if not brand_has_signal:
+            after_dose = text[dose_match.end():]
+            generic = _extract_paren_generic(after_dose)
+            if generic:
+                return generic.strip(" -:;.,")
+        text = brand_part
 
     # Cắt theo dấu phân tách thường xuất hiện khi OCR trộn nhiều cột.
     text = re.split(r"\s*[|•;]{1,}\s*", text, maxsplit=1)[0].strip()
@@ -127,9 +194,10 @@ def clean_medication_name_surface(name: str) -> str:
         text = " ".join(tokens[:7])
 
     # Nếu token đầu bị OCR tách rời (vd: "Vag stat"), thử ghép lại.
-    # Guard: không compact khi có token là ký tự đặc biệt (ví dụ ")", "(").
+    # Guard: chỉ compact khi token đầu ngắn (≤4 ký tự) — tránh ghép tên 2 từ
+    # hợp lệ như "Bisoprolol fumarat" thành "Bisoprololfumarat".
     parts = [p for p in text.split(" ") if p]
-    if 2 <= len(parts) <= 3:
+    if 2 <= len(parts) <= 3 and len(parts[0]) <= 4:
         if not any(re.match(r"^[^A-Za-zÀ-ỹ0-9]", p) for p in parts):
             compact = "".join(parts)
             if 6 <= len(compact) <= 20:
@@ -139,6 +207,11 @@ def clean_medication_name_surface(name: str) -> str:
 
     # Strip trailing dangling open bracket produced by OCR (e.g. "Longn(").
     text = re.sub(r"\s*\(\s*$", "", text).strip()
+
+    # Second pass of typo fixes: catches variants that only appear after compact/trim
+    # (e.g. "Vag 3 stat" → truncate → digit-strip → compact → "Vagstat" → fixed here).
+    for pat, repl in _med_name_typo_fixes:
+        text = pat.sub(repl, text)
 
     return text[:220]
 
@@ -174,6 +247,9 @@ def post_process_items(items: list[dict[str, Any]]) -> tuple[list[dict[str, Any]
             suspicious, reason = True, "dangling_bracket"
 
         if suspicious:
+            # Schedule-noise items are unsalvageable — drop entirely.
+            if reason == "schedule_noise":
+                continue
             # Attempt to salvage glued names before giving up.
             if reason == "glued_names":
                 fixed["name"] = _salvage_glued_name(fixed["name"])
@@ -218,6 +294,27 @@ def post_process_items(items: list[dict[str, Any]]) -> tuple[list[dict[str, Any]
         if len(key) >= 3:
             seen_name_keys.add(key)
         deduped.append(item)
+
+    # Subset-dedup: remove items whose simplified token set is a strict subset of
+    # another item's token set.  Prevents emitting both "Amlodipine" and
+    # "Amlodipine besylate" (the latter is more specific and subsumes the former).
+    def _tok_set(name: str) -> frozenset[str]:
+        s = re.sub(r"\d+(?:[.,]\d+)?\s*(?:mg|g|ml|mcg|iu|ui)(?:/\S+)?", " ", name, flags=re.I)
+        s = re.sub(r"[^a-zà-ỹ]+", " ", s.lower())
+        return frozenset(t for t in s.split() if len(t) >= 2)
+
+    tok_sets = [_tok_set(str(it.get("name", ""))) for it in deduped]
+    dominated = set()
+    for i in range(len(deduped)):
+        if not tok_sets[i]:
+            continue
+        for j in range(len(deduped)):
+            if i == j or j in dominated:
+                continue
+            if tok_sets[i] < tok_sets[j]:   # strict subset → i is less specific than j
+                dominated.add(i)
+                break
+    deduped = [it for k, it in enumerate(deduped) if k not in dominated]
 
     unique_warnings: list[str] = []
     for w in warnings:

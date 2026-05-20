@@ -63,6 +63,26 @@ KNOWN_DRUG_SIGNALS: frozenset[str] = frozenset({
     "acyclovir",   "oseltamivir","paracetam",    "acemuc",     "acetylcystein",
     "ridlor",      "sterolow",   "troysar",      "norvasc",    "concor",
     "saviprolol",  "kavasdin",   "slmetformin",
+    # Brand names not already covered by generic signals
+    "hapacol",     "amlodac",    "aspin",      "diamicron",
+    # Additional signals from label dataset analysis
+    "trimetazid",  "entecavir",  "trimebutin",   "silymarin",  "ursodiol",
+    "ursodeox",    "urliv",      "nicorandil",   "rebamipid",  "itoprid",
+    "betahistin",  "glucosamin", "tramadol",     "diosmin",    "hesperidin",
+    "bromhexin",   "aceclofenac","aceclonac",
+    # Pantoprazole brands (brand→generic mapping trong _canonicalize_name)
+    "pantoc",      "pantoloc",   "pantozol",     "pantac",
+    # Insulin brands and types
+    "mixtard",     "novomix",    "wosulin",      "flexpen",
+    # SGLT2 inhibitors
+    "dapaglifloz", "empaglifloz",
+    # Combination antihypertensive
+    "vamlos",      "valsartan",  "telmisartan",
+    # Sulfonylureas
+    "glimepirid",  "glipizid",   "glibenclamid",
+    # Other common omissions
+    "pregabalin",  "gabapentin", "esomeprazol",  "lansoprazol",  "rabeprazol",
+    "domperidon",  "levosulpir", "silymarin",
 })
 
 # ---------------------------------------------------------------------------
@@ -74,7 +94,7 @@ KNOWN_MEDICINE_RESCUE: list[tuple[str, re.Pattern[str], str]] = [
     (
         "id:agidopa",
         re.compile(r"agidopa|methyldop|melhyldopa|melyldop", re.I),
-        "Agidopa 250 mg (Methyldopa)",
+        "Methyldopa 250mg",
     ),
     (
         "id:paracetamol",
@@ -89,10 +109,10 @@ KNOWN_MEDICINE_RESCUE: list[tuple[str, re.Pattern[str], str]] = [
     (
         "id:bidiferon",
         re.compile(
-            r"bidifer|sulfat.{0,24}folic|folic.{0,24}sulfat|s[aăâ]t.{0,12}folic",
+            r"bidifer|sulfat[^\n]{0,24}folic|folic[^\n]{0,24}sulfat|s[aăâ]t[^\n]{0,12}folic",
             re.I,
         ),
-        "Bidiferon (Sắt II sulfat + Acid folic)",
+        "Bidiferon",
     ),
     (
         "id:caldihasan",
@@ -100,12 +120,12 @@ KNOWN_MEDICINE_RESCUE: list[tuple[str, re.Pattern[str], str]] = [
             r"caldiha|calci.{0,24}vitamin|calci.{0,24}d3|carbonat.{0,24}vitamin",
             re.I,
         ),
-        "Caldihason (Calci carbonat + Vitamin D3)",
+        "Caldihason",
     ),
     (
         "id:vagastat",
-        re.compile(r"vagastat|sucralf", re.I),
-        "Vagastat (Sucralfate)",
+        re.compile(r"vagastat|vagastai|sucralf", re.I),
+        "Sucralfat",  # Vagastat là brand của Sucralfate; dùng tên generic VN nhất quán
     ),
     (
         "id:bisoprolol",
@@ -114,8 +134,33 @@ KNOWN_MEDICINE_RESCUE: list[tuple[str, re.Pattern[str], str]] = [
     ),
     (
         "id:xarelto",
-        re.compile(r"xarelto|rivarox|xaravix|xerax", re.I),
-        "Xarelto 15 mg (Rivaroxaban)",
+        re.compile(r"rivarox|xaravix|xerax|xarelto", re.I),
+        "Rivaroxaban 15 mg",
+    ),
+    (
+        "id:lipotatin",
+        re.compile(r"atorva|lipotatin", re.I),
+        "Atorvastatin 10 mg",
+    ),
+    (
+        "id:rosuvastatin",
+        re.compile(r"rosuvast|rosuvas|crestor", re.I),
+        "Rosuvastatin 10 mg",
+    ),
+    (
+        "id:amlodipine",
+        re.compile(r"amlodip|norvasc|kavasdin", re.I),
+        "Amlodipine 5 mg",
+    ),
+    (
+        "id:losartan",
+        re.compile(r"losartan|cozaar|troysar", re.I),
+        "Losartan 50 mg",
+    ),
+    (
+        "id:metformin",
+        re.compile(r"metformin|metfosmin|slmetformin", re.I),
+        "Metformin 500 mg",
     ),
 ]
 

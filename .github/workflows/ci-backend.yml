@@ -8,6 +8,7 @@ on:
       - 'auth-service/**'
       - 'realtime-service/**'
       - 'storage-service/**'
+      - 'ocr-service/**'
       - '.github/workflows/**'
 
   pull_request:
@@ -17,6 +18,7 @@ on:
       - 'auth-service/**'
       - 'realtime-service/**'
       - 'storage-service/**'
+      - 'ocr-service/**'
       - '.github/workflows/**'
 
 jobs:
@@ -89,3 +91,16 @@ jobs:
       - run: go test ./... -v
         env:
           CGO_ENABLED: 1
+
+  test-ocr-service-parser:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ocr-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements-dev.txt
+      - run: python -m pytest -q

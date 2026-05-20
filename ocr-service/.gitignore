@@ -1,2 +1,10 @@
 .env
-scripts/
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+scripts/reports/*
+!scripts/reports/.gitkeep
+
+tests/test_output/

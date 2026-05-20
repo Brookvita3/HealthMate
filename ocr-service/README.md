@@ -187,16 +187,61 @@ Multipart `file` + Bearer — FE: `ApiOcrService`, `ApiEndpoints.ocrPrescription
 
 ---
 
-## 10. Checklist test nhanh (khuyên dùng trước khi merge)
+## 10. Hướng dẫn test (unit test trong repo này)
 
-- Chuẩn bị tối thiểu 10 ảnh thật (5 ảnh rõ, 5 ảnh khó: nghiêng, mờ, thiếu sáng).
-- Chạy API parse và ghi lại: `items_count`, `avg_confidence`, số warning.
-- Kiểm tra các case quan trọng:
-  - `name_match_kind=exact|exact_ascii|exact_simplified|fuzzy` (ổn).
-  - `name_match_kind=fuzzy_below_cutoff|not_found` (phải có warning).
-- So sánh trước/sau tối ưu theo 4 trường: tên thuốc, liều lượng, thời điểm dùng, hướng dẫn.
-- Chỉ điều chỉnh `OCR_DRUG_DICT_FUZZY_CUTOFF` / `OCR_DRUG_DICT_WEAK_CUTOFF` nếu warning quá nhiều hoặc normalize quá "liều".
+Nguồn đồng bộ từ repo R&D `HealthMate_OCR` (cùng `app/prescription_parser.py`).
+
+### 10.1. Pytest — parser (50 test, không cần Paddle/Docker)
+
+```powershell
+cd ocr-service
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements-dev.txt
+python -m pytest
+```
+
+Chụp màn hình báo cáo:
+
+```powershell
+.\scripts\run_unit_tests.ps1
+```
+
+Linux/macOS: `./scripts/run_unit_tests.sh`
+
+**Kỳ vọng:** `50 passed in ~0.1s`
+
+| Nhóm | Số case |
+|------|---------|
+| `TestStripMarkdownFence` | 7 |
+| `TestVlJsonToItems` | 13 |
+| `TestParsePrescriptionText` | 25 |
+| `test_real_world_samples` | 5 |
+
+`tests/` và `scripts/run_unit_tests.*` **không** đưa vào image Docker (`.dockerignore`).
+
+### 10.2. Smoke API — Docker (OCR thật)
+
+```bash
+docker build -t healthmate-ocr:local .
+docker run --rm -p 8010:8010 \
+  -e OCR_POOL_SIZE=1 \
+  -e OCR_MAX_CONCURRENT_REQUESTS=1 \
+  -e OCR_EARLY_EXIT_QUALITY=99.0 \
+  -e OCR_DRUG_DICT_ENABLED=true \
+  -e OCR_DRUG_DICT_CSV_PATH=/app/data/drugs_moh.csv \
+  healthmate-ocr:local
+```
+
+```bash
+curl http://localhost:8010/health
+curl -X POST http://localhost:8010/ocr/prescriptions/parse -F "file=@don-thuoc.jpg"
+```
+
+Qua gateway (JWT): `POST {GATEWAY}/ocr/prescriptions/parse` — mục 4.
+
+Benchmark F1 + dataset 66 ảnh: repo `HealthMate_OCR` (`scripts/benchmark.py`).
 
 ---
 
-*Tài liệu căn cứ `app/main.py`, `../api-gateway/app/router.go`, `../docker-compose.yml`, `../nginx/nginx.conf`.*
+*Tài liệu căn cứ `app/main.py`, `app/prescription_parser.py`, `tests/test_prescription_parser.py`, `../api-gateway/app/router.go`.*

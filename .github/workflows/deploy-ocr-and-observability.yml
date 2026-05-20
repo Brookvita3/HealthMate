@@ -2,17 +2,41 @@ name: Deploy OCR and Observability
 
 on:
   workflow_run:
-    workflows: ['CI Backend']
+    workflows: ["CI Backend"]
     types:
       - completed
 
 jobs:
-  deploy:
+  changes:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    outputs:
+      ocr-service: ${{ steps.filter.outputs.ocr-service }}
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Detect changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            ocr-service:
+              - 'ocr-service/**'
+
+  deploy:
+    needs: changes
+    if: needs.changes.outputs.ocr-service == 'true'
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Set image tag
         run: echo "IMAGE_TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV

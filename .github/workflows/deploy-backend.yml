@@ -2,18 +2,57 @@ name: Deploy Backend
 
 on:
   workflow_run:
-    workflows: ['CI Backend']
+    workflows: ["CI Backend"]
     types:
       - completed
 
 jobs:
+  changes:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    outputs:
+      api-gateway: ${{ steps.filter.outputs.api-gateway }}
+      auth-service: ${{ steps.filter.outputs.auth-service }}
+      realtime-service: ${{ steps.filter.outputs.realtime-service }}
+      storage-service: ${{ steps.filter.outputs.storage-service }}
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Detect changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            api-gateway:
+              - 'api-gateway/**'
+
+            auth-service:
+              - 'auth-service/**'
+
+            realtime-service:
+              - 'realtime-service/**'
+
+            storage-service:
+              - 'storage-service/**'
+
+            ocr-service:
+              - 'ocr-service/**'
+
   deploy:
+    needs: changes
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Set image tag
         run: echo "IMAGE_TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
@@ -24,51 +63,59 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # API GATEWAY
+      # ---------------- API GATEWAY ----------------
       - name: Build API Gateway
+        if: needs.changes.outputs.api-gateway == 'true'
         run: |
           docker build \
             -t brookvita3/healthmate-api-gateway:${IMAGE_TAG} \
             ./api-gateway
 
       - name: Push API Gateway
+        if: needs.changes.outputs.api-gateway == 'true'
         run: |
           docker push brookvita3/healthmate-api-gateway:${IMAGE_TAG}
 
-      # AUTH
+      # ---------------- AUTH ----------------
       - name: Build Auth Service
+        if: needs.changes.outputs.auth-service == 'true'
         run: |
           docker build \
             -t brookvita3/healthmate-auth-service:${IMAGE_TAG} \
             ./auth-service
 
       - name: Push Auth Service
+        if: needs.changes.outputs.auth-service == 'true'
         run: |
           docker push brookvita3/healthmate-auth-service:${IMAGE_TAG}
 
-      # REALTIME
+      # ---------------- REALTIME ----------------
       - name: Build Realtime Service
+        if: needs.changes.outputs.realtime-service == 'true'
         run: |
           docker build \
             -t brookvita3/healthmate-realtime-service:${IMAGE_TAG} \
             ./realtime-service
 
       - name: Push Realtime Service
+        if: needs.changes.outputs.realtime-service == 'true'
         run: |
           docker push brookvita3/healthmate-realtime-service:${IMAGE_TAG}
 
-      # STORAGE
+      # ---------------- STORAGE ----------------
       - name: Build Storage Service
+        if: needs.changes.outputs.storage-service == 'true'
         run: |
           docker build \
             -t brookvita3/healthmate-storage-service:${IMAGE_TAG} \
             ./storage-service
 
       - name: Push Storage Service
+        if: needs.changes.outputs.storage-service == 'true'
         run: |
           docker push brookvita3/healthmate-storage-service:${IMAGE_TAG}
 
-      # DEPLOY
+      # ---------------- DEPLOY EC2 ----------------
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.2.5
         with:

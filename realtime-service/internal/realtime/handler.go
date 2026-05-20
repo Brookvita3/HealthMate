@@ -54,13 +54,19 @@ func (h *Handler) upgradeToWebSocket(w http.ResponseWriter, r *http.Request, vie
 	}
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Printf("WebSocket upgrade error: %v", err)
+		log.Printf("WS upgrade failed: user=%s ip=%s err=%v",
+			viewerID,
+			r.RemoteAddr,
+			err,
+		)
 		return
 	}
 
 	client := NewClient(h.hub, conn, viewerID)
 
 	h.hub.register <- client
+
+	log.Printf("WS connection established successfully: user=%s client=%s ip=%s", viewerID, client.id, r.RemoteAddr)
 
 	ctx := context.Background()
 	go client.writePump(ctx)

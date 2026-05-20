@@ -1,12 +1,9 @@
 package app
 
 import (
-	"bufio"
 	"context"
 	"errors"
-	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"realtime-service/config"
 	"strconv"
@@ -63,25 +60,24 @@ func (w *statusResponseWriter) WriteHeader(code int) {
 	w.ResponseWriter.WriteHeader(code)
 }
 
-func (w *statusResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
-	if hijacker, ok := w.ResponseWriter.(http.Hijacker); ok {
-		return hijacker.Hijack()
-	}
-	return nil, nil, fmt.Errorf("underlying ResponseWriter does not implement http.Hijacker")
-}
-
-func (w *statusResponseWriter) Flush() {
-	if flusher, ok := w.ResponseWriter.(http.Flusher); ok {
-		flusher.Flush()
-	}
-}
-
 func prometheusMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		if r.URL.Path == "/ws" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		if r.Header.Get("Upgrade") == "websocket" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		if r.URL.Path == "/prometheus-metrics" {
 			next.ServeHTTP(w, r)
 			return
 		}
+
 		start := time.Now()
 		sw := &statusResponseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 		next.ServeHTTP(sw, r)
@@ -173,9 +169,11 @@ func NewHttpServer(deps *Dependencies, hub *realtime.Hub) *http.Server {
 		w.Write([]byte(`{"status":"ready", "database":"ok"}`))
 	})
 
+	handler := prometheusMiddleware(mux)
+
 	httpServer := &http.Server{
 		Addr:    ":" + deps.Config.HTTPPort,
-		Handler: prometheusMiddleware(mux),
+		Handler: handler,
 	}
 	return httpServer
 }

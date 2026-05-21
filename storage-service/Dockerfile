@@ -39,6 +39,8 @@ COPY --from=builder /app/libonnxruntime.so* ./
 ENV LD_LIBRARY_PATH=/app
 ENV ONNX_LIB_PATH=/app/libonnxruntime.so
 ENV MODEL_PATH=/app/models/readiness_model.onnx
+ENV STRESS_MODEL_PATH=/app/models/wesad_stress_hgbc.onnx
+ENV STRESS_NORM_STATS_PATH=/app/models/wesad_norm_stats.json
 
 EXPOSE 5003
 

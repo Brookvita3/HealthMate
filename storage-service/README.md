@@ -22,9 +22,9 @@ Required environment variables (can be set in a `.env` file):
 | `API_PREFIX` | API prefix (e.g., `api/v1`) |
 
 ## How to Build
-Run the following command at the root directory of the project (where `docker-compose.yml` is located):
+From repo root:
 ```bash
-docker compose build storage-service
+docker compose -f deploy/docker-compose.prod.yml build storage-service
 ```
 Or build independently at the project root:
 ```bash
@@ -41,7 +41,8 @@ The system uses a **"Group Rule as Base"** model to ensure granular yet safe dat
 
 ### 1. The Logic
 - **Rule 1 (Base - Global Rule)**: A metric type (e.g., `heart_rate`) must be explicitly enabled for the Group (shared with `null`) for any member to have a chance to see it.
-- **Rule 2 (Filter - Specific Rule)**: If a specific rule exists for a member, they only see the intersection of the Base and their Filter. If no specific rules exist, they see all Base metrics.
+- **Rule 2 (Filter - Specific Rule)**: Per-viewer filter applies only when an `access_control` row exists for that viewer. Then they see only metrics explicitly granted to them; otherwise they see all global (base) metrics.
+- **Migration `000019`**: On startup, removes legacy per-viewer rows that lacked `access_control` (see `migration/000019_cleanup_orphan_specific_permissions.up.sql`).
 
 ### 2. Implementation in Storage Service
 - **Notifications**: When a health metric exceeds a configured threshold, the system calculates the authorized "watchers" using a strict SQL join across `group_members` and `sharing_permissions`. Only members with valid "Base + Filter" permissions receive the notification.

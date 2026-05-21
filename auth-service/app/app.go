@@ -140,6 +140,8 @@ func NewHTTPServer(deps *Dependencies) *HTTPServer {
 		// Create a subgroup with group validation middleware
 		groupWithID := groupGroup.Group("/:id")
 		groupWithID.Use(groupMiddleware.ValidateGroupExists())
+		groupMemberRoutes := groupWithID.Group("")
+		groupMemberRoutes.Use(groupMiddleware.RequireGroupMembership())
 		{
 			groupWithID.GET("", groupHandler.GetGroup)
 			groupWithID.PUT("", groupHandler.UpdateGroup)
@@ -147,6 +149,8 @@ func NewHTTPServer(deps *Dependencies) *HTTPServer {
 
 			groupWithID.POST("/members", groupHandler.InviteMember)
 			groupWithID.GET("/members", groupHandler.GetMembers)
+			// Static path registered before /:member_id so Gin resolves it correctly.
+			groupMemberRoutes.GET("/members/visible-metrics", groupHandler.GetMembersVisibleMetrics)
 			groupWithID.GET("/invitations", groupHandler.ListGroupInvitations)
 			groupWithID.PUT("/members/me", groupHandler.UpdateMyMemberStatus)
 			groupWithID.DELETE("/members/me", groupHandler.LeaveGroup)
@@ -157,9 +161,9 @@ func NewHTTPServer(deps *Dependencies) *HTTPServer {
 			groupWithID.POST("/reject-approval/:member_id", groupHandler.RejectApproval)
 
 			groupWithID.PUT("/owner", groupHandler.TransferOwnership)
-			groupWithID.POST("/permissions", groupHandler.SetPermission)
-			groupWithID.PUT("/permissions", groupHandler.UpdatePermissions)
-			groupWithID.GET("/permissions", groupHandler.GetPermissions)
+			groupMemberRoutes.POST("/permissions", groupHandler.SetPermission)
+			groupMemberRoutes.PUT("/permissions", groupHandler.UpdatePermissions)
+			groupMemberRoutes.GET("/permissions", groupHandler.GetPermissions)
 
 			// Routes that need member validation
 			groupWithID.DELETE("/members/:member_id", groupMiddleware.ValidateMemberExists(), groupHandler.RemoveMember)

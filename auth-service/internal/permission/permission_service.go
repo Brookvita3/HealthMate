@@ -26,6 +26,10 @@ type Service interface {
 	// If targetUserID is not nil, it validates that all metricTypes are enabled in the Global Rule.
 	UpdateSharing(ctx context.Context, groupID, userID uuid.UUID, targetUserID *uuid.UUID, metricTypes []string) error
 
+	// GetGroupMembersVisibleMetrics returns, for each member in the group (excluding viewerID),
+	// the metric types the viewer is allowed to see based on each member's sharing settings.
+	GetGroupMembersVisibleMetrics(ctx context.Context, groupID, viewerID uuid.UUID) ([]domain.MemberVisibleMetrics, error)
+
 	// ListMetricTypes retrieves all available metric types in the system.
 	ListMetricTypes(ctx context.Context) ([]domain.MetricType, error)
 }
@@ -49,31 +53,17 @@ func (s *serviceImpl) EnableSharing(ctx context.Context, groupID, userID uuid.UU
 		return ErrInvalidMetricType
 	}
 
-	// Double check membership to avoid FK violation
-	isMember, err := s.repo.IsMember(ctx, groupID, userID)
-	if err != nil {
-		return err
-	}
-	if !isMember {
-		return ErrPermissionDenied
-	}
-
-	// Hierarchy check: If targetUserID is not nil, check if metricType is in Global Rules
-	if targetUserID != nil {
-		globalPerms, err := s.repo.ListUserPermissionsInGroup(ctx, groupID, userID, nil)
+	if targetUserID == nil {
+		// Global rule: pending_owner_approval members may pre-set their sharing.
+		ok, err := s.repo.IsMemberOrPendingApproval(ctx, groupID, userID)
 		if err != nil {
 			return err
 		}
-		found := false
-		for _, p := range globalPerms {
-			if p.MetricType == metricType && p.SharedWithUserId == nil {
-				found = true
-				break
-			}
+		if !ok {
+			return ErrPermissionDenied
 		}
-		if !found {
-			return ErrPermissionDenied // Or a more specific error like "Metric not enabled in group level"
-		}
+	} else {
+		return ErrUsePutForPerMemberSharing
 	}
 
 	return s.repo.SetPermission(ctx, groupID, userID, metricType, targetUserID)
@@ -112,47 +102,54 @@ func (s *serviceImpl) UpdateSharing(ctx context.Context, groupID, userID uuid.UU
 		}
 	}
 
-	// Check if user is a member of the group before setting permissions
-	isMember, err := s.repo.IsMember(ctx, groupID, userID)
-	if err != nil {
-		return err
-	}
-	if !isMember {
-		return ErrPermissionDenied
-	}
+	if targetUserID == nil {
+		// Global rule: pending_owner_approval members may pre-set their sharing.
+		ok, err := s.repo.IsMemberOrPendingApproval(ctx, groupID, userID)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return ErrPermissionDenied
+		}
+		// Update Global Rule — preserve member-specific rules.
+		if err := s.repo.RevokeGlobalPermissions(ctx, groupID, userID); err != nil {
+			return err
+		}
+	} else {
+		// Member-specific rule: require fully accepted membership.
+		isMember, err := s.repo.IsMember(ctx, groupID, userID)
+		if err != nil {
+			return err
+		}
+		if !isMember {
+			return ErrPermissionDenied
+		}
 
-	// Hierarchy check: Member rules must be subset of Global rules (Base)
-	if targetUserID != nil {
+		if err := s.repo.RevokeSpecificPermissions(ctx, groupID, userID, *targetUserID); err != nil {
+			return err
+		}
+		// Empty list: remove per-viewer filter; viewer falls back to sharer's global metrics.
+		if len(metricTypes) == 0 {
+			return nil
+		}
+
+		// Hierarchy check: member rules must be a subset of global rules.
 		baseRules, err := s.repo.ListUserPermissionsInGroup(ctx, groupID, userID, nil)
 		if err != nil {
 			return err
 		}
-
 		allowedMetrics := make(map[string]bool)
 		for _, b := range baseRules {
-			allowedMetrics[b.MetricType] = true
+			if b.SharedWithUserId == nil && b.MetricType != "access_control" {
+				allowedMetrics[b.MetricType] = true
+			}
 		}
-
 		for _, m := range metricTypes {
 			if !allowedMetrics[m] {
 				return common.NewBusinessError(fmt.Sprintf("Metric '%s' is not allowed in this group rule (Base). Please enable it globally first.", m))
 			}
 		}
-
-		// Revoke all existing specific rules for this member before updating
-		if err := s.repo.RevokeSpecificPermissions(ctx, groupID, userID, *targetUserID); err != nil {
-			return err
-		}
-
-		// Always insert a special marker to signify this user is "Specially Managed" in this group.
-		// This ensures they don't default back to Global defaults if their specific list is empty.
 		if err := s.repo.SetPermission(ctx, groupID, userID, "access_control", targetUserID); err != nil {
-			return err
-		}
-	} else {
-		// Update Global Rule
-		// Revoke all existing global rules first
-		if err := s.repo.RevokeAllPermissions(ctx, groupID, userID); err != nil {
 			return err
 		}
 	}
@@ -164,6 +161,11 @@ func (s *serviceImpl) UpdateSharing(ctx context.Context, groupID, userID uuid.UU
 	}
 
 	return nil
+}
+
+// GetGroupMembersVisibleMetrics implementation.
+func (s *serviceImpl) GetGroupMembersVisibleMetrics(ctx context.Context, groupID, viewerID uuid.UUID) ([]domain.MemberVisibleMetrics, error) {
+	return s.repo.ListAllMembersVisibleMetrics(ctx, groupID, viewerID)
 }
 
 // ListMetricTypes implementation.

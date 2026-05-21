@@ -23,14 +23,17 @@ Required environment variables (can be set in a `.env` file):
 | `API_PREFIX` | API prefix (e.g., `api/v1`) |
 
 ## How to Build
-Run the following command at the root directory of the project (where `docker-compose.yml` is located):
+From repo root (`deploy/docker-compose.prod.yml` or your environment):
+
 ```bash
-docker compose build auth-service
+docker compose -f deploy/docker-compose.prod.yml build auth-service
 ```
-Or build independently at the project root:
+
+Or build the image only:
 ```bash
 docker build -t brookvita3/auth-service:local ./auth-service
 ```
+After deploying permission/sharing changes, rebuild and redeploy **auth-service**, **storage-service**, and **realtime-service** together.
 
 ## API Documentation (Link Docs)
 Swagger UI (available after running the service):
@@ -73,43 +76,56 @@ To share a metric with all current and future members of a group:
 }
 ```
 
-### 2. Share with a SPECIFIC USER in Group
-To share a metric with only one specific member:
-- **Endpoint**: `POST /groups/:id/permissions`
-- **Body**: Provide the UUID of the target member in `target_user_id`.
+### 2. Share with a SPECIFIC USER in Group (bulk only)
+Per-viewer rules **must** use `PUT`, not `POST`. The service writes an `access_control` marker plus metric rows so storage/realtime `CheckAccess` stays aligned with `GET .../members/visible-metrics`.
+
+- **Endpoint**: `PUT /groups/:id/permissions`
+- **Body**: `target_user_id` = viewer UUID; `metric_types` = subset of your global metrics.
 
 ```json
 {
-  "metric_type": "spo2",
-  "enabled": true,
+  "metric_types": ["heart_rate", "spo2"],
   "target_user_id": "987e6543-e21b-12d3-a456-426614174000"
 }
 ```
 
-### 3. Bulk Update Permissions
-To set all shared metrics for a target at once:
+`POST /groups/:id/permissions` with a non-null `target_user_id` returns **400** (`use PUT ... for per-member sharing`).
+
+### 3. Bulk Update Global Permissions
 - **Endpoint**: `PUT /groups/:id/permissions`
-- **Body**: `metric_types` should be an array of all metrics allowed for that target.
+- **Body**: Omit `target_user_id` (or empty string).
 
 ```json
 {
-  "metric_types": ["heart_rate", "spo2", "blood_pressure"],
-  "target_user_id": "" 
+  "metric_types": ["heart_rate", "spo2", "blood_pressure"]
 }
 ```
 
-### 4. Reset User to Group Defaults
-To remove all specific overrides for a user and return them to the global group rules:
-- **Endpoint**: `PUT /groups/:id/permissions`
-- **Body**: Set `metric_types` to `null`.
+### 4. Reset Viewer to Global Defaults
+Remove per-viewer filter so the viewer sees your full global share again:
 
 ```json
 {
-  "metric_types": null,
+  "metric_types": [],
   "target_user_id": "987e6543-e21b-12d3-a456-426614174000"
 }
 ```
 
-### 5. Fetching Current Permissions
+### 5. Run unit tests (permission sharing)
+
+From repo root (no local Go required):
+
+```bash
+docker run --rm -v "$(pwd)/auth-service:/app" -w /app golang:1.24-alpine \
+  go test ./internal/permission/... -count=1 -v
+```
+
+Or with Go installed:
+
+```bash
+cd auth-service && go test ./internal/permission/... -count=1 -v
+```
+
+### 6. Fetching Current Permissions
 - **Endpoint**: `GET /groups/:id/permissions`
 - **Query Param**: `target_user_id` (optional). If provided, it filters for permissions granted to that specific user (including global group shares).

@@ -10,4 +10,7 @@ var (
 
 	// ErrInvalidMetricType is returned when an unsupported metric type is provided.
 	ErrInvalidMetricType = &common.BusinessError{Code: 400, Message: "invalid metric type"}
+
+	// ErrUsePutForPerMemberSharing is returned when POST is used for per-viewer rules.
+	ErrUsePutForPerMemberSharing = &common.BusinessError{Code: 400, Message: "use PUT /groups/:id/permissions with target_user_id for per-member sharing"}
 )

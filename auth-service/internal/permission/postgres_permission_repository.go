@@ -76,6 +76,65 @@ func (r *postgresRepository) RevokeAllPermissions(ctx context.Context, groupID, 
 	return err
 }
 
+func (r *postgresRepository) RevokeGlobalPermissions(ctx context.Context, groupID, userID uuid.UUID) error {
+	query := `DELETE FROM sharing_permissions WHERE group_id = $1 AND user_id = $2 AND shared_with_user_id IS NULL`
+	_, err := r.pool.Exec(ctx, query, groupID, userID)
+	return err
+}
+
+func (r *postgresRepository) ListAllMembersVisibleMetrics(ctx context.Context, groupID, viewerID uuid.UUID) ([]domain.MemberVisibleMetrics, error) {
+	// Single query: apply two-tier rule for all members at once.
+	// Members with an 'access_control' row for viewer use viewer-specific metrics;
+	// all others fall back to their global (shared_with_user_id IS NULL) metrics.
+	query := `
+		WITH specific_members AS (
+			SELECT DISTINCT user_id
+			FROM sharing_permissions
+			WHERE group_id = $1
+			  AND shared_with_user_id = $2
+			  AND metric_type = 'access_control'
+		)
+		SELECT sp.user_id, sp.metric_type
+		FROM sharing_permissions sp
+		WHERE sp.group_id = $1
+		  AND sp.user_id != $2
+		  AND sp.metric_type != 'access_control'
+		  AND EXISTS (
+			SELECT 1 FROM group_members gm
+			WHERE gm.group_id = $1 AND gm.user_id = sp.user_id AND gm.status = 'accepted'
+		  )
+		  AND (
+			(sp.user_id IN (SELECT user_id FROM specific_members) AND sp.shared_with_user_id = $2)
+			OR
+			(sp.user_id NOT IN (SELECT user_id FROM specific_members) AND sp.shared_with_user_id IS NULL)
+		  )`
+
+	rows, err := r.pool.Query(ctx, query, groupID, viewerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	grouped := make(map[uuid.UUID][]string)
+	for rows.Next() {
+		var memberID uuid.UUID
+		var metricType string
+		if err := rows.Scan(&memberID, &metricType); err != nil {
+			return nil, err
+		}
+		grouped[memberID] = append(grouped[memberID], metricType)
+	}
+
+	result := make([]domain.MemberVisibleMetrics, 0, len(grouped))
+	for memberID, metrics := range grouped {
+		result = append(result, domain.MemberVisibleMetrics{
+			MemberID: memberID,
+			Metrics:  metrics,
+		})
+	}
+	return result, nil
+}
+
 func (r *postgresRepository) RevokeSpecificPermissions(ctx context.Context, groupID, userID uuid.UUID, targetUserID uuid.UUID) error {
 	query := `DELETE FROM sharing_permissions WHERE group_id = $1 AND user_id = $2 AND shared_with_user_id = $3`
 	_, err := r.pool.Exec(ctx, query, groupID, userID, targetUserID)
@@ -83,6 +142,13 @@ func (r *postgresRepository) RevokeSpecificPermissions(ctx context.Context, grou
 }
 func (r *postgresRepository) IsMember(ctx context.Context, groupID, userID uuid.UUID) (bool, error) {
 	query := `SELECT EXISTS(SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2 AND status = 'accepted')`
+	var exists bool
+	err := r.pool.QueryRow(ctx, query, groupID, userID).Scan(&exists)
+	return exists, err
+}
+
+func (r *postgresRepository) IsMemberOrPendingApproval(ctx context.Context, groupID, userID uuid.UUID) (bool, error) {
+	query := `SELECT EXISTS(SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2 AND status IN ('accepted', 'pending_owner_approval'))`
 	var exists bool
 	err := r.pool.QueryRow(ctx, query, groupID, userID).Scan(&exists)
 	return exists, err

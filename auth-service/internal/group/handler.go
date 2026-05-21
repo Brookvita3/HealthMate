@@ -63,6 +63,12 @@ type MemberPermissionResponse struct {
 	Metrics []string  `json:"metrics"`
 }
 
+// MemberVisibleMetricsResponse is the per-member element returned by GetMembersVisibleMetrics.
+type MemberVisibleMetricsResponse struct {
+	MemberID string   `json:"member_id"`
+	Metrics  []string `json:"metrics"`
+}
+
 // NewHandler creates a new instance of group.Handler with its dependencies.
 func NewHandler(gs Service, ms member.Service, ps permission.Service) *Handler {
 	return &Handler{
@@ -482,11 +488,21 @@ func (handler *Handler) GetPermissions(c *gin.Context) {
 	specificMap := make(map[uuid.UUID][]string)
 
 	for _, p := range perms {
+		if p.MetricType == "access_control" {
+			continue
+		}
 		if p.SharedWithUserId == nil {
 			resp.Global = append(resp.Global, p.MetricType)
 		} else {
 			uid := *p.SharedWithUserId
-			specificMap[uid] = append(specificMap[uid], p.MetricType)
+			if p.MetricType != "access_control" {
+				specificMap[uid] = append(specificMap[uid], p.MetricType)
+			} else {
+				// Ensure viewer appears in specific list when only marker exists.
+				if _, ok := specificMap[uid]; !ok {
+					specificMap[uid] = []string{}
+				}
+			}
 		}
 	}
 
@@ -666,6 +682,51 @@ func (handler *Handler) UpdatePermissions(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, webHelpers.OKResponse{Message: "Permissions updated"})
+}
+
+// GetMembersVisibleMetrics returns, for each group member, the metric types
+// that the current authenticated user is allowed to see from that member.
+// @Summary Get visible metrics per member
+// @Description For each member in the group, returns the metric types the caller can view based on each member's sharing settings
+// @Tags groups
+// @Produce json
+// @Param id path string true "Group ID"
+// @Success 200 {array} MemberVisibleMetricsResponse
+// @Failure 404 {object} webHelpers.ErrorResponse
+// @Security BearerAuth
+// @Router /groups/{id}/members/visible-metrics [get]
+func (handler *Handler) GetMembersVisibleMetrics(c *gin.Context) {
+	viewerID, ok := webHelpers.GetAuthUserID(c)
+	if !ok {
+		return
+	}
+
+	groupID, ok := webHelpers.GetValidatedGroupID(c)
+	if !ok {
+		groupID, ok = webHelpers.GetGroupID(c)
+		if !ok {
+			return
+		}
+	}
+
+	results, err := handler.permService.GetGroupMembersVisibleMetrics(c.Request.Context(), groupID, viewerID)
+	if err != nil {
+		handler.handleError(c, err)
+		return
+	}
+
+	resp := make([]MemberVisibleMetricsResponse, 0, len(results))
+	for _, r := range results {
+		metrics := r.Metrics
+		if metrics == nil {
+			metrics = []string{}
+		}
+		resp = append(resp, MemberVisibleMetricsResponse{
+			MemberID: r.MemberID.String(),
+			Metrics:  metrics,
+		})
+	}
+	c.JSON(http.StatusOK, resp)
 }
 
 // ListMetricTypes returns all available metric types.

@@ -1,3 +1,8 @@
+// Package permission_test covers group metric sharing rules:
+// - Global share (targetUserID nil), including pending_owner_approval preset
+// - Per-viewer share via UpdateSharing PUT only (access_control + metrics)
+// - POST EnableSharing with targetUserID rejected (ErrUsePutForPerMemberSharing)
+// - Empty metric_types + targetUserID resets viewer to global fallback
 package permission_test
 
 import (
@@ -34,6 +39,18 @@ func (m *mockPermRepo) RevokeAllPermissions(ctx context.Context, groupID, userID
 	return m.Called(ctx, groupID, userID).Error(0)
 }
 
+func (m *mockPermRepo) RevokeGlobalPermissions(ctx context.Context, groupID, userID uuid.UUID) error {
+	return m.Called(ctx, groupID, userID).Error(0)
+}
+
+func (m *mockPermRepo) ListAllMembersVisibleMetrics(ctx context.Context, groupID, viewerID uuid.UUID) ([]domain.MemberVisibleMetrics, error) {
+	ret := m.Called(ctx, groupID, viewerID)
+	if ret.Get(0) == nil {
+		return nil, ret.Error(1)
+	}
+	return ret.Get(0).([]domain.MemberVisibleMetrics), ret.Error(1)
+}
+
 func (m *mockPermRepo) RevokeSpecificPermissions(ctx context.Context, groupID, userID, targetUserID uuid.UUID) error {
 	return m.Called(ctx, groupID, userID, targetUserID).Error(0)
 }
@@ -47,6 +64,11 @@ func (m *mockPermRepo) ListUserPermissionsInGroup(ctx context.Context, groupID, 
 }
 
 func (m *mockPermRepo) IsMember(ctx context.Context, groupID, userID uuid.UUID) (bool, error) {
+	ret := m.Called(ctx, groupID, userID)
+	return ret.Bool(0), ret.Error(1)
+}
+
+func (m *mockPermRepo) IsMemberOrPendingApproval(ctx context.Context, groupID, userID uuid.UUID) (bool, error) {
 	ret := m.Called(ctx, groupID, userID)
 	return ret.Bool(0), ret.Error(1)
 }
@@ -81,12 +103,12 @@ func newPermTestEnv() *permTestEnv {
 
 func TestEnableSharing(t *testing.T) {
 	t.Run("success: group-level rule (targetUserID nil)", func(t *testing.T) {
-		// When targetUserID is nil we set a group-wide rule; no hierarchy check needed.
+		// Global rule: IsMemberOrPendingApproval allows pending_owner_approval members too.
 		env := newPermTestEnv()
 		gID, uID := uuid.New(), uuid.New()
 
 		env.repo.On("IsValidMetricType", mock.Anything, "heart_rate").Return(true, nil).Once()
-		env.repo.On("IsMember", mock.Anything, gID, uID).Return(true, nil).Once()
+		env.repo.On("IsMemberOrPendingApproval", mock.Anything, gID, uID).Return(true, nil).Once()
 		env.repo.On("SetPermission", mock.Anything, gID, uID, "heart_rate", (*uuid.UUID)(nil)).Return(nil).Once()
 
 		err := env.service.EnableSharing(context.Background(), gID, uID, "heart_rate", nil)
@@ -95,25 +117,32 @@ func TestEnableSharing(t *testing.T) {
 		env.repo.AssertExpectations(t)
 	})
 
-	t.Run("success: member-level rule when metric exists in global rule", func(t *testing.T) {
-		// targetUserID is set; the service must verify the metric is already in
-		// the group-level (global) rule before creating the member-specific rule.
+	t.Run("success: pending_owner_approval member can enable global sharing", func(t *testing.T) {
+		// A member pending owner approval is allowed to set global sharing preferences.
+		env := newPermTestEnv()
+		gID, uID := uuid.New(), uuid.New()
+
+		env.repo.On("IsValidMetricType", mock.Anything, "steps_count").Return(true, nil).Once()
+		env.repo.On("IsMemberOrPendingApproval", mock.Anything, gID, uID).Return(true, nil).Once()
+		env.repo.On("SetPermission", mock.Anything, gID, uID, "steps_count", (*uuid.UUID)(nil)).Return(nil).Once()
+
+		err := env.service.EnableSharing(context.Background(), gID, uID, "steps_count", nil)
+
+		assert.NoError(t, err)
+		env.repo.AssertNotCalled(t, "IsMember", mock.Anything, mock.Anything, mock.Anything)
+		env.repo.AssertExpectations(t)
+	})
+
+	t.Run("error: per-member sharing must use PUT not POST", func(t *testing.T) {
 		env := newPermTestEnv()
 		gID, uID, tID := uuid.New(), uuid.New(), uuid.New()
 
-		globalPerms := []domain.Permission{
-			{GroupId: gID, UserId: uID, MetricType: "heart_rate", SharedWithUserId: nil},
-		}
-
 		env.repo.On("IsValidMetricType", mock.Anything, "heart_rate").Return(true, nil).Once()
-		env.repo.On("IsMember", mock.Anything, gID, uID).Return(true, nil).Once()
-		env.repo.On("ListUserPermissionsInGroup", mock.Anything, gID, uID, (*uuid.UUID)(nil)).Return(globalPerms, nil).Once()
-		env.repo.On("SetPermission", mock.Anything, gID, uID, "heart_rate", ptrUUID(tID)).Return(nil).Once()
 
 		err := env.service.EnableSharing(context.Background(), gID, uID, "heart_rate", ptrUUID(tID))
 
-		assert.NoError(t, err)
-		env.repo.AssertExpectations(t)
+		assert.ErrorIs(t, err, permission.ErrUsePutForPerMemberSharing)
+		env.repo.AssertNotCalled(t, "SetPermission", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 	})
 
 	t.Run("error: invalid metric type is rejected before any DB call", func(t *testing.T) {
@@ -129,13 +158,13 @@ func TestEnableSharing(t *testing.T) {
 		env.repo.AssertNotCalled(t, "IsMember", mock.Anything, mock.Anything, mock.Anything)
 	})
 
-	t.Run("error: non-member cannot enable sharing", func(t *testing.T) {
-		// A user who is not a group member must receive ErrPermissionDenied.
+	t.Run("error: non-member cannot enable global sharing", func(t *testing.T) {
+		// A user with no membership at all (not even pending) gets ErrPermissionDenied.
 		env := newPermTestEnv()
 		gID, uID := uuid.New(), uuid.New()
 
 		env.repo.On("IsValidMetricType", mock.Anything, "heart_rate").Return(true, nil).Once()
-		env.repo.On("IsMember", mock.Anything, gID, uID).Return(false, nil).Once()
+		env.repo.On("IsMemberOrPendingApproval", mock.Anything, gID, uID).Return(false, nil).Once()
 
 		err := env.service.EnableSharing(context.Background(), gID, uID, "heart_rate", nil)
 
@@ -143,21 +172,6 @@ func TestEnableSharing(t *testing.T) {
 		env.repo.AssertExpectations(t)
 	})
 
-	t.Run("error: member-level rule denied when metric missing from global rule", func(t *testing.T) {
-		// A specific-member rule cannot be created for a metric that has no global rule yet.
-		env := newPermTestEnv()
-		gID, uID, tID := uuid.New(), uuid.New(), uuid.New()
-
-		env.repo.On("IsValidMetricType", mock.Anything, "steps_count").Return(true, nil).Once()
-		env.repo.On("IsMember", mock.Anything, gID, uID).Return(true, nil).Once()
-		// Global rules do NOT contain steps_count
-		env.repo.On("ListUserPermissionsInGroup", mock.Anything, gID, uID, (*uuid.UUID)(nil)).Return([]domain.Permission{}, nil).Once()
-
-		err := env.service.EnableSharing(context.Background(), gID, uID, "steps_count", ptrUUID(tID))
-
-		assert.ErrorIs(t, err, permission.ErrPermissionDenied)
-		env.repo.AssertExpectations(t)
-	})
 
 	t.Run("error: IsValidMetricType repository failure propagates", func(t *testing.T) {
 		env := newPermTestEnv()
@@ -287,8 +301,8 @@ func TestGetPermissions(t *testing.T) {
 // ─── UpdateSharing ────────────────────────────────────────────────────────────
 
 func TestUpdateSharing(t *testing.T) {
-	t.Run("success: replaces global rule (targetUserID nil)", func(t *testing.T) {
-		// Global update: revoke all then re-insert the new set.
+	t.Run("success: replaces global rule without touching member-specific rules", func(t *testing.T) {
+		// Global update uses IsMemberOrPendingApproval and RevokeGlobalPermissions.
 		env := newPermTestEnv()
 		gID, uID := uuid.New(), uuid.New()
 		metrics := []string{"heart_rate", "steps_count"}
@@ -296,14 +310,34 @@ func TestUpdateSharing(t *testing.T) {
 		for _, m := range metrics {
 			env.repo.On("IsValidMetricType", mock.Anything, m).Return(true, nil).Once()
 		}
-		env.repo.On("IsMember", mock.Anything, gID, uID).Return(true, nil).Once()
-		env.repo.On("RevokeAllPermissions", mock.Anything, gID, uID).Return(nil).Once()
+		env.repo.On("IsMemberOrPendingApproval", mock.Anything, gID, uID).Return(true, nil).Once()
+		env.repo.On("RevokeGlobalPermissions", mock.Anything, gID, uID).Return(nil).Once()
 		env.repo.On("SetPermission", mock.Anything, gID, uID, "heart_rate", (*uuid.UUID)(nil)).Return(nil).Once()
 		env.repo.On("SetPermission", mock.Anything, gID, uID, "steps_count", (*uuid.UUID)(nil)).Return(nil).Once()
 
 		err := env.service.UpdateSharing(context.Background(), gID, uID, nil, metrics)
 
 		assert.NoError(t, err)
+		env.repo.AssertNotCalled(t, "RevokeAllPermissions", mock.Anything, mock.Anything, mock.Anything)
+		env.repo.AssertNotCalled(t, "IsMember", mock.Anything, mock.Anything, mock.Anything)
+		env.repo.AssertExpectations(t)
+	})
+
+	t.Run("success: pending_owner_approval member can set global permissions", func(t *testing.T) {
+		// Members pending owner approval can pre-set their global sharing before being fully accepted.
+		env := newPermTestEnv()
+		gID, uID := uuid.New(), uuid.New()
+		metrics := []string{"heart_rate"}
+
+		env.repo.On("IsValidMetricType", mock.Anything, "heart_rate").Return(true, nil).Once()
+		env.repo.On("IsMemberOrPendingApproval", mock.Anything, gID, uID).Return(true, nil).Once()
+		env.repo.On("RevokeGlobalPermissions", mock.Anything, gID, uID).Return(nil).Once()
+		env.repo.On("SetPermission", mock.Anything, gID, uID, "heart_rate", (*uuid.UUID)(nil)).Return(nil).Once()
+
+		err := env.service.UpdateSharing(context.Background(), gID, uID, nil, metrics)
+
+		assert.NoError(t, err)
+		env.repo.AssertNotCalled(t, "IsMember", mock.Anything, mock.Anything, mock.Anything)
 		env.repo.AssertExpectations(t)
 	})
 
@@ -320,14 +354,28 @@ func TestUpdateSharing(t *testing.T) {
 
 		env.repo.On("IsValidMetricType", mock.Anything, "heart_rate").Return(true, nil).Once()
 		env.repo.On("IsMember", mock.Anything, gID, uID).Return(true, nil).Once()
-		env.repo.On("ListUserPermissionsInGroup", mock.Anything, gID, uID, (*uuid.UUID)(nil)).Return(globalPerms, nil).Once()
 		env.repo.On("RevokeSpecificPermissions", mock.Anything, gID, uID, tID).Return(nil).Once()
+		env.repo.On("ListUserPermissionsInGroup", mock.Anything, gID, uID, (*uuid.UUID)(nil)).Return(globalPerms, nil).Once()
 		env.repo.On("SetPermission", mock.Anything, gID, uID, "access_control", ptrUUID(tID)).Return(nil).Once()
 		env.repo.On("SetPermission", mock.Anything, gID, uID, "heart_rate", ptrUUID(tID)).Return(nil).Once()
 
 		err := env.service.UpdateSharing(context.Background(), gID, uID, ptrUUID(tID), metrics)
 
 		assert.NoError(t, err)
+		env.repo.AssertExpectations(t)
+	})
+
+	t.Run("success: empty member metrics resets to global fallback", func(t *testing.T) {
+		env := newPermTestEnv()
+		gID, uID, tID := uuid.New(), uuid.New(), uuid.New()
+
+		env.repo.On("IsMember", mock.Anything, gID, uID).Return(true, nil).Once()
+		env.repo.On("RevokeSpecificPermissions", mock.Anything, gID, uID, tID).Return(nil).Once()
+
+		err := env.service.UpdateSharing(context.Background(), gID, uID, ptrUUID(tID), []string{})
+
+		assert.NoError(t, err)
+		env.repo.AssertNotCalled(t, "SetPermission", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 		env.repo.AssertExpectations(t)
 	})
 
@@ -344,13 +392,13 @@ func TestUpdateSharing(t *testing.T) {
 		env.repo.AssertNotCalled(t, "RevokeAllPermissions", mock.Anything, mock.Anything, mock.Anything)
 	})
 
-	t.Run("error: non-member cannot update sharing", func(t *testing.T) {
-		// IsMember check happens after metric validation; non-members get ErrPermissionDenied.
+	t.Run("error: non-member cannot update global sharing", func(t *testing.T) {
+		// Users with no membership (not even pending) are denied even for global updates.
 		env := newPermTestEnv()
 		gID, uID := uuid.New(), uuid.New()
 
 		env.repo.On("IsValidMetricType", mock.Anything, "heart_rate").Return(true, nil).Once()
-		env.repo.On("IsMember", mock.Anything, gID, uID).Return(false, nil).Once()
+		env.repo.On("IsMemberOrPendingApproval", mock.Anything, gID, uID).Return(false, nil).Once()
 
 		err := env.service.UpdateSharing(context.Background(), gID, uID, nil, []string{"heart_rate"})
 
@@ -365,29 +413,83 @@ func TestUpdateSharing(t *testing.T) {
 
 		env.repo.On("IsValidMetricType", mock.Anything, "calories").Return(true, nil).Once()
 		env.repo.On("IsMember", mock.Anything, gID, uID).Return(true, nil).Once()
-		// Global rule only has heart_rate, NOT calories
+		env.repo.On("RevokeSpecificPermissions", mock.Anything, gID, uID, tID).Return(nil).Once()
 		env.repo.On("ListUserPermissionsInGroup", mock.Anything, gID, uID, (*uuid.UUID)(nil)).Return([]domain.Permission{
 			{GroupId: gID, UserId: uID, MetricType: "heart_rate"},
 		}, nil).Once()
 
 		err := env.service.UpdateSharing(context.Background(), gID, uID, ptrUUID(tID), []string{"calories"})
 
-		assert.Error(t, err) // BusinessError: "Metric 'calories' is not allowed in this group rule"
+		assert.Error(t, err)
+		env.repo.AssertNotCalled(t, "SetPermission", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 		env.repo.AssertExpectations(t)
 	})
 
-	t.Run("error: RevokeAllPermissions failure propagates", func(t *testing.T) {
+	t.Run("error: RevokeGlobalPermissions failure propagates", func(t *testing.T) {
 		env := newPermTestEnv()
 		gID, uID := uuid.New(), uuid.New()
 		dbErr := errors.New("database error")
 
 		env.repo.On("IsValidMetricType", mock.Anything, "heart_rate").Return(true, nil).Once()
-		env.repo.On("IsMember", mock.Anything, gID, uID).Return(true, nil).Once()
-		env.repo.On("RevokeAllPermissions", mock.Anything, gID, uID).Return(dbErr).Once()
+		env.repo.On("IsMemberOrPendingApproval", mock.Anything, gID, uID).Return(true, nil).Once()
+		env.repo.On("RevokeGlobalPermissions", mock.Anything, gID, uID).Return(dbErr).Once()
 
 		err := env.service.UpdateSharing(context.Background(), gID, uID, nil, []string{"heart_rate"})
 
 		assert.ErrorIs(t, err, dbErr)
+		env.repo.AssertExpectations(t)
+	})
+
+	t.Run("success: member hierarchy check ignores specific rows and access_control", func(t *testing.T) {
+		// access_control and member-specific rows must NOT count as allowed base metrics.
+		// Only global rows (shared_with_user_id IS NULL, not access_control) are the base.
+		env := newPermTestEnv()
+		gID, uID, tID := uuid.New(), uuid.New(), uuid.New()
+		tID2 := uuid.New()
+
+		// Simulate: global rule has heart_rate only.
+		// There is also an access_control specific row and a steps_count specific row for another member.
+		// steps_count must NOT be considered allowed.
+		mixedPerms := []domain.Permission{
+			{GroupId: gID, UserId: uID, MetricType: "heart_rate", SharedWithUserId: nil},
+			{GroupId: gID, UserId: uID, MetricType: "access_control", SharedWithUserId: ptrUUID(tID2)},
+			{GroupId: gID, UserId: uID, MetricType: "steps_count", SharedWithUserId: ptrUUID(tID2)},
+		}
+
+		env.repo.On("IsValidMetricType", mock.Anything, "heart_rate").Return(true, nil).Once()
+		env.repo.On("IsMember", mock.Anything, gID, uID).Return(true, nil).Once()
+		env.repo.On("RevokeSpecificPermissions", mock.Anything, gID, uID, tID).Return(nil).Once()
+		env.repo.On("ListUserPermissionsInGroup", mock.Anything, gID, uID, (*uuid.UUID)(nil)).Return(mixedPerms, nil).Once()
+		env.repo.On("SetPermission", mock.Anything, gID, uID, "access_control", ptrUUID(tID)).Return(nil).Once()
+		env.repo.On("SetPermission", mock.Anything, gID, uID, "heart_rate", ptrUUID(tID)).Return(nil).Once()
+
+		err := env.service.UpdateSharing(context.Background(), gID, uID, ptrUUID(tID), []string{"heart_rate"})
+
+		assert.NoError(t, err)
+		env.repo.AssertExpectations(t)
+	})
+
+	t.Run("error: member rule rejected when metric only in specific row but not global", func(t *testing.T) {
+		// steps_count exists as a specific row for another member but NOT as a global rule.
+		// It must still be rejected for a new member-level rule.
+		env := newPermTestEnv()
+		gID, uID, tID := uuid.New(), uuid.New(), uuid.New()
+		tID2 := uuid.New()
+
+		mixedPerms := []domain.Permission{
+			{GroupId: gID, UserId: uID, MetricType: "heart_rate", SharedWithUserId: nil},
+			{GroupId: gID, UserId: uID, MetricType: "steps_count", SharedWithUserId: ptrUUID(tID2)},
+		}
+
+		env.repo.On("IsValidMetricType", mock.Anything, "steps_count").Return(true, nil).Once()
+		env.repo.On("IsMember", mock.Anything, gID, uID).Return(true, nil).Once()
+		env.repo.On("RevokeSpecificPermissions", mock.Anything, gID, uID, tID).Return(nil).Once()
+		env.repo.On("ListUserPermissionsInGroup", mock.Anything, gID, uID, (*uuid.UUID)(nil)).Return(mixedPerms, nil).Once()
+
+		err := env.service.UpdateSharing(context.Background(), gID, uID, ptrUUID(tID), []string{"steps_count"})
+
+		assert.Error(t, err)
+		env.repo.AssertNotCalled(t, "SetPermission", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 		env.repo.AssertExpectations(t)
 	})
 }

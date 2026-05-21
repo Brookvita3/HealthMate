@@ -39,18 +39,22 @@ func (r *pgRepository) CheckAccess(ctx context.Context, observerUserID, targetUs
 			    AND gm_target.status = 'accepted'
 		  )
 		  AND (
-			  -- Specific Filter Check: Grant if specific match exists
-			  EXISTS (
-				  SELECT 1 FROM sharing_permissions spec
-				  WHERE spec.group_id = base.group_id AND spec.user_id = base.user_id 
-				    AND spec.metric_type = base.metric_type AND spec.shared_with_user_id = $1::uuid
+			  (
+				  EXISTS (
+					  SELECT 1 FROM sharing_permissions ac
+					  WHERE ac.group_id = base.group_id AND ac.user_id = base.user_id
+					    AND ac.shared_with_user_id = $1::uuid AND ac.metric_type = 'access_control'
+				  )
+				  AND EXISTS (
+					  SELECT 1 FROM sharing_permissions spec
+					  WHERE spec.group_id = base.group_id AND spec.user_id = base.user_id
+					    AND spec.metric_type = base.metric_type AND spec.shared_with_user_id = $1::uuid
+				  )
 			  )
-			  OR
-			  -- Fallback to Global: Grant ONLY if NO specific rules exist for this observer in this group
-			  NOT EXISTS (
-				  SELECT 1 FROM sharing_permissions filter
-				  WHERE filter.group_id = base.group_id AND filter.user_id = base.user_id 
-				    AND filter.shared_with_user_id = $1::uuid
+			  OR NOT EXISTS (
+				  SELECT 1 FROM sharing_permissions ac
+				  WHERE ac.group_id = base.group_id AND ac.user_id = base.user_id
+				    AND ac.shared_with_user_id = $1::uuid AND ac.metric_type = 'access_control'
 			  )
 		  )
 	);`
@@ -77,18 +81,22 @@ func (r *pgRepository) GetMetricWatchers(ctx context.Context, targetUserID, metr
 	  AND gm_watcher.status = 'accepted'
 	  AND gm_watcher.user_id != $1::uuid -- Don't return the owner
 	  AND (
-		  -- Check Case 1: Specific Grant exists
-		  EXISTS (
-			  SELECT 1 FROM sharing_permissions spec
-			  WHERE spec.group_id = base.group_id AND spec.user_id = base.user_id 
-			    AND spec.metric_type = base.metric_type AND spec.shared_with_user_id = gm_watcher.user_id
+		  (
+			  EXISTS (
+				  SELECT 1 FROM sharing_permissions ac
+				  WHERE ac.group_id = base.group_id AND ac.user_id = base.user_id
+				    AND ac.shared_with_user_id = gm_watcher.user_id AND ac.metric_type = 'access_control'
+			  )
+			  AND EXISTS (
+				  SELECT 1 FROM sharing_permissions spec
+				  WHERE spec.group_id = base.group_id AND spec.user_id = base.user_id
+				    AND spec.metric_type = base.metric_type AND spec.shared_with_user_id = gm_watcher.user_id
+			  )
 		  )
-		  OR
-		  -- Check Case 2: No specific rules exist for this watcher (Fallback to Global)
-		  NOT EXISTS (
-			  SELECT 1 FROM sharing_permissions filter
-			  WHERE filter.group_id = base.group_id AND filter.user_id = base.user_id 
-			    AND filter.shared_with_user_id = gm_watcher.user_id
+		  OR NOT EXISTS (
+			  SELECT 1 FROM sharing_permissions ac
+			  WHERE ac.group_id = base.group_id AND ac.user_id = base.user_id
+			    AND ac.shared_with_user_id = gm_watcher.user_id AND ac.metric_type = 'access_control'
 		  )
 	  )
 	  -- Ensure the owner is still an accepted member of the group

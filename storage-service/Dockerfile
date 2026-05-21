@@ -2,7 +2,7 @@ FROM golang:1.26 AS builder
 
 WORKDIR /app
 
-ARG ONNX_VERSION=1.21.0
+ARG ONNX_VERSION=1.20.1
 
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     wget ca-certificates \

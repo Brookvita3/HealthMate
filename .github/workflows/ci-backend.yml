@@ -77,7 +77,7 @@ jobs:
       # Install ONNX Runtime (required by onnxruntime_go)
       - name: Install ONNX Runtime
         run: |
-          wget https://github.com/microsoft/onnxruntime/releases/download/v1.20.1/onnxruntime-linux-x64-1.21.0.tgz
+          wget https://github.com/microsoft/onnxruntime/releases/download/v1.21.0/onnxruntime-linux-x64-1.21.0.tgz
           tar -xzf onnxruntime-linux-x64-1.21.0.tgz
           sudo cp onnxruntime-linux-x64-1.21.0/lib/libonnxruntime.so* /usr/lib/
 

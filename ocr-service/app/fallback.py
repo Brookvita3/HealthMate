@@ -5,32 +5,43 @@ import re
 import urllib.error
 import urllib.parse
 import urllib.request
+from typing import Union
+
+
+def _get_bytes(img_input: Union[bytes, str]) -> bytes:
+    if isinstance(img_input, bytes):
+        return img_input
+    with open(img_input, "rb") as f:
+        return f.read()
 
 
 def call_fallback_ocr(
-    raw: bytes,
+    img_input: Union[bytes, str],
     *,
     fallback_mode: str,
     fallback_ocr_url: str,
     ocr_space_api_key: str,
 ) -> tuple[str, bool]:
     if fallback_mode == "ocr_space":
-        return call_ocr_space(raw, ocr_space_api_key=ocr_space_api_key)
+        return call_ocr_space(img_input, ocr_space_api_key=ocr_space_api_key)
     if fallback_mode == "mistral_ocr":
-        txt, ok = call_mistral_ocr(raw)
+        txt, ok = call_mistral_ocr(img_input)
         if ok and _is_usable_ocr_text(txt):
             return txt, True
         # Safety net: when Mistral output is noisy, try OCR.Space.
-        txt2, ok2 = call_ocr_space(raw, ocr_space_api_key=ocr_space_api_key)
+        txt2, ok2 = call_ocr_space(img_input, ocr_space_api_key=ocr_space_api_key)
         if ok2:
             return txt2, True
         return txt, ok
     if fallback_ocr_url:
-        return call_http_fallback(raw, fallback_ocr_url=fallback_ocr_url)
+        return call_http_fallback(img_input, fallback_ocr_url=fallback_ocr_url)
     return "", False
 
 
-def call_http_fallback(raw: bytes, *, fallback_ocr_url: str) -> tuple[str, bool]:
+def call_http_fallback(
+    img_input: Union[bytes, str], *, fallback_ocr_url: str
+) -> tuple[str, bool]:
+    raw = _get_bytes(img_input)
     boundary = "----FallbackBoundary"
     body = (
         f"--{boundary}\r\n"
@@ -53,7 +64,10 @@ def call_http_fallback(raw: bytes, *, fallback_ocr_url: str) -> tuple[str, bool]
     return "", False
 
 
-def call_ocr_space(raw: bytes, *, ocr_space_api_key: str) -> tuple[str, bool]:
+def call_ocr_space(
+    img_input: Union[bytes, str], *, ocr_space_api_key: str
+) -> tuple[str, bool]:
+    raw = _get_bytes(img_input)
     # Free-tier fallback: https://ocr.space/ocrapi
     # api key can use `helloworld` for quick tests.
     api_key = ocr_space_api_key if ocr_space_api_key else "helloworld"
@@ -92,7 +106,8 @@ def call_ocr_space(raw: bytes, *, ocr_space_api_key: str) -> tuple[str, bool]:
     return "", False
 
 
-def call_mistral_ocr(raw: bytes) -> tuple[str, bool]:
+def call_mistral_ocr(img_input: Union[bytes, str]) -> tuple[str, bool]:
+    raw = _get_bytes(img_input)
     api_key = os.getenv("MISTRAL_API_KEY", "").strip()
     if not api_key:
         return "", False

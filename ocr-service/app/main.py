@@ -2,7 +2,7 @@ import asyncio
 import re
 import os
 import time
-from typing import Any
+from typing import Any, Union
 
 import cv2
 import numpy as np
@@ -48,8 +48,10 @@ def _crop_to_medication_body_bgr(img_bgr: np.ndarray) -> np.ndarray:
     return crop_to_medication_body_bgr(img_bgr)
 
 
-def _preprocess_image(raw: bytes, *, crop_body: bool = True) -> np.ndarray:
-    return preprocess_image(raw, crop_body=crop_body)
+def _preprocess_image(
+    img_input: Union[bytes, str], *, crop_body: bool = True
+) -> np.ndarray:
+    return preprocess_image(img_input, crop_body=crop_body)
 
 
 def _deskew(gray: np.ndarray) -> np.ndarray:
@@ -571,17 +573,17 @@ def _extract_raw_text(img: np.ndarray) -> tuple[str, float, str]:
     return _ocr_extract_text(img)
 
 
-def _call_fallback_ocr(raw: bytes) -> tuple[str, bool]:
+def _call_fallback_ocr(img_input: Union[bytes, str]) -> tuple[str, bool]:
     return call_fallback_ocr(
-        raw,
+        img_input,
         fallback_mode=fallback_mode,
         fallback_ocr_url=fallback_ocr_url,
         ocr_space_api_key=ocr_space_api_key,
     )
 
 
-def _call_ocr_space_direct(raw: bytes) -> tuple[str, bool]:
-    return call_ocr_space(raw, ocr_space_api_key=ocr_space_api_key)
+def _call_ocr_space_direct(img_input: Union[bytes, str]) -> tuple[str, bool]:
+    return call_ocr_space(img_input, ocr_space_api_key=ocr_space_api_key)
 
 
 def _fallback_pass_tag(mode: str) -> str:
@@ -1541,15 +1543,15 @@ def _parse_items_from_tabular_lines(normalized_text: str) -> list[dict[str, Any]
     return _dedupe_prescription_items(candidates)
 
 
-def _process_image_sync(raw: bytes) -> dict[str, Any]:
+def _process_image_sync(img_input: Union[bytes, str]) -> dict[str, Any]:
     """OCR + parse pipeline — CPU-bound; chạy qua asyncio.to_thread.
 
-    Nhận bytes ảnh đã được validate (JPEG/PNG, size OK).
+    Nhận bytes/path ảnh đã được validate (JPEG/PNG, size OK).
     Trả về dict response đầy đủ; trường processing_ms được gán bởi caller.
     Raise Exception tự nhiên khi preprocess/OCR thất bại — caller bắt và
     wrap thành HTTPException.
     """
-    img = _preprocess_image(raw)
+    img = _preprocess_image(img_input)
     raw_text, ocr_score, pass_used = _extract_raw_text(img)
 
     used_fallback = False
@@ -1558,7 +1560,7 @@ def _process_image_sync(raw: bytes) -> dict[str, Any]:
         fallback_mode == "mistral_ocr" and bool(mistral_api_key)
     )
     if (not raw_text or len(raw_text) < 120 or ocr_score < 0.45) and has_fallback:
-        fallback_text, ok = _call_fallback_ocr(raw)
+        fallback_text, ok = _call_fallback_ocr(img_input)
         if ok and len(fallback_text) > len(raw_text):
             raw_text = fallback_text
             used_fallback = True
@@ -1647,7 +1649,7 @@ def _process_image_sync(raw: bytes) -> dict[str, Any]:
     # Một số ảnh có dòng thuốc nằm cao, crop body có thể cắt mất các dòng giữa/cuối.
     if len(items) <= 2:
         try:
-            img_full = _preprocess_image(raw, crop_body=False)
+            img_full = _preprocess_image(img_input, crop_body=False)
             raw_text_full, ocr_score_full, pass_full = _extract_raw_text(img_full)
             if raw_text_full and len(raw_text_full) >= max(80, int(len(raw_text) * 0.6)):
                 norm_full = _normalize_ocr_vi(raw_text_full)
@@ -1672,7 +1674,7 @@ def _process_image_sync(raw: bytes) -> dict[str, Any]:
     # Second chance fallback: OCR pass chính có text nhưng parser vẫn ra 0 item.
     # Chỉ chạy khi chưa dùng fallback trước đó; chỉ nhận khi parse được nhiều item hơn.
     if not items and has_fallback and not used_fallback:
-        fallback_text, ok = _call_fallback_ocr(raw)
+        fallback_text, ok = _call_fallback_ocr(img_input)
         if ok:
             fb_norm = _normalize_ocr_vi(fallback_text)
             fb_items = _parse_items_from_text(fb_norm)
@@ -1694,7 +1696,7 @@ def _process_image_sync(raw: bytes) -> dict[str, Any]:
     # Last-resort rescue: when Mistral fallback already ran but parser still fails,
     # retry parse from OCR.Space text for better plain text lines.
     if not items and fallback_mode == "mistral_ocr":
-        alt_text, ok = _call_ocr_space_direct(raw)
+        alt_text, ok = _call_ocr_space_direct(img_input)
         if ok:
             alt_norm = _normalize_ocr_vi(alt_text)
             alt_items = _parse_items_from_text(alt_norm)
@@ -1774,33 +1776,62 @@ async def parse_prescription(file: UploadFile = File(...)) -> dict[str, Any]:
     """
     if file is None:
         raise HTTPException(status_code=400, detail="file is required")
-    raw = await file.read()
-    if not raw:
+
+    # Read first 4 bytes to check magic bytes
+    magic = await file.read(4)
+    if not magic:
         raise HTTPException(status_code=400, detail="empty file")
-    if len(raw) > _MAX_UPLOAD_BYTES:
-        raise HTTPException(
-            status_code=413,
-            detail=f"File quá lớn (tối đa {_MAX_UPLOAD_BYTES // (1024 * 1024)} MB).",
-        )
-    if len(raw) < 4:
+    if len(magic) < 4:
         raise HTTPException(status_code=400, detail="file too small")
-    is_jpeg = raw[:2] == b"\xff\xd8"
-    is_png = raw[:4] == b"\x89PNG"
+
+    is_jpeg = magic[:2] == b"\xff\xd8"
+    is_png = magic[:4] == b"\x89PNG"
     if not (is_jpeg or is_png):
         raise HTTPException(
             status_code=415,
             detail="Chỉ chấp nhận ảnh JPEG hoặc PNG.",
         )
 
+    import tempfile
+
+    # Save to temporary file in chunks to minimize RAM footprint
+    fd, temp_file_path = tempfile.mkstemp(suffix=".tmp")
+    try:
+        with os.fdopen(fd, "wb") as tmp:
+            tmp.write(magic)
+            total_size = len(magic)
+            while True:
+                chunk = await file.read(1024 * 1024)  # 1MB chunks
+                if not chunk:
+                    break
+                total_size += len(chunk)
+                if total_size > _MAX_UPLOAD_BYTES:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"File quá lớn (tối đa {_MAX_UPLOAD_BYTES // (1024 * 1024)} MB).",
+                    )
+                tmp.write(chunk)
+    except Exception:
+        try:
+            os.unlink(temp_file_path)
+        except Exception:
+            pass
+        raise
+
     # Offload toàn bộ CPU-bound work sang thread pool; semaphore đảm bảo
     # số luồng OCR đồng thời không vượt pool size.
     t0 = time.perf_counter()
     async with _ocr_semaphore:
         try:
-            result = await asyncio.to_thread(_process_image_sync, raw)
+            result = await asyncio.to_thread(_process_image_sync, temp_file_path)
         except Exception as exc:  # noqa: BLE001
             raise HTTPException(
                 status_code=400, detail=f"failed to process image: {exc}"
             ) from exc
+        finally:
+            try:
+                os.unlink(temp_file_path)
+            except Exception:
+                pass
     result["meta"]["processing_ms"] = round((time.perf_counter() - t0) * 1000, 1)
     return result

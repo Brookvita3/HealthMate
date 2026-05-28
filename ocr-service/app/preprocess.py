@@ -1,4 +1,5 @@
 import os
+from typing import Union
 
 import cv2
 import numpy as np
@@ -26,11 +27,17 @@ def crop_to_medication_body_bgr(img_bgr: np.ndarray) -> np.ndarray:
     return img_bgr[top:, :]
 
 
-def preprocess_image(raw: bytes, *, crop_body: bool = True) -> np.ndarray:
-    arr = np.frombuffer(raw, np.uint8)
-    img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+def preprocess_image(
+    img_input: Union[bytes, str, os.PathLike], *, crop_body: bool = True
+) -> np.ndarray:
+    if isinstance(img_input, bytes):
+        arr = np.frombuffer(img_input, np.uint8)
+        img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+    else:
+        img = cv2.imread(os.fspath(img_input), cv2.IMREAD_COLOR)
+
     if img is None:
-        raise ValueError("invalid image bytes")
+        raise ValueError("invalid image input")
     if crop_body:
         img = crop_to_medication_body_bgr(img)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
